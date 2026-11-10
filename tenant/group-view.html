@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Group · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="tenant" data-page="groups">
+<main class="content">
+  <div class="crumbs"><a href="groups.html">Chit groups</a><i data-i="chevR"></i><span id="crumb"></span></div>
+
+  <div class="card mb-4">
+    <div class="card-body row wrap" style="gap:18px">
+      <span class="avatar xl" id="gIcon"></span>
+      <div style="flex:1;min-width:240px">
+        <div class="row wrap"><h1 class="mono" id="gName"></h1><span id="gStatus"></span><span class="badge hl" id="gLabel"></span></div>
+        <div class="small muted mt-1" id="gMeta"></div>
+      </div>
+      <div class="row wrap">
+        <button class="btn"><i data-i="download"></i>Group register</button>
+        <button class="btn primary" id="auctionBtn"><i data-i="gavel"></i>Conduct auction</button>
+      </div>
+    </div>
+    <div class="calc-strip" id="gStrip" style="border-left:0;border-right:0;border-radius:0"></div>
+    <div class="tabs" data-tabs style="padding:0 12px">
+      <button class="active" data-tab="ov">Overview</button>
+      <button data-tab="auc">Auctions</button>
+      <button data-tab="mem">Subscribers <span class="count" id="memCount"></span></button>
+      <button data-tab="docs">Compliance documents</button>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-tab-panel="ov">
+    <div class="grid g-main-side">
+      <div class="stack-lg">
+        <div class="card">
+          <div class="card-head"><div><h3>Progress</h3><div class="sub" id="progSub"></div></div></div>
+          <div class="card-body">
+            <div class="meter"><div class="meter-bar" style="height:10px"><div class="meter-fill" id="progBar"></div></div></div>
+            <div class="grid g-4 mt-4">
+              <div class="kv-card"><span>Prized</span><b id="pPrized"></b></div>
+              <div class="kv-card"><span>Non-prized</span><b id="pNon"></b></div>
+              <div class="kv-card"><span>Avg. discount</span><b>18.4%</b></div>
+              <div class="kv-card"><span>Dividend paid</span><b id="pDiv"></b></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Group details</h3></div>
+          <div class="card-body"><dl class="kv" id="details"></dl></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Lifecycle</h3></div>
+        <div class="card-body"><div class="timeline" id="lifecycle"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-tab-panel="auc">
+    <div class="card"><div class="card-head"><div><h3>Auction history & schedule</h3><div class="sub">Discount (bid), commission and dividend per auction</div></div></div><div id="aucTbl"></div></div>
+  </div>
+
+  <div class="tab-panel" data-tab-panel="mem">
+    <div class="card"><div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="mq" placeholder="Search subscriber…"></div></div><div id="memTbl"></div></div>
+  </div>
+
+  <div class="tab-panel" data-tab-panel="docs">
+    <div class="card"><div class="list" id="docs"></div></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var g = DB.group(UI.param('id')) || DB.groups[0];
+  var s = DB.scheme(g.scheme), b = DB.branch(g.branch), $ = function (id) { return document.getElementById(id); };
+  var sub = Math.round(s.chitValue / s.installments);
+  document.title = g.name + ' · Sri Venkata Chits';
+  $('crumb').textContent = g.name; $('gName').textContent = g.name;
+  $('gIcon').innerHTML = UI.icon('grid', 'lg'); $('gIcon').style.cssText = 'background:' + s.color + ';color:#fff';
+  $('gStatus').innerHTML = UI.badge(g.status); $('gLabel').textContent = g.label;
+  $('gMeta').innerHTML = g.id + ' · ' + s.name + ' · ' + b.name + ' · Auctions ' + g.auctionDay;
+  if (g.status === 'Closed') $('auctionBtn').disabled = true;
+  $('gStrip').innerHTML = [['Chit value', UI.inr(g.chitValue)], ['Subscription', UI.inr(sub)], ['Tickets', g.enrolled + ' / ' + g.tickets], ['Auctions done', g.auctionNo + ' / ' + g.tickets], ['Commenced', UI.date(g.startDate)]]
+    .map(function (c) { return '<div><span>' + c[0] + '</span><b>' + c[1] + '</b></div>'; }).join('');
+  $('memCount').textContent = g.enrolled;
+
+  $('progBar').style.width = (g.auctionNo / g.tickets * 100) + '%';
+  $('progSub').textContent = g.auctionNo + ' of ' + g.tickets + ' auctions completed · ' + (g.tickets - g.auctionNo) + ' remaining';
+  $('pPrized').textContent = g.auctionNo; $('pNon').textContent = g.tickets - g.auctionNo;
+  $('pDiv').textContent = UI.inrShort(g.chitValue * 0.134 * g.auctionNo / 1);
+
+  $('details').innerHTML = [['Scheme', '<a href="schemes.html?open=' + s.id + '">' + s.name + '</a>'], ['Auction type', s.auctionType + ' · ' + g.mode], ['Collection', s.collection === 'BEFORE_AUCTION' ? 'Before auction' : 'After auction'], ['Bid range', s.minBid + '% – ' + s.maxBid + '%'], ['Commission', s.commission + '% (' + UI.inr(g.chitValue * s.commission / 100) + ')'], ['Company ticket', '#' + s.companyTicket], ['Overdue', 'After auction · 7 days'], ['Penalty (NPS / PS)', s.penaltyNPS + '% / ' + s.penaltyPS + '% p.m.'], ['Allowed branches', b.name + ', Kukatpally']]
+    .map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
+
+  var dates = ['12 Sep 2024', '20 Sep 2024', '24 Oct 2024', '30 Oct 2024', '11 Nov 2024', '18 Nov 2024', '27 Nov 2024', '02 Dec 2024'];
+  $('lifecycle').innerHTML = DB.stages.map(function (st, i) {
+    return '<div class="tl-item"><span class="tl-dot ok"></span><div class="tl-body"><b>' + st.name + '</b> <span class="mono xs muted">' + st.code + '</span><div class="when">' + dates[i] + '</div></div></div>';
+  }).join('') + '<div class="tl-item"><span class="tl-dot"></span><div class="tl-body"><b>Group commenced</b><div class="when">' + UI.date(g.startDate) + '</div></div></div>';
+
+  /* auctions */
+  var auc = [];
+  for (var i = 1; i <= Math.min(g.tickets, g.auctionNo + 3); i++) {
+    var done = i <= g.auctionNo;
+    var bid = i === 1 ? s.commission : Math.max(s.minBid, s.maxBid - (i - 2) * ((s.maxBid - s.minBid) / g.tickets) * 1.6);
+    var d = new Date(g.startDate); d.setMonth(d.getMonth() + i - 1);
+    var disc = g.chitValue * bid / 100, comm = g.chitValue * s.commission / 100;
+    auc.push({ no: i, date: d.toISOString().slice(0, 10), done: done, winner: done ? (i === 1 ? 'Company Ticket' : DB.members[(i % 7) + 1].name) : '—', bid: bid, disc: disc, prize: g.chitValue - disc, div: Math.max(0, (disc - comm) / g.tickets) });
+  }
+  UI.table({
+    el: '#aucTbl', rows: auc.reverse(), pageSize: 10,
+    columns: [
+      { key: 'no', label: '#', render: function (a) { return '<b class="mono">' + a.no + '</b>'; } },
+      { key: 'date', label: 'Date', render: function (a) { return UI.date(a.date); } },
+      { key: 'winner', label: 'Prized subscriber', render: function (a) { return a.done ? '<b>' + a.winner + '</b>' : '<span class="muted">Scheduled</span>'; } },
+      { key: 'bid', label: 'Bid %', num: true, render: function (a) { return a.done ? a.bid.toFixed(1) + '%' : '—'; } },
+      { key: 'disc', label: 'Discount', num: true, render: function (a) { return a.done ? UI.inr(a.disc) : '—'; } },
+      { key: 'prize', label: 'Prize amount', num: true, render: function (a) { return a.done ? '<b>' + UI.inr(a.prize) + '</b>' : '—'; } },
+      { key: 'div', label: 'Dividend / ticket', num: true, render: function (a) { return a.done ? UI.inr(a.div) : '—'; } },
+      { key: 'st', label: 'Status', render: function (a) { return a.done ? UI.badge('Closed') : '<span class="badge info dot">Upcoming</span>'; } }
+    ]
+  });
+
+  var mem = DB.members.concat(Array.from({ length: Math.max(0, g.enrolled - DB.members.length) }, function (_, i) {
+    var names = ['Lakshmi N', 'Rajesh K', 'Swathi P', 'Naveen R', 'Bhavani D', 'Krishna M', 'Anitha S', 'Gopal V', 'Sirisha T', 'Rakesh B'];
+    return { ticket: DB.members.length + i + 1, name: names[i % names.length] + (i >= names.length ? ' ' + Math.floor(i / names.length + 1) : ''), phone: '+91 90000 1' + String(i + 9).padStart(4, '0'), branch: i % 3 ? b.name : 'Kukatpally', kyc: i % 9 ? 'Verified' : 'Pending', status: (DB.members.length + i + 1) <= g.auctionNo ? 'Prized' : 'Non-prized' };
+  }));
+  UI.table({
+    el: '#memTbl', rows: mem.slice(0, g.enrolled), pageSize: 10, search: '#mq', searchKeys: ['name', 'phone', 'ticket'],
+    columns: [
+      { key: 'ticket', label: 'Ticket', sort: true, render: function (m) { return '<b class="mono">#' + m.ticket + '</b>'; } },
+      { key: 'name', label: 'Subscriber', sort: true, render: function (m) { return '<div class="ent"><span class="avatar sm">' + UI.initials(m.name) + '</span><div class="ent-txt"><b>' + m.name + '</b><span>' + m.phone + '</span></div></div>'; } },
+      { key: 'branch', label: 'Branch' },
+      { key: 'kyc', label: 'KYC', render: function (m) { return UI.badge(m.kyc); } },
+      { key: 'status', label: 'Status', sort: true, render: function (m) { return UI.badge(m.status); } },
+      { key: 'due', label: 'Dues', num: true, render: function (m) { return m.ticket % 6 === 0 ? '<b style="color:var(--danger)">' + UI.inr(sub) + '</b>' : '<span class="muted">Nil</span>'; } }
+    ]
+  });
+
+  $('docs').innerHTML = [['bank', 'FD certificate', 'FD No. 50300' + g.id.slice(-4) + ' · ' + UI.inr(g.chitValue) + ' · SBI Ameerpet'], ['shield', 'PSO application', 'Ref. ROC/HYD/' + g.id.slice(-4) + '/2024'], ['shieldCheck', 'Previous Sanction Order', 'PSO No. 1184/2024'], ['flag', 'CC application', 'Challan 7781' + g.id.slice(-3)], ['checkCircle', 'Commencement Certificate', 'CC No. 2209/2024']].map(function (d) {
+    return '<div class="list-item"><span class="card-title-icon">' + UI.icon(d[0]) + '</span><div style="flex:1"><b>' + d[1] + '</b><div class="xs muted">' + d[2] + '</div></div>' + UI.badge('Verified') + '<button class="btn sm ghost">' + UI.icon('eye') + 'View</button><button class="icon-btn sm" aria-label="Download">' + UI.icon('download') + '</button></div>';
+  }).join('');
+
+  $('auctionBtn').addEventListener('click', function () { UI.toast('Auction module is planned for the next phase', 'warning'); });
+});
+</script>
+</body>
+</html>

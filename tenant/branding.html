@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Branding & theme · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <style>
+    .phone { width: 230px; height: 440px; border-radius: 30px; border: 8px solid #0b0f19; background: #F4F6FA; overflow: hidden; margin: 0 auto; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); color: #0F172A; }
+    .phone .ph-top { background: var(--pv); color: #fff; padding: 22px 14px 40px; }
+    .phone .ph-top small { opacity: .75; font-size: 11px; }
+    .phone .ph-top b { display: block; font-size: 20px; margin-top: 2px; }
+    .phone .ph-card { background: #fff; margin: -28px 12px 0; border-radius: 12px; padding: 12px; box-shadow: 0 6px 16px rgba(0,0,0,.08); font-size: 11.5px; }
+    .phone .ph-card .bar { height: 6px; border-radius: 3px; background: #EEF2F7; margin-top: 8px; overflow: hidden; }
+    .phone .ph-card .bar i { display: block; height: 100%; width: 46%; background: var(--pv); }
+    .phone .ph-btn { margin: 14px 12px 0; background: var(--pv-hl); color: #fff; text-align: center; border-radius: 10px; padding: 10px; font-weight: 600; font-size: 12.5px; }
+    .phone .ph-list { margin: 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .phone .ph-list div { background: #fff; border-radius: 10px; padding: 10px; font-size: 11.5px; display: flex; justify-content: space-between; }
+    .phone .ph-list b { color: var(--pv); }
+    .logo-box { width: 72px; height: 72px; border-radius: var(--radius); display: grid; place-items: center; font-weight: 750; font-size: 24px; color: #fff; flex: none; }
+  </style>
+</head>
+<body data-portal="tenant" data-page="branding">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Branding & theme</div>
+      <h1>Branding & theme</h1>
+      <p>Make the workspace, member app, receipts and emails look like Sri Venkata Chits.</p>
+    </div>
+    <div class="actions"><button class="btn" id="previewMine"><i data-i="eye"></i>Apply to my screen</button><button class="btn primary" id="saveBrand"><i data-i="save"></i>Publish branding</button></div>
+  </div>
+
+  <div class="grid g-main-side" style="align-items:start">
+    <div class="stack-lg">
+      <div class="card">
+        <div class="card-head"><h3>Identity</h3></div>
+        <div class="card-body stack-lg">
+          <div class="row wrap" style="gap:16px">
+            <div class="logo-box" id="logoBox">SV</div>
+            <label class="dropzone" style="flex:1;min-width:240px"><span class="dz-ico"><i data-i="image"></i></span><div><b>Upload logo</b><span>SVG or PNG, square, min 256 × 256</span></div><input type="file" accept="image/*"></label>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Display name</label><input class="input" id="dispName" value="Sri Venkata Chits"></div>
+            <div class="field"><label>Short mark</label><input class="input" id="mark" value="SV" maxlength="2" style="text-transform:uppercase"></div>
+            <div class="field span-2"><label>Tagline (member app & receipts)</label><input class="input" value="Trusted savings since 1998"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div><h3>Colours</h3><div class="sub">Primary drives buttons, links and highlights. Accent is used for calls-to-action in the member app.</div></div></div>
+        <div class="card-body stack-lg">
+          <div class="field"><label>Primary colour</label><div class="swatches" id="brandSw" style="grid-template-columns:repeat(auto-fill,minmax(84px,1fr))"></div></div>
+          <div class="form-grid">
+            <div class="field"><label>Custom primary</label><div class="input-group"><input type="color" id="pColor" value="#072E77" style="width:48px;border:0;padding:0;background:none;cursor:pointer"><input class="input mono" id="pHex" value="#072E77"></div></div>
+            <div class="field"><label>Accent colour</label><div class="input-group"><input type="color" id="aColor" value="#FF4A00" style="width:48px;border:0;padding:0;background:none;cursor:pointer"><input class="input mono" id="aHex" value="#FF4A00"></div></div>
+          </div>
+          <div class="alert info" id="contrast"><i data-i="info"></i><div></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div><h3>Workspace defaults</h3><div class="sub">Applied to every staff member when they first sign in</div></div></div>
+        <div class="card-body stack-lg">
+          <div class="field"><label>Default appearance</label><div class="segmented" data-seg id="defMode"><button data-v="light" class="active"><i data-i="sun"></i>Light</button><button data-v="dark"><i data-i="moon"></i>Dark</button><button data-v="system"><i data-i="monitor"></i>Follow device</button></div></div>
+          <div class="field"><label>Sidebar</label><div class="segmented" data-seg id="defSidebar"><button data-v="surface" class="active">Neutral</button><button data-v="brand">Brand colour</button></div></div>
+          <div class="field"><label>Density</label><div class="segmented" data-seg id="defDensity"><button data-v="comfortable" class="active">Comfortable</button><button data-v="compact">Compact</button></div></div>
+          <label class="switch"><input type="checkbox" id="lockTheme"><span class="track"></span><span>Lock theme — staff can’t change colours (dark mode stays allowed)</span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Custom domain</h3><span class="badge outline ml-auto">Enterprise</span></div>
+        <div class="card-body form-grid">
+          <div class="field span-2"><label>Current workspace URL</label><div class="input-group"><span class="addon">https://</span><input class="input" value="svchits.chitsphere.in" readonly><button class="btn ghost" style="border:0;border-radius:0" onclick="UI.toast('Copied','success')"><i data-i="copy"></i></button></div></div>
+          <div class="field span-2"><label>Custom domain</label><input class="input" placeholder="app.svchits.in" disabled><span class="hint">Upgrade to Enterprise to use your own domain.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="stack-lg" style="position:sticky;top:calc(var(--topbar-h) + 16px)">
+      <div class="card">
+        <div class="card-head"><div><h3>Member app preview</h3><div class="sub">What subscribers see</div></div></div>
+        <div class="card-body" style="background:var(--surface-2)">
+          <div class="phone" id="phone">
+            <div class="ph-top"><small id="phName">Sri Venkata Chits</small><b>Hi, Kavitha</b></div>
+            <div class="ph-card"><div style="display:flex;justify-content:space-between"><span>SV-5L-A24 · Ticket #3</span><b>₹10,000</b></div><div style="color:#64748B;margin-top:2px">Next due 5 Dec · 23/50 paid</div><div class="bar"><i></i></div></div>
+            <div class="ph-btn">Pay ₹10,000 now</div>
+            <div class="ph-list"><div>Next auction<b>5 Dec, 11 AM</b></div><div>Last dividend<b>₹1,240</b></div><div>Prize eligibility<b>Yes</b></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Receipt header</h3></div>
+        <div class="card-body">
+          <div class="row" style="padding:12px;border-radius:var(--radius);background:var(--pv);color:#fff" id="rcpt"><span class="logo-box" style="width:36px;height:36px;font-size:14px;background:rgba(255,255,255,.18)" id="rcptMark">SV</span><div><b id="rcptName">Sri Venkata Chits</b><div class="xs" style="opacity:.8">Receipt · RC-2026-00841</div></div></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var primary = '#072E77', accent = '#FF4A00';
+  var HL = {}; Theme.accents.forEach(function (a) { HL[a.key] = a.hl; });
+
+  $('brandSw').innerHTML = Theme.accents.map(function (a, i) {
+    return '<button class="swatch' + (i === 0 ? ' active' : '') + '" data-c="' + a.light + '" data-hl="' + HL[a.key] + '"><span class="sw" style="background:' + a.light + ';--_hl:' + HL[a.key] + ';--_hld:block"></span>' + a.name + '</button>';
+  }).join('');
+  $('brandSw').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-c]'); if (!b) return;
+    primary = b.getAttribute('data-c'); accent = b.getAttribute('data-hl');
+    $('pColor').value = $('pHex').value = primary; $('aColor').value = $('aHex').value = accent;
+    update();
+  });
+  function bindColor(picker, hex, set) {
+    $(picker).addEventListener('input', function () { $(hex).value = this.value.toUpperCase(); set(this.value); update(); });
+    $(hex).addEventListener('change', function () { if (/^#[0-9a-f]{6}$/i.test(this.value)) { $(picker).value = this.value; set(this.value); update(); } });
+  }
+  bindColor('pColor', 'pHex', function (v) { primary = v; });
+  bindColor('aColor', 'aHex', function (v) { accent = v; });
+  ['dispName', 'mark'].forEach(function (id) { $(id).addEventListener('input', update); });
+
+  function lum(hex) {
+    var c = hex.replace('#', '').match(/../g).map(function (x) { x = parseInt(x, 16) / 255; return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); });
+    return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+  }
+  function update() {
+    document.querySelectorAll('#brandSw .swatch').forEach(function (s) { s.classList.toggle('active', s.getAttribute('data-c').toLowerCase() === primary.toLowerCase()); });
+    var root = document.querySelector('main');
+    root.style.setProperty('--pv', primary); root.style.setProperty('--pv-hl', accent);
+    $('logoBox').style.background = primary; $('logoBox').textContent = ($('mark').value || 'SV').toUpperCase();
+    $('rcptMark').textContent = ($('mark').value || 'SV').toUpperCase();
+    $('phName').textContent = $('rcptName').textContent = $('dispName').value || 'Your company';
+    var ratio = (1.05) / (lum(primary) + .05);
+    var box = $('contrast'), ok = ratio >= 4.5;
+    box.className = 'alert ' + (ok ? 'success' : 'warning');
+    box.innerHTML = UI.icon(ok ? 'checkCircle' : 'alert') + '<div><b>Contrast ' + ratio.toFixed(1) + ':1 with white text</b>' + (ok ? 'Meets WCAG AA for buttons and labels.' : 'Below 4.5:1 — white text on this colour may be hard to read. Choose a darker shade.') + '</div>';
+  }
+  update();
+
+  $('previewMine').addEventListener('click', function () {
+    var preset = Theme.accents.find(function (a) { return a.light.toLowerCase() === primary.toLowerCase(); });
+    Theme.set(preset ? { accent: preset.key } : { accent: 'custom', custom: primary });
+    UI.toast('Applied to your screen. Open the palette icon to fine-tune.', 'success');
+  });
+  ['defMode', 'defSidebar', 'defDensity'].forEach(function (id) {
+    $(id).addEventListener('change', function (e) {
+      var key = { defMode: 'mode', defSidebar: 'sidebar', defDensity: 'density' }[id], p = {}; p[key] = e.detail; Theme.set(p);
+    });
+  });
+  $('saveBrand').addEventListener('click', function () { UI.toast('<b>Branding published</b> — staff and members will see it on next load', 'success'); });
+});
+</script>
+</body>
+</html>

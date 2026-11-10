@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Admin console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="assets/js/theme.js"></script>
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+</head>
+<!--
+  Organisation admin sign-in.
+  In production this page is served at https://<slug>.chitsphere.in/login, so the
+  organisation is known from the host name. In the prototype it comes from ?org=<slug>.
+  Without an org, the page asks the user to find their organisation first.
+-->
+<body class="simple">
+  <div class="row" style="justify-content:space-between;padding:16px 20px">
+    <a class="row small muted" href="index.html" style="gap:6px"><i data-i="arrowL" class="sm"></i>chitsphere.in</a>
+    <div class="row"><button class="icon-btn" data-theme-toggle aria-label="Toggle dark mode"></button><button class="icon-btn" data-open="#themePanel" aria-label="Theme settings"><i data-i="palette"></i></button></div>
+  </div>
+
+  <main class="simple-main" style="align-items:flex-start;padding-top:24px">
+    <div class="simple-card">
+
+      <!-- A: find organisation -->
+      <div id="findView" class="hidden">
+        <div class="org-brand"><div class="logo" style="background:var(--primary)"><i data-i="building" class="lg"></i></div>
+          <div><h1 style="font-size:24px">Sign in to your organisation</h1><p class="muted mt-1">Enter your organisation’s console address.</p></div></div>
+        <div class="card"><div class="card-body stack">
+          <form id="findForm" class="stack" novalidate>
+            <div class="field"><label for="orgInput">Console address</label>
+              <div class="input-group"><input class="input" id="orgInput" required placeholder="yourname" autocomplete="organization"><span class="addon">.chitsphere.in</span></div>
+              <span class="err" id="findErr">We couldn’t find that organisation</span></div>
+            <button class="btn primary block" type="submit">Continue <i data-i="arrowR"></i></button>
+          </form>
+          <div class="divider-label">Recently used on this device</div>
+          <div class="stack" id="recent"></div>
+        </div></div>
+        <p class="small muted center mt-4">New to ChitSphere? <a href="register.html">Register your organisation</a></p>
+      </div>
+
+      <!-- B: branded org login -->
+      <div id="orgView" class="hidden">
+        <div class="org-brand">
+          <div class="logo" id="oLogo"></div>
+          <div><h1 style="font-size:22px" id="oName"></h1><p class="muted mt-1">Admin console · <span class="mono" id="oHost"></span></p></div>
+        </div>
+        <div id="oNotice"></div>
+        <div class="card"><div class="card-body">
+          <div class="segmented block mb-4" data-seg id="method"><button class="active" data-v="pwd">Password</button><button data-v="otp">Mobile OTP</button></div>
+          <form id="loginForm" class="stack" novalidate>
+            <div class="field"><label for="user" id="userLbl">Email or employee ID</label><div class="input-icon"><i data-i="user"></i><input class="input" id="user" required></div><span class="err">Required</span></div>
+            <div class="field" id="pwdField"><div class="row between"><label for="pwd">Password</label><a href="#" class="small">Forgot?</a></div><div class="input-icon"><i data-i="lock"></i><input class="input" type="password" id="pwd" required value="prototype"></div><span class="err">Required</span></div>
+            <label class="check"><input type="checkbox" checked> Keep me signed in on this device</label>
+            <button class="btn primary lg block" type="submit" id="goBtn">Sign in</button>
+          </form>
+        </div></div>
+        <p class="small muted center mt-4">Not <b id="oShort"></b>? <a href="login.html">Choose another organisation</a></p>
+        <p class="xs muted center mt-2" id="memberHint">Members: please use the mobile app, not this console.</p>
+      </div>
+
+      <div class="powered"><span class="sb-logo" style="width:20px;height:20px;font-size:9px;border-radius:5px">CS</span>Powered by ChitSphere</div>
+    </div>
+  </main>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  document.addEventListener('app:ready', function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var slug = (UI.param('org') || '').toLowerCase();
+
+    if (!slug) {
+      $('findView').classList.remove('hidden');
+      $('recent').innerHTML = ['svchits', 'nandini'].map(function (s) {
+        var t = DB.tenantBySlug(s);
+        return '<a class="list-item card" style="box-shadow:none;padding:10px 12px;color:inherit;text-decoration:none" href="login.html?org=' + s + '"><span class="avatar sq sm" style="background:' + t.color + ';color:#fff">' + UI.initials(t.short) + '</span><div style="flex:1"><b class="small">' + t.short + '</b><div class="xs muted mono">' + s + '.chitsphere.in</div></div>' + UI.icon('chevR', 'sm') + '</a>';
+      }).join('');
+      $('findForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var v = $('orgInput').value.trim().toLowerCase().replace('.chitsphere.in', '');
+        if (!v) { UI.validate(this); return; }
+        if (!DB.tenantBySlug(v)) { $('orgInput').closest('.field').classList.add('invalid'); return; }
+        location.href = 'login.html?org=' + v;
+      });
+      return;
+    }
+
+    /* Branded view */
+    var t = DB.tenantBySlug(slug);
+    var name = t ? t.short : (UI.param('name') || slug);
+    var color = t ? t.color : '#072E77';
+    function brand() {
+      document.documentElement.style.setProperty('--brand', color);
+      document.documentElement.style.setProperty('--brand-dark', color);
+      document.documentElement.style.setProperty('--primary', document.documentElement.getAttribute('data-theme') === 'dark' ? 'color-mix(in srgb, ' + color + ' 55%, white)' : color);
+    }
+    brand(); document.addEventListener('themechange', brand);
+    document.title = 'Sign in · ' + name;
+    $('orgView').classList.remove('hidden');
+    $('oLogo').textContent = UI.initials(name); $('oLogo').style.background = color;
+    $('oName').textContent = name; $('oShort').textContent = name;
+    $('oHost').textContent = slug + '.chitsphere.in';
+    $('user').value = t ? t.email : '';
+    var app = t && DB.app(t.id);
+    if (app && app.android === 'Live') $('memberHint').innerHTML = 'Members: please use the <b>' + app.appName + '</b> app from Google Play or the App Store.';
+
+    var status = t ? t.status : 'Trial';
+    var notices = {
+      'Trial': ['info', 'clock', 'Trial workspace', t ? 'Your trial is active. Upgrade any time from Subscription.' : 'Documents are being verified (1–2 working days). You can set up branches, staff and schemes meanwhile.'],
+      'Pending KYC': ['warning', 'shield', 'Verification pending', 'Group creation and the member app unlock once your documents are approved.'],
+      'Past due': ['warning', 'alert', 'Payment overdue', 'Your subscription invoice is overdue. Admins can still sign in to pay.'],
+      'Suspended': ['warning', 'pause', 'Organisation suspended', 'Sign-in is disabled. Contact ChitSphere support at support@chitsphere.in.']
+    };
+    if (notices[status]) {
+      var n = notices[status];
+      $('oNotice').innerHTML = '<div class="alert ' + n[0] + ' mb-4">' + UI.icon(n[1]) + '<div><b>' + n[2] + '</b>' + n[3] + '</div></div>';
+    }
+    if (status === 'Suspended') $('goBtn').disabled = true;
+
+    $('method').addEventListener('change', function (e) {
+      var otp = e.detail === 'otp';
+      $('pwdField').classList.toggle('hidden', otp);
+      $('pwd').required = !otp;
+      $('userLbl').textContent = otp ? 'Registered mobile number' : 'Email or employee ID';
+      $('user').value = otp ? '98480 11223' : (t ? t.email : '');
+      $('goBtn').textContent = otp ? 'Send OTP' : 'Sign in';
+    });
+    $('loginForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!UI.validate(this)) return;
+      location.href = 'tenant/dashboard.html';
+    });
+  });
+  </script>
+</body>
+</html>

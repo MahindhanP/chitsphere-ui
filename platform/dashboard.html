@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="platform" data-page="dashboard">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <h1>Good morning, Arjun</h1>
+      <p>Here’s how the platform is doing across all chit fund tenants.</p>
+    </div>
+    <div class="actions">
+      <select class="select" style="width:auto"><option>Last 12 months</option><option>This quarter</option><option>This month</option></select>
+      <button class="btn"><i data-i="download"></i>Export</button>
+      <a class="btn primary" href="tenant-new.html"><i data-i="plus"></i>Onboard tenant</a>
+    </div>
+  </div>
+
+  <div class="grid g-4">
+    <div class="card kpi">
+      <div class="label"><span class="ico"><i data-i="building"></i></span>Active tenants</div>
+      <div class="value" id="kTenants">—</div>
+      <div class="delta"><span class="up"><i data-i="trendUp"></i>+2</span> this month · <span id="kTrial"></span></div>
+    </div>
+    <div class="card kpi">
+      <div class="label"><span class="ico hl"><i data-i="rupee"></i></span>Monthly recurring revenue</div>
+      <div class="value" id="kMrr">—</div>
+      <div class="delta"><span class="up"><i data-i="trendUp"></i>12.4%</span> vs last month</div>
+    </div>
+    <div class="card kpi">
+      <div class="label"><span class="ico ok"><i data-i="grid"></i></span>Chit groups on platform</div>
+      <div class="value" id="kGroups">—</div>
+      <div class="delta"><span class="up"><i data-i="trendUp"></i>38</span> new this quarter</div>
+    </div>
+    <div class="card kpi">
+      <div class="label"><span class="ico warn"><i data-i="users"></i></span>Subscribers managed</div>
+      <div class="value" id="kSubs">—</div>
+      <div class="delta"><span class="up"><i data-i="trendUp"></i>6.1%</span> vs last month</div>
+    </div>
+  </div>
+
+  <div class="grid g-main-side mt-6">
+    <div class="card">
+      <div class="card-head">
+        <div><h3>Revenue</h3><div class="sub">Subscription revenue (MRR) by month, in ₹ lakh</div></div>
+        <div class="tools legend"><span><i></i>Recurring</span><span><i class="c2"></i>Add-ons</span></div>
+      </div>
+      <div class="card-body"><div id="revChart"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h3>Plan mix</h3><div class="sub">Tenants by subscription plan</div></div></div>
+      <div class="card-body">
+        <div class="row" style="gap:24px;align-items:center;flex-wrap:wrap">
+          <div class="donut" id="planDonut"><div class="donut-c"><div><b id="donutTotal">10</b><span>tenants</span></div></div></div>
+          <div class="stack" id="planLegend" style="flex:1;min-width:140px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g-main-side mt-6">
+    <div class="card flush">
+      <div class="card-head">
+        <div><h3>Needs attention</h3><div class="sub">Trials ending, overdue invoices and pending KYC</div></div>
+        <div class="tools"><a class="btn sm ghost" href="tenants.html">View all <i data-i="arrowR"></i></a></div>
+      </div>
+      <div id="attnTable"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Recent activity</h3></div>
+      <div class="card-body"><div class="timeline" id="activity"></div></div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var T = DB.tenants;
+  var active = T.filter(function (t) { return t.status === 'Active'; });
+  document.getElementById('kTenants').textContent = active.length + ' / ' + T.length;
+  document.getElementById('kTrial').textContent = T.filter(function (t) { return t.status === 'Trial'; }).length + ' on trial';
+  document.getElementById('kMrr').textContent = UI.inrShort(T.reduce(function (s, t) { return s + t.mrr; }, 0));
+  document.getElementById('kGroups').textContent = UI.num(T.reduce(function (s, t) { return s + t.groups; }, 0));
+  document.getElementById('kSubs').textContent = UI.num(T.reduce(function (s, t) { return s + t.subscribers; }, 0));
+
+  var months = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
+  var rec = [1.9, 2.1, 2.1, 2.4, 2.5, 2.7, 2.9, 3.0, 3.2, 3.3, 3.34, 3.75];
+  var add = [0.2, 0.2, 0.3, 0.3, 0.3, 0.4, 0.4, 0.5, 0.5, 0.5, 0.6, 0.6];
+  UI.bars('#revChart', months.map(function (m, i) { return { label: m, a: rec[i], b: add[i] }; }), {
+    tip: function (d) { return d.label + ': ₹' + (d.a + d.b).toFixed(2) + ' L'; }
+  });
+
+  var colors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)'];
+  var counts = DB.plans.map(function (p) { return T.filter(function (t) { return t.plan === p.id; }).length; });
+  var acc = 0, stops = counts.map(function (c, i) { var a = acc; acc += c / T.length * 100; return colors[i] + ' ' + a + '% ' + acc + '%'; });
+  document.getElementById('planDonut').style.background = 'conic-gradient(' + stops.join(',') + ')';
+  document.getElementById('planLegend').innerHTML = DB.plans.map(function (p, i) {
+    return '<div class="row between"><span class="row"><span class="color-dot" style="background:' + colors[i] + '"></span>' + p.name + '</span><b>' + counts[i] + '</b></div>';
+  }).join('');
+
+  var attn = T.filter(function (t) { return t.status !== 'Active'; });
+  UI.table({
+    el: '#attnTable', rows: attn, pageSize: 5,
+    onRow: function (r) { location.href = 'tenant-view.html?id=' + r.id; },
+    columns: [
+      { key: 'name', label: 'Tenant', render: function (r) { return '<div class="ent"><span class="avatar sq sm" style="background:' + r.color + ';color:#fff">' + UI.initials(r.name) + '</span><div class="ent-txt"><b>' + r.name + '</b><span>' + r.id + ' · ' + r.city + '</span></div></div>'; } },
+      { key: 'plan', label: 'Plan', render: function (r) { return DB.plan(r.plan).name; } },
+      { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } },
+      { key: 'renew', label: 'Action', render: function (r) {
+          var a = { 'Trial': 'Convert trial', 'Past due': 'Send reminder', 'Pending KYC': 'Review KYC', 'Suspended': 'Reactivate' }[r.status] || 'Open';
+          return '<button class="btn sm soft">' + a + '</button>'; }, cls: 'actions-cell' }
+    ]
+  });
+
+  document.getElementById('activity').innerHTML = DB.activity.map(function (a) {
+    return '<div class="tl-item"><span class="tl-dot ' + a.tone + '"></span><div class="tl-body"><b>' + a.who + '</b> ' + a.what + '<div class="when">' + a.when + '</div></div></div>';
+  }).join('');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subscription plans · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="platform" data-page="plans">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Platform</a><i data-i="chevR"></i>Subscription plans</div>
+      <h1>Subscription plans</h1>
+      <p>Packages that tenants subscribe to. Limits are enforced across schemes, groups, branches and users.</p>
+    </div>
+    <div class="actions">
+      <div class="segmented" data-seg id="cycle"><button class="active" data-v="month">Monthly</button><button data-v="year">Yearly</button></div>
+      <button class="btn primary" data-open="#planDrawer"><i data-i="plus"></i>New plan</button>
+    </div>
+  </div>
+
+  <div class="plans" id="plans"></div>
+
+  <div class="card mt-6">
+    <div class="card-head"><div><h3>Feature comparison</h3><div class="sub">What each plan unlocks for tenants</div></div></div>
+    <div class="table-wrap">
+      <table class="table" id="compare"></table>
+    </div>
+  </div>
+</main>
+
+<div class="drawer wide" id="planDrawer" role="dialog" aria-label="Plan editor">
+  <div class="drawer-head"><div class="card-title-icon"><i data-i="layers"></i></div><div><h3 id="pdTitle">New plan</h3><div class="xs muted">Existing subscribers keep their current terms until renewal</div></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="drawer-body stack-lg">
+    <div class="form-grid">
+      <div class="field"><label>Plan name <span class="req">*</span></label><input class="input" id="pdName" required><span class="err">Name is required</span></div>
+      <div class="field"><label>Plan code</label><input class="input mono" id="pdCode" placeholder="growth"></div>
+      <div class="field"><label>Monthly price <span class="req">*</span></label><div class="input-group"><span class="addon">₹</span><input class="input" type="number" id="pdPrice" required></div><span class="err">Price is required</span></div>
+      <div class="field"><label>Yearly discount</label><div class="input-group"><input class="input" type="number" value="15"><span class="addon">%</span></div></div>
+      <div class="field span-2"><label>Tagline</label><input class="input" id="pdTag"></div>
+    </div>
+    <div>
+      <h4 class="mb-2">Limits</h4>
+      <div class="form-grid">
+        <div class="field"><label>Branches</label><input class="input" type="number" id="pdBr"></div>
+        <div class="field"><label>Chit groups</label><input class="input" type="number" id="pdGr"></div>
+        <div class="field"><label>Subscribers</label><input class="input" type="number" id="pdSu"></div>
+        <div class="field"><label>Staff users</label><input class="input" type="number" id="pdUs"></div>
+      </div>
+      <p class="xs muted mt-2">Leave a limit empty for unlimited.</p>
+    </div>
+    <div>
+      <h4 class="mb-2">Included modules</h4>
+      <div class="chip-select" id="pdMods"></div>
+    </div>
+    <label class="switch"><input type="checkbox" checked><span class="track"></span>Visible to new tenants during onboarding</label>
+  </div>
+  <div class="drawer-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" id="pdSave">Save plan</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var cycle = 'month';
+  var MODULES = ['Schemes & groups', 'Auctions', 'Collections', 'SMS alerts', 'Own member app (Android & iOS)', 'Online payments', 'Online bidding in app', 'Custom branding', 'Custom domain', 'Publish under own store accounts', 'API & webhooks', 'Dedicated manager'];
+  var HAS = { starter: [0, 1, 2, 3, 4, 5, 7], growth: [0, 1, 2, 3, 4, 5, 6, 7], enterprise: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] };
+
+  function draw() {
+    document.getElementById('plans').innerHTML = DB.plans.map(function (p) {
+      var tenants = DB.tenants.filter(function (t) { return t.plan === p.id; }).length;
+      var price = cycle === 'year' ? Math.round(p.price * 12 * .85) : p.price;
+      return '<div class="card plan' + (p.featured ? ' featured' : '') + '">' +
+        (p.featured ? '<span class="badge hl ribbon">Most popular</span>' : '') +
+        '<div class="row between"><h2>' + p.name + '</h2><div class="dropdown"><button class="icon-btn sm" data-menu="#pm' + p.id + '" aria-label="Plan actions">' + UI.icon('moreV') + '</button><div class="menu" id="pm' + p.id + '"><button data-edit="' + p.id + '">' + UI.icon('edit') + 'Edit plan</button><button>' + UI.icon('copy') + 'Duplicate</button><div class="sep"></div><button class="danger">' + UI.icon('trash') + 'Archive</button></div></div></div>' +
+        '<p class="muted small">' + p.tagline + '</p>' +
+        '<div class="price">' + UI.inr(price) + ' <small>/ ' + cycle + '</small></div>' +
+        '<div class="kv-cards" style="grid-template-columns:repeat(2,1fr)">' +
+          '<div class="kv-card"><span>Branches</span><b>' + p.limits.branches + '</b></div><div class="kv-card"><span>Groups</span><b>' + p.limits.groups + '</b></div>' +
+          '<div class="kv-card"><span>Subscribers</span><b>' + UI.num(p.limits.subscribers) + '</b></div><div class="kv-card"><span>Users</span><b>' + p.limits.users + '</b></div></div>' +
+        '<ul>' + p.features.map(function (f) { return '<li>' + UI.icon('check') + f + '</li>'; }).join('') + p.missing.map(function (f) { return '<li class="no">' + UI.icon('x') + f + '</li>'; }).join('') + '</ul>' +
+        '<div class="row between mt-2" style="margin-top:auto;padding-top:14px;border-top:1px solid var(--border)"><span class="small muted"><b style="color:var(--text)">' + tenants + '</b> tenants subscribed</span><button class="btn sm" data-edit="' + p.id + '">' + UI.icon('edit') + 'Edit</button></div>' +
+        '</div>';
+    }).join('');
+  }
+  draw();
+  document.getElementById('cycle').addEventListener('change', function (e) { cycle = e.detail; draw(); });
+
+  document.getElementById('compare').innerHTML = '<thead><tr><th>Module</th>' + DB.plans.map(function (p) { return '<th class="center">' + p.name + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    MODULES.map(function (m, i) {
+      return '<tr><td class="strong">' + m + '</td>' + DB.plans.map(function (p) {
+        return '<td class="center">' + (HAS[p.id].indexOf(i) >= 0 ? '<span style="color:var(--success)">' + UI.icon('checkCircle') + '</span>' : '<span class="muted">—</span>') + '</td>';
+      }).join('') + '</tr>';
+    }).join('') + '</tbody>';
+
+  document.getElementById('pdMods').innerHTML = MODULES.map(function (m) { return '<label><input type="checkbox" value="' + m + '"><span>' + m + '</span></label>'; }).join('');
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-edit]'); if (!b) return;
+    var p = DB.plan(b.getAttribute('data-edit'));
+    document.getElementById('pdTitle').textContent = 'Edit ' + p.name;
+    document.getElementById('pdName').value = p.name; document.getElementById('pdCode').value = p.id;
+    document.getElementById('pdPrice').value = p.price; document.getElementById('pdTag').value = p.tagline;
+    ['Br', 'Gr', 'Su', 'Us'].forEach(function (k, i) { var v = p.limits[['branches', 'groups', 'subscribers', 'users'][i]]; document.getElementById('pd' + k).value = typeof v === 'number' ? v : ''; });
+    document.querySelectorAll('#pdMods input').forEach(function (c, i) { c.checked = HAS[p.id].indexOf(i) >= 0; });
+    UI.open('#planDrawer');
+  });
+  document.querySelector('[data-open="#planDrawer"]').addEventListener('click', function () {
+    document.getElementById('pdTitle').textContent = 'New plan';
+    document.querySelectorAll('#planDrawer input:not([type=checkbox])').forEach(function (i) { i.value = ''; });
+  });
+  document.getElementById('pdSave').addEventListener('click', function () {
+    if (!UI.validate(document.getElementById('planDrawer'))) return;
+    UI.close(); UI.toast('Plan saved', 'success');
+  });
+});
+</script>
+</body>
+</html>

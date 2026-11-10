@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Branches · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="tenant" data-page="branches">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Branches</div>
+      <h1>Branches</h1>
+      <p>Offices that enrol subscribers, run auctions and collect dues. <b id="usage"></b></p>
+    </div>
+    <div class="actions"><button class="btn primary" data-open="#bDrawer" id="addBtn"><i data-i="plus"></i>Add branch</button></div>
+  </div>
+  <div class="card">
+    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search branches…"></div>
+      <select class="select" id="fStatus"><option value="">All statuses</option><option>Active</option><option>Inactive</option></select></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<div class="drawer" id="bDrawer" role="dialog" aria-label="Branch">
+  <div class="drawer-head"><div class="card-title-icon"><i data-i="pin"></i></div><h3 id="bTitle">Add branch</h3><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="drawer-body form-grid">
+    <div class="field span-2"><label>Branch name <span class="req">*</span></label><input class="input" id="bName" required><span class="err">Required</span></div>
+    <div class="field"><label>Branch code <span class="req">*</span></label><input class="input mono" id="bCode" required maxlength="4" style="text-transform:uppercase"><span class="err">Required</span></div>
+    <div class="field"><label>City <span class="req">*</span></label><input class="input" id="bCity" required><span class="err">Required</span></div>
+    <div class="field span-2"><label>Address</label><textarea class="textarea"></textarea></div>
+    <div class="field"><label>Branch manager</label><select class="select" id="bMgr"></select></div>
+    <div class="field"><label>Phone</label><input class="input" id="bPhone"></div>
+    <div class="field span-2"><label>Chit registration office</label><select class="select"><option>Registrar of Chits, Hyderabad</option><option>Asst. Registrar of Chits, Warangal</option><option>Asst. Registrar of Chits, Karimnagar</option></select></div>
+    <div class="field span-2"><label class="switch"><input type="checkbox" checked><span class="track"></span>Branch is active</label></div>
+  </div>
+  <div class="drawer-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" id="bSave">Save branch</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('usage').textContent = DB.branches.length + ' of 10 branches used on your plan.';
+  $('bMgr').innerHTML = '<option value="">Unassigned</option>' + DB.users.map(function (u) { return '<option>' + u.name + '</option>'; }).join('');
+  UI.table({
+    el: '#tbl', rows: DB.branches, search: '#q', searchKeys: ['name', 'code', 'city', 'manager'], filters: [{ el: '#fStatus', key: 'status' }],
+    onRow: function (b) { edit(b); },
+    columns: [
+      { key: 'name', label: 'Branch', sort: true, render: function (b) { return '<div class="ent"><span class="avatar sq sm">' + b.code + '</span><div class="ent-txt"><b>' + b.name + '</b><span>' + b.id + '</span></div></div>'; } },
+      { key: 'city', label: 'City', sort: true },
+      { key: 'manager', label: 'Manager', render: function (b) { return b.manager + '<div class="xs muted">' + b.phone + '</div>'; } },
+      { key: 'groups', label: 'Groups', num: true, sort: true },
+      { key: 'subscribers', label: 'Subscribers', num: true, sort: true, render: function (b) { return UI.num(b.subscribers); } },
+      { key: 'status', label: 'Status', render: function (b) { return UI.badge(b.status); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function () { return '<button class="icon-btn sm" aria-label="Edit">' + UI.icon('edit') + '</button>'; } }
+    ]
+  });
+  function edit(b) {
+    $('bTitle').textContent = 'Edit ' + b.name; $('bName').value = b.name; $('bCode').value = b.code; $('bCity').value = b.city; $('bMgr').value = b.manager; $('bPhone').value = b.phone;
+    UI.open('#bDrawer');
+  }
+  $('addBtn').addEventListener('click', function () { $('bTitle').textContent = 'Add branch'; ['bName', 'bCode', 'bCity', 'bPhone'].forEach(function (i) { $(i).value = ''; }); $('bMgr').value = ''; });
+  $('bSave').addEventListener('click', function () { if (!UI.validate($('bDrawer'))) return; UI.close(); UI.toast('Branch saved', 'success'); });
+});
+</script>
+</body>
+</html>

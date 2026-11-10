@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chit schemes · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="tenant" data-page="schemes">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Chit schemes</div>
+      <h1>Chit schemes</h1>
+      <p>Templates that define chit value, duration, bidding rules and fees. Groups are created from a scheme.</p>
+    </div>
+    <div class="actions">
+      <a class="btn primary" href="scheme-new.html"><i data-i="plus"></i>Create scheme</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search schemes…"></div>
+      <select class="select" id="fType"><option value="">All auction types</option><option>Monthly</option><option>Bi-Monthly</option><option>Weekly</option><option>Daily</option></select>
+      <select class="select" id="fStatus"><option value="">All statuses</option><option>Active</option><option>Draft</option><option>Inactive</option></select>
+      <div class="segmented ml-auto" data-seg id="view" aria-label="View">
+        <button class="active" data-v="cards" title="Card view"><i data-i="grid"></i></button>
+        <button data-v="table" title="Table view"><i data-i="menu"></i></button>
+      </div>
+    </div>
+    <div class="card-body" id="cardsView"><div class="grid g-3" id="cards"></div></div>
+    <div id="tableView" class="hidden"></div>
+  </div>
+</main>
+
+<!-- Scheme detail drawer -->
+<div class="drawer wide" id="schemeDrawer" role="dialog" aria-label="Scheme details">
+  <div class="drawer-head">
+    <span class="avatar sq" id="sdIcon"></span>
+    <div style="flex:1;min-width:0"><h3 id="sdName"></h3><div class="xs muted" id="sdMeta"></div></div>
+    <button class="icon-btn" data-close aria-label="Close"><i data-i="x"></i></button>
+  </div>
+  <div class="drawer-body stack-lg">
+    <div class="calc-strip" id="sdCalc"></div>
+    <div><h4 class="mb-2">Scheme rules</h4><dl class="kv" id="sdRules"></dl></div>
+    <div><h4 class="mb-2">Penalties</h4><div class="kv-cards" id="sdPen"></div></div>
+    <div><div class="row between mb-2"><h4>Groups using this scheme</h4><a class="small" id="sdGroupsLink" href="groups.html">View all</a></div><div class="list card" id="sdGroups" style="box-shadow:none"></div></div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn danger-ghost mr-auto" style="margin-right:auto"><i data-i="pause"></i>Deactivate</button>
+    <a class="btn" id="sdEdit"><i data-i="edit"></i>Edit</a>
+    <a class="btn primary" id="sdCreate"><i data-i="plus"></i>Create group</a>
+  </div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var S = DB.schemes, q = '', fType = '', fStatus = '';
+  function sub(s) { return Math.round(s.chitValue / s.installments); }
+  function visible() {
+    return S.filter(function (s) {
+      return (!q || (s.name + s.id).toLowerCase().indexOf(q) >= 0) && (!fType || s.auctionType === fType) && (!fStatus || s.status === fStatus);
+    });
+  }
+  function drawCards() {
+    var list = visible();
+    document.getElementById('cards').innerHTML = list.length ? list.map(function (s) {
+      return '<div class="card scheme-card" data-sid="' + s.id + '" tabindex="0">' +
+        '<div class="row between"><div class="ent"><span class="avatar sq" style="background:' + s.color + ';color:#fff">' + UI.icon('coins', 'sm') + '</span><div class="ent-txt"><b>' + s.name + '</b><span>' + s.id + ' · ' + s.auctionType + '</span></div></div>' + UI.badge(s.status) + '</div>' +
+        '<div><div class="xs muted">Chit value</div><div class="sc-value">' + UI.inr(s.chitValue) + '</div></div>' +
+        '<div class="sc-meta"><div>Instalments<b>' + s.installments + '</b></div><div>Subscription<b>' + UI.inr(sub(s)) + '</b></div><div>Bid range<b>' + s.minBid + '–' + s.maxBid + '%</b></div></div>' +
+        '<div class="row between small" style="border-top:1px solid var(--border);padding-top:12px"><span class="muted">' + s.groups + ' groups · ' + s.commission + '% commission</span><span class="row" style="color:var(--primary);font-weight:600">View ' + UI.icon('arrowR', 'sm') + '</span></div>' +
+        '</div>';
+    }).join('') : '<div class="empty span-all"><div class="e-ico">' + UI.icon('file') + '</div><b>No schemes found</b>Adjust filters or create a new scheme.</div>';
+  }
+  var tbl = UI.table({
+    el: '#tableView', rows: visible, pageSize: 10,
+    onRow: function (r) { openScheme(r.id); },
+    columns: [
+      { key: 'name', label: 'Scheme', sort: true, render: function (s) { return '<div class="ent"><span class="color-dot" style="background:' + s.color + '"></span><div class="ent-txt"><b>' + s.name + '</b><span>' + s.id + '</span></div></div>'; } },
+      { key: 'chitValue', label: 'Chit value', num: true, sort: true, render: function (s) { return '<b>' + UI.inr(s.chitValue) + '</b>'; } },
+      { key: 'installments', label: 'Instalments', num: true, sort: true },
+      { key: 'sub', label: 'Subscription', num: true, render: function (s) { return UI.inr(sub(s)); } },
+      { key: 'auctionType', label: 'Auction', sort: true },
+      { key: 'collection', label: 'Collection', render: function (s) { return '<span class="badge outline">' + (s.collection === 'BEFORE_AUCTION' ? 'Before auction' : 'After auction') + '</span>'; } },
+      { key: 'bid', label: 'Bid %', render: function (s) { return s.minBid + '–' + s.maxBid + '%'; } },
+      { key: 'groups', label: 'Groups', num: true, sort: true },
+      { key: 'status', label: 'Status', sort: true, render: function (s) { return UI.badge(s.status); } }
+    ]
+  });
+  function redraw() { drawCards(); tbl.render(); }
+  document.getElementById('q').addEventListener('input', function () { q = this.value.toLowerCase(); redraw(); });
+  document.getElementById('fType').addEventListener('change', function () { fType = this.value; redraw(); });
+  document.getElementById('fStatus').addEventListener('change', function () { fStatus = this.value; redraw(); });
+  document.getElementById('view').addEventListener('change', function (e) {
+    document.getElementById('cardsView').classList.toggle('hidden', e.detail !== 'cards');
+    document.getElementById('tableView').classList.toggle('hidden', e.detail !== 'table');
+  });
+  document.getElementById('cards').addEventListener('click', function (e) { var c = e.target.closest('[data-sid]'); if (c) openScheme(c.getAttribute('data-sid')); });
+  document.getElementById('cards').addEventListener('keydown', function (e) { var c = e.target.closest('[data-sid]'); if (c && e.key === 'Enter') openScheme(c.getAttribute('data-sid')); });
+  drawCards();
+
+  function openScheme(id) {
+    var s = DB.scheme(id), $ = function (x) { return document.getElementById(x); };
+    $('sdIcon').innerHTML = UI.icon('coins'); $('sdIcon').style.cssText = 'background:' + s.color + ';color:#fff';
+    $('sdName').textContent = s.name;
+    $('sdMeta').innerHTML = s.id + ' · Created ' + UI.date(s.created) + ' · ' + UI.badge(s.status);
+    $('sdCalc').innerHTML = [['Chit value', UI.inr(s.chitValue)], ['Subscription', UI.inr(sub(s)) + '<span class="xs muted"> /' + ({ 'Monthly': 'month', 'Bi-Monthly': 'instalment', 'Weekly': 'week', 'Daily': 'day' }[s.auctionType]) + '</span>'], ['Instalments', s.installments], ['Commission', UI.inr(s.chitValue * s.commission / 100)]]
+      .map(function (c) { return '<div><span>' + c[0] + '</span><b>' + c[1] + '</b></div>'; }).join('');
+    $('sdRules').innerHTML = [['Auction type', s.auctionType], ['Collection', s.collection === 'BEFORE_AUCTION' ? 'Before auction' : 'After auction'], ['Bid range', s.minBid + '% – ' + s.maxBid + '% (' + UI.inr(s.chitValue * s.minBid / 100) + ' – ' + UI.inr(s.chitValue * s.maxBid / 100) + ')'], ['Company commission', s.commission + '%'], ['Company ticket no.', s.companyTicket], ['Enrolment fee', UI.inr(s.enrollmentFee)], ['Min. members for CC', s.minMembersCC]]
+      .map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
+    $('sdPen').innerHTML = [['Non-prized (NPS)', s.penaltyNPS], ['Prized (PS)', s.penaltyPS], ['SF', s.penaltySF]].map(function (p) { return '<div class="kv-card"><span>' + p[0] + '</span><b>' + p[1] + '% <span class="xs muted" style="font-weight:400">p.m.</span></b></div>'; }).join('');
+    var gs = DB.groups.filter(function (g) { return g.scheme === s.id; });
+    $('sdGroups').innerHTML = gs.length ? gs.map(function (g) {
+      return '<a class="list-item" href="group-view.html?id=' + g.id + '" style="color:inherit;text-decoration:none"><b class="mono" style="flex:1">' + g.name + '</b><span class="small muted">' + g.enrolled + '/' + g.tickets + '</span>' + UI.badge(g.status) + '</a>';
+    }).join('') : '<div class="empty" style="padding:24px">No groups yet</div>';
+    $('sdEdit').href = 'scheme-new.html?id=' + s.id;
+    $('sdCreate').href = 'group-new.html?scheme=' + s.id;
+    UI.open('#schemeDrawer');
+  }
+  if (UI.param('open')) openScheme(UI.param('open'));
+});
+</script>
+</body>
+</html>

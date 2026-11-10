@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subscription · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="tenant" data-page="subscription">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Subscription</div>
+      <h1>Subscription</h1>
+      <p>Your ChitSphere plan, usage and invoices.</p>
+    </div>
+  </div>
+
+  <div class="grid g-main-side">
+    <div class="card">
+      <div class="card-body row wrap" style="gap:20px;align-items:flex-start">
+        <div class="card-title-icon" style="width:48px;height:48px"><i data-i="layers" class="lg"></i></div>
+        <div style="flex:1;min-width:220px">
+          <div class="row"><h2>Growth plan</h2><span class="badge success dot">Active</span></div>
+          <p class="muted mt-1">₹39,999 / month · billed monthly via NACH · renews on <b style="color:var(--text)">14 Jan 2027</b></p>
+          <div class="row wrap mt-4"><button class="btn primary" data-open="#mUpgrade"><i data-i="zap"></i>Upgrade to Enterprise</button><button class="btn">Switch to yearly · save 15%</button></div>
+        </div>
+      </div>
+      <div class="card-body grid g-2" style="border-top:1px solid var(--border)">
+        <div class="meter"><div class="meter-row"><span>Chit groups</span><b>84 / 120</b></div><div class="meter-bar"><div class="meter-fill" style="width:70%"></div></div></div>
+        <div class="meter"><div class="meter-row"><span>Branches</span><b>7 / 10</b></div><div class="meter-bar"><div class="meter-fill" style="width:70%"></div></div></div>
+        <div class="meter"><div class="meter-row"><span>Subscribers</span><b>4,210 / 6,000</b></div><div class="meter-bar"><div class="meter-fill" style="width:70%"></div></div></div>
+        <div class="meter"><div class="meter-row"><span>Staff users</span><b>31 / 40</b></div><div class="meter-bar"><div class="meter-fill warn" style="width:78%"></div></div></div>
+        <div class="meter"><div class="meter-row"><span>Document storage</span><b>38 / 100 GB</b></div><div class="meter-bar"><div class="meter-fill" style="width:38%"></div></div></div>
+        <div class="meter"><div class="meter-row"><span>SMS credits (Nov)</span><b>8,420 / 10,000</b></div><div class="meter-bar"><div class="meter-fill warn" style="width:84%"></div></div></div>
+      </div>
+    </div>
+    <div class="stack-lg">
+      <div class="card">
+        <div class="card-head"><h3>Payment method</h3><div class="tools"><button class="btn sm ghost">Change</button></div></div>
+        <div class="card-body ent"><span class="card-title-icon"><i data-i="bank"></i></span><div class="ent-txt"><b>NACH mandate · HDFC Bank</b><span>A/c ••••4421 · up to ₹1,50,000</span></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Billing details</h3><div class="tools"><button class="btn sm ghost">Edit</button></div></div>
+        <div class="card-body"><dl class="kv small"><dt>Bill to</dt><dd>Sri Venkata Chits Pvt. Ltd.</dd><dt>GSTIN</dt><dd class="mono">36AAJCS1001K1Z5</dd><dt>Email</dt><dd>accounts@svchits.in</dd></dl></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-6"><div class="card-head"><h3>Invoices</h3></div><div id="inv"></div></div>
+</main>
+
+<div class="modal lg" id="mUpgrade" role="dialog" aria-label="Upgrade plan">
+  <div class="modal-head"><div><h3>Change plan</h3><p>Upgrades apply immediately and are prorated for the current cycle.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body"><div class="plans" id="plans"></div></div>
+  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" onclick="UI.close();UI.toast('Upgrade request sent to ChitSphere','success')">Confirm upgrade</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var rows = ['2026-10-14', '2026-09-14', '2026-08-14', '2026-07-14', '2026-06-14'].map(function (d, i) { return { no: 'INV-2026-' + (1138 - i * 31), date: d, amount: 39999, status: 'Paid' }; });
+  UI.table({
+    el: '#inv', rows: rows, pageSize: 5,
+    columns: [
+      { key: 'no', label: 'Invoice', render: function (r) { return '<b class="mono">' + r.no + '</b>'; } },
+      { key: 'date', label: 'Date', render: function (r) { return UI.date(r.date); } },
+      { key: 'p', label: 'Period', render: function (r) { var d = new Date(r.date); return d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }); } },
+      { key: 'amount', label: 'Amount', num: true, render: function (r) { return UI.inr(r.amount); } },
+      { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function () { return '<button class="btn sm ghost">' + UI.icon('download') + 'PDF</button>'; } }
+    ]
+  });
+  document.getElementById('plans').innerHTML = DB.plans.map(function (p) {
+    var cur = p.id === 'growth';
+    return '<div class="card plan' + (p.id === 'enterprise' ? ' featured' : '') + '" style="box-shadow:none">' +
+      '<div class="row between"><h3>' + p.name + '</h3>' + (cur ? '<span class="badge outline">Current</span>' : '') + '</div>' +
+      '<div class="price">' + UI.inr(p.price) + ' <small>/ month</small></div>' +
+      '<ul>' + p.features.slice(0, 5).map(function (f) { return '<li>' + UI.icon('check') + f + '</li>'; }).join('') + '</ul>' +
+      '<button class="btn ' + (p.id === 'enterprise' ? 'primary' : '') + ' block" ' + (cur ? 'disabled' : '') + '>' + (cur ? 'Current plan' : p.price > 39999 ? 'Upgrade' : 'Downgrade') + '</button></div>';
+  }).join('');
+});
+</script>
+</body>
+</html>

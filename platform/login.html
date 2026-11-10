@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Staff sign in · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<!-- Served at https://admin.chitsphere.in — for ChitSphere employees only. -->
+<body class="simple">
+  <div class="row" style="justify-content:space-between;padding:16px 20px">
+    <a class="row small muted" href="../index.html" style="gap:6px"><i data-i="arrowL" class="sm"></i>chitsphere.in</a>
+    <button class="icon-btn" data-theme-toggle aria-label="Toggle dark mode"></button>
+  </div>
+  <main class="simple-main" style="align-items:flex-start;padding-top:24px">
+    <div class="simple-card">
+      <div class="org-brand">
+        <div class="logo" style="background:var(--primary);color:var(--on-primary)">CS</div>
+        <div><h1 style="font-size:22px">Platform console</h1><p class="muted mt-1">ChitSphere staff only · <span class="mono">admin.chitsphere.in</span></p></div>
+      </div>
+      <div class="card"><div class="card-body">
+        <form id="f" class="stack" novalidate>
+          <div id="s1" class="stack">
+            <div class="field"><label>Work email</label><div class="input-icon"><i data-i="mail"></i><input class="input" type="email" required value="arjun@chitsphere.in"></div><span class="err">Required</span></div>
+            <div class="field"><label>Password</label><div class="input-icon"><i data-i="lock"></i><input class="input" type="password" required value="prototype"></div><span class="err">Required</span></div>
+          </div>
+          <div id="s2" class="field hidden"><label>Authenticator code</label><input class="input mono" id="code" maxlength="6" inputmode="numeric" placeholder="6-digit code" style="letter-spacing:.3em;text-align:center;font-size:18px;height:46px"><span class="hint">Two-factor authentication is required for platform staff.</span></div>
+          <button class="btn primary lg block" type="submit" id="go">Continue</button>
+        </form>
+      </div></div>
+      <div class="alert info mt-4"><i data-i="info"></i><div>Looking for your company’s console? <a href="../login.html">Organisation sign-in</a></div></div>
+    </div>
+  </main>
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script>
+  document.addEventListener('app:ready', function () {
+    var step = 1;
+    document.getElementById('f').addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!UI.validate(this)) return;
+      if (step === 1) { step = 2; document.getElementById('s2').classList.remove('hidden'); document.getElementById('code').focus(); document.getElementById('go').textContent = 'Verify & sign in'; return; }
+      location.href = 'dashboard.html';
+    });
+  });
+  </script>
+</body>
+</html>

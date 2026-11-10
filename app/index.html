@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Member app · ChitSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<!--
+  Member (subscriber) mobile app — clickable prototype of the Android/iOS app.
+  Every organisation gets its OWN app, published to Play Store / App Store under its
+  own name, icon and package ID (built from one shared codebase). The organisation is
+  baked into the build, so members never pick an organisation.
+  ?org=<slug> chooses which organisation's build to preview (default svchits).
+  ?screen=<name> opens a screen directly.
+-->
+<body class="mobile-proto">
+  <div class="proto">
+    <aside class="proto-side">
+      <a class="row small muted" href="../index.html" style="gap:6px"><i data-i="arrowL" class="sm"></i>chitsphere.in</a>
+      <h1 class="mt-4" id="buildTitle">Member mobile app</h1>
+      <p id="buildMeta">Clickable prototype of the organisation’s own Android / iOS app.</p>
+      <div class="screen-list" id="screenList"></div>
+    </aside>
+
+    <div class="device" id="device">
+      <div class="notch"></div>
+      <div class="statusbar" id="statusbar"><span>9:41</span><span class="sys">5G <i></i></span></div>
+      <div class="view" id="view"></div>
+      <nav class="tabbar" id="tabbar"></nav>
+    </div>
+
+    <aside class="proto-side">
+      <h1>Other organisations’ apps</h1>
+      <p>Each is a separate app in the stores with its own name, icon and package ID. Same codebase, different build.</p>
+      <div class="stack mt-4" id="orgSwitch"></div>
+      <div class="row mt-6"><button class="btn" data-theme-toggle aria-label="Toggle dark mode"></button><span class="small muted">Dark mode</span></div>
+    </aside>
+  </div>
+
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script>
+  document.addEventListener('app:ready', function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var I = UI.icon, M = DB.member;
+    var HL = {}; Theme.accents.forEach(function (a) { HL[a.light] = a.hl; });
+    /* The organisation is fixed per build — never chosen by the member */
+    var org = DB.tenantBySlug(UI.param('org')) || DB.tenantBySlug('svchits');
+    var build = DB.app(org.id) || {};
+    var unavailable = org.status === 'Suspended' || org.status === 'Pending KYC';
+    var signedIn = false;
+    var hist = [];
+    var payItems = null, bidPct = 0;
+    document.title = build.appName + ' · member app prototype';
+    $('buildTitle').textContent = build.appName;
+    $('buildMeta').innerHTML = 'Own app of <b>' + org.short + '</b><br><span class="mono xs">' + build.pkg + ' · v' + build.version + '</span><br>Android: ' + UI.badge(build.android) + ' &nbsp;iOS: ' + UI.badge(build.ios);
+    function brand() {
+      var d = $('device');
+      d.style.setProperty('--org', org ? org.color : '#072E77');
+      d.style.setProperty('--org-hl', org ? (HL[org.color] || '#FF4A00') : '#FF4A00');
+    }
+    function grp(c) { return DB.group(c.group); }
+
+    /* ------------ Screens ------------ */
+    var S = {
+      splash: { title: 'Welcome', tabs: false, status: 'brand', html: function () {
+        return '<div style="min-height:100%;display:flex;flex-direction:column;background:var(--org);color:#fff;padding:0 28px 32px">' +
+          '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px">' +
+          '<div style="width:96px;height:96px;border-radius:28px;background:#fff;color:var(--org);display:grid;place-items:center;font-weight:800;font-size:32px;box-shadow:0 14px 34px rgba(0,0,0,.25)">' + UI.initials(org.short) + '</div>' +
+          '<h2 style="color:#fff;font-size:26px">' + build.appName + '</h2><p style="opacity:.8;font-size:14px">Pay instalments, track dividends and bid in auctions — ' + org.city + '</p></div>' +
+          (unavailable
+            ? '<div class="m-card" style="color:var(--text)"><b>App temporarily unavailable</b><p class="xs muted mt-1">Please contact your ' + org.short + ' branch.</p></div>'
+            : '<button class="m-btn" data-go="login" style="background:#fff;color:var(--org)">Get started</button>') +
+          '<p style="text-align:center;font-size:11px;opacity:.6;margin-top:14px">Powered by ChitSphere</p></div>';
+      } },
+      login: { title: 'Sign in', tabs: false, html: function () {
+        return '<div class="hero-org"><div class="logo">' + UI.initials(org.short) + '</div><h2>' + org.short + '</h2><p>' + org.city + ' · Member sign-in</p></div>' +
+          '<div class="pad stack"><label class="small strong">Registered mobile number</label>' +
+          '<div class="row"><span class="big-input" style="width:auto;display:grid;place-items:center;padding:0 12px">+91</span><input class="big-input" id="mob" inputmode="tel" maxlength="10" value="9000010003"></div>' +
+          '<button class="m-btn mt-2" data-go="otp">Get OTP</button>' +
+          '<p class="xs muted center">Use the mobile number registered with ' + org.short + '. Not a member yet? Visit any branch to enrol.</p></div>';
+      } },
+      otp: { title: 'Verify OTP', tabs: false, back: true, html: function () {
+        return '<div class="pad stack" style="padding-top:24px"><h2>Enter OTP</h2><p class="muted small">Sent to +91 90000 10003 by ' + org.short + '</p>' +
+          '<div class="m-otp mt-4" id="otpBox">' + '<input maxlength="1" inputmode="numeric">'.repeat(6) + '</div>' +
+          '<p class="xs muted">Prototype: type any digits, or just tap Verify.</p>' +
+          '<button class="m-btn mt-4" data-do="verify">Verify & continue</button><button class="btn ghost sm" style="align-self:center">Resend OTP in 0:28</button></div>';
+      } },
+      home: { title: 'Home', tab: 'home', status: 'brand', html: function () {
+        var totalDue = M.chits.reduce(function (s, c) { return s + c.due; }, 0);
+        return '<div class="m-head"><div class="org"><span class="lg">' + UI.initials(org.short) + '</span>' + org.short +
+          '<button class="hbtn" data-go="notifications" aria-label="Notifications">' + I('bell') + '<span class="dot"></span></button></div>' +
+          '<h2>Hi, ' + M.name.split(' ')[0] + '</h2><p>Member ID ' + M.id + '</p></div>' +
+          '<div class="m-card lift due-card"><div class="row between"><span class="small muted">Total due</span><span class="pill">Next: ' + UI.date(M.chits[1].dueDate) + '</span></div>' +
+          '<div class="amt mt-1">' + UI.inr(totalDue) + '</div><div class="xs muted">across ' + M.chits.length + ' chits · after dividend</div>' +
+          '<button class="m-btn hl mt-4" data-go="pay">' + I('wallet') + 'Pay now</button></div>' +
+          '<div class="quick"><button data-go="auction"><span>' + I('gavel') + '</span>Auctions</button><button data-go="passbook"><span>' + I('receipt') + '</span>Passbook</button><button data-go="chits"><span>' + I('grid') + '</span>My chits</button><button data-go="support"><span>' + I('help') + '</span>Support</button></div>' +
+          '<div class="m-card" style="margin:0 16px"><div class="row"><span class="pill live">Live</span><span class="small muted ml-auto">' + grp(M.chits[1]).name + '</span></div>' +
+          '<div class="row between mt-2"><div><b>Auction #10 is open</b><div class="xs muted">Closes in 42 min · you are eligible to bid</div></div><button class="btn sm" data-go="auction" style="border-radius:10px">Bid</button></div></div>' +
+          '<div class="sec-title"><h4>My chits</h4><a data-go="chits">See all</a></div>' + M.chits.map(chitCard).join('');
+      } },
+      chits: { title: 'My chits', tab: 'chits', html: function () {
+        return bar('My chits', false) + '<div style="padding-top:16px">' + M.chits.map(chitCard).join('') +
+          '<div class="m-card" style="margin:0 16px;text-align:center"><b>Want to join a new chit?</b><p class="xs muted mt-1">See open groups at ' + org.short + '</p><button class="m-btn ghost mt-4">' + I('search') + 'Browse open groups</button></div></div>';
+      } },
+      chit: { title: 'Chit details', back: true, html: function (p) {
+        var c = M.chits[p || 0], g = grp(c), s = DB.scheme(g.scheme);
+        return bar(g.name, true) + '<div class="pad stack">' +
+          '<div class="m-card"><div class="row between"><span class="small muted">Chit value</span>' + (c.status === 'Prized' ? '<span class="badge primary">Prized</span>' : '<span class="badge outline">Non-prized</span>') + '</div>' +
+          '<div class="due-card"><div class="amt">' + UI.inr(g.chitValue) + '</div></div><div class="xs muted">' + s.name + ' · Ticket #' + c.ticket + '</div>' +
+          '<div class="chit" style="margin:12px 0 0;cursor:default"><div class="prog"><i style="width:' + (c.paid / c.total * 100) + '%"></i></div><div class="meta"><span>Paid <b>' + c.paid + '</b> of ' + c.total + '</span><span>' + (c.total - c.paid) + ' left</span></div></div></div>' +
+          (c.status === 'Prized' ? '<div class="alert success">' + I('checkCircle') + '<div><b>Prize amount ' + UI.inr(c.prize) + '</b>Paid to your bank on 18 Oct 2026. Keep paying instalments until the group ends.</div></div>' : '') +
+          '<div class="m-card"><div class="row-item"><span class="ri-ic">' + I('calendar') + '</span><div class="grow"><b>Next instalment</b><span>Due ' + UI.date(c.dueDate) + '</span></div><b>' + UI.inr(c.due) + '</b></div>' +
+          '<div class="row-item"><span class="ri-ic">' + I('coins') + '</span><div class="grow"><b>Last dividend</b><span>Auction #' + g.auctionNo + '</span></div><b style="color:var(--success)">' + UI.inr(c.dividendLast) + '</b></div>' +
+          '<div class="row-item"><span class="ri-ic">' + I('gavel') + '</span><div class="grow"><b>Next auction</b><span>' + g.auctionDay + '</span></div><span class="small muted">' + UI.date(c.nextAuction) + '</span></div>' +
+          '<div class="row-item"><span class="ri-ic">' + I('pin') + '</span><div class="grow"><b>Branch</b><span>' + DB.branch(g.branch).name + '</span></div></div></div>' +
+          '<button class="m-btn" data-go="pay">' + I('wallet') + 'Pay ' + UI.inr(c.due) + '</button>' +
+          (c.status !== 'Prized' ? '<button class="m-btn ghost" data-go="auction">' + I('gavel') + 'Go to auction</button>' : '') + '</div>';
+      } },
+      pay: { title: 'Pay dues', tab: 'pay', html: function () {
+        if (!payItems) payItems = M.chits.map(function () { return true; });
+        var tot = M.chits.reduce(function (s, c, i) { return s + (payItems[i] ? c.due : 0); }, 0);
+        return bar('Pay dues', false) + '<div class="pad stack">' +
+          '<div class="m-card">' + M.chits.map(function (c, i) {
+            return '<label class="row-item" style="cursor:pointer"><input type="checkbox" data-pi="' + i + '"' + (payItems[i] ? ' checked' : '') + ' style="width:20px;height:20px;accent-color:var(--org-ui)"><div class="grow"><b>' + grp(c).name + ' · #' + c.ticket + '</b><span>Instalment ' + (c.paid + 1) + ' · due ' + UI.date(c.dueDate) + '</span></div><b>' + UI.inr(c.due) + '</b></label>';
+          }).join('') + '</div>' +
+          '<div class="m-card"><div class="small strong mb-2">Pay using</div><div class="upi">' +
+          [['GPay', '#1a73e8'], ['PhonePe', '#5f259f'], ['Paytm', '#00b9f1'], ['Any UPI', '#0F172A']].map(function (u, i) { return '<label><input type="radio" name="upi"' + (i === 0 ? ' checked' : '') + '><span><i style="background:' + u[1] + '">' + u[0][0] + '</i>' + u[0] + '</span></label>'; }).join('') +
+          '</div><div class="row-item mt-2" style="border-top:1px solid var(--border)"><span class="ri-ic">' + I('card') + '</span><div class="grow"><b>Debit card / Net banking</b></div>' + I('chevR', 'sm') + '</div></div>' +
+          '<div class="row between"><span class="muted">Total</span><b style="font-size:22px">' + UI.inr(tot) + '</b></div>' +
+          '<button class="m-btn hl" data-do="paynow"' + (tot ? '' : ' disabled') + '>' + I('lock') + 'Pay ' + UI.inr(tot) + ' securely</button>' +
+          '<p class="xs muted center">Payment goes directly to ' + org.short + '’s collection account.</p></div>';
+      } },
+      paid: { title: 'Payment success', tabs: false, html: function () {
+        var tot = M.chits.reduce(function (s, c, i) { return s + (payItems && payItems[i] ? c.due : 0); }, 0);
+        return '<div class="pad center"><div class="success-ic">' + I('check') + '</div><h2>Payment successful</h2><p class="muted mt-1">' + UI.inr(tot) + ' paid to ' + org.short + '</p>' +
+          '<div class="m-card mt-6" style="text-align:left"><div class="row-item"><div class="grow"><span>Receipt no.</span><b class="mono">RC-2026-00902</b></div></div><div class="row-item"><div class="grow"><span>UPI ref.</span><b class="mono">631498220145</b></div></div><div class="row-item"><div class="grow"><span>Date</span><b>10 Nov 2026, 9:41 AM</b></div></div></div>' +
+          '<div class="stack mt-6"><button class="m-btn ghost">' + I('download') + 'Download receipt</button><button class="m-btn" data-go="home">Back to home</button></div></div>';
+      } },
+      auction: { title: 'Live auction', back: true, html: function () {
+        var c = M.chits[0], g = grp(c), s = DB.scheme(g.scheme);
+        var bids = [27.5, 26, 25, 22.5];
+        var top = bids[0];
+        if (!bidPct) bidPct = top + 0.5;
+        var amt = g.chitValue * bidPct / 100;
+        return bar('Auction #' + (g.auctionNo + 1) + ' · ' + g.name, true) + '<div class="pad stack">' +
+          '<div class="m-card center"><span class="pill live">Live now</span><div class="timer mt-2" id="timer">41:58</div><div class="xs muted">until auction closes</div></div>' +
+          '<div class="grid g-2" style="gap:10px"><div class="m-card"><div class="xs muted">Highest bid</div><b style="font-size:20px">' + top + '%</b><div class="xs muted">' + UI.inr(g.chitValue * top / 100) + ' discount</div></div>' +
+          '<div class="m-card"><div class="xs muted">Bid range</div><b style="font-size:20px">' + s.minBid + '–' + s.maxBid + '%</b><div class="xs muted">of ' + UI.inrShort(g.chitValue) + '</div></div></div>' +
+          '<div class="m-card"><div class="small strong">Your bid (discount %)</div>' +
+          '<div class="row mt-2" style="justify-content:space-between"><button class="bid-chip" data-bid="-0.5">−</button><b style="font-size:30px" id="bidV">' + bidPct.toFixed(1) + '%</b><button class="bid-chip" data-bid="0.5">+</button></div>' +
+          '<div class="row-item"><div class="grow"><span>You would receive</span><b>' + UI.inr(g.chitValue - amt) + '</b></div><div class="grow right"><span>Discount</span><b>' + UI.inr(amt) + '</b></div></div>' +
+          '<button class="m-btn hl" data-do="bid"' + (bidPct > s.maxBid ? ' disabled' : '') + '>' + I('gavel') + 'Place bid</button>' +
+          (bidPct > s.maxBid ? '<p class="xs center mt-2" style="color:var(--danger)">Maximum allowed bid is ' + s.maxBid + '%</p>' : '') + '</div>' +
+          '<div class="m-card"><div class="small strong mb-2">Bids so far</div>' + bids.map(function (b, i) { return '<div class="row-item" style="padding:10px 0"><span class="avatar sm">#' + [14, 31, 3, 22][i] + '</span><div class="grow"><b>Ticket #' + [14, 31, 3, 22][i] + (i === 2 ? ' (you)' : '') + '</b><span>' + ['2 min', '6 min', '9 min', '15 min'][i] + ' ago</span></div><b>' + b + '%</b></div>'; }).join('') + '</div></div>';
+      } },
+      passbook: { title: 'Passbook', tab: 'passbook', html: function () {
+        return bar('Passbook', false) + '<div class="pad stack"><div class="m-card"><div class="row between"><div><div class="xs muted">Paid this year</div><b style="font-size:22px">' + UI.inr(178420) + '</b></div><div class="right"><div class="xs muted">Dividends earned</div><b style="font-size:18px;color:var(--success)">' + UI.inr(24860) + '</b></div></div></div>' +
+          '<div class="m-card">' + M.receipts.map(function (r) {
+            return '<div class="row-item"><span class="ri-ic">' + I('receipt') + '</span><div class="grow"><b>' + r.group + '</b><span>' + UI.date(r.date) + ' · ' + r.mode + '</span></div><div class="right"><b>' + UI.inr(r.amount) + '</b><div class="xs muted mono">' + r.no + '</div></div></div>';
+          }).join('') + '</div><button class="m-btn ghost">' + I('download') + 'Download statement (PDF)</button></div>';
+      } },
+      profile: { title: 'Profile', tab: 'profile', html: function () {
+        return bar('Profile', false) + '<div class="pad stack"><div class="m-card row"><span class="avatar lg">' + UI.initials(M.name) + '</span><div><b style="font-size:16px">' + M.name + '</b><div class="xs muted">' + M.mobile + ' · ' + M.id + '</div><span class="badge success dot mt-1">KYC ' + M.kyc + '</span></div></div>' +
+          '<div class="m-card">' + [['user', 'Personal details', 'Address, PAN, Aadhaar'], ['users', 'Nominee', 'Lakshmi M (Mother)'], ['bank', 'Bank account', 'For prize & dividend payouts · SBI ••2201'], ['pin', 'Home branch', M.branch], ['bell', 'Notifications', 'SMS, WhatsApp, push']].map(function (r) {
+            return '<div class="row-item" style="cursor:pointer"><span class="ri-ic">' + I(r[0]) + '</span><div class="grow"><b>' + r[1] + '</b><span>' + r[2] + '</span></div>' + I('chevR', 'sm') + '</div>';
+          }).join('') + '</div>' +
+          '<div class="m-card"><div class="row-item"><span class="ri-ic">' + I('moon') + '</span><div class="grow"><b>Dark mode</b></div><label class="switch"><input type="checkbox" data-do="dark"' + (Theme.get().resolved === 'dark' ? ' checked' : '') + '><span class="track"></span></label></div>' +
+          '<div class="row-item"><span class="ri-ic">' + I('phone') + '</span><div class="grow"><b>Contact ' + org.short + '</b><span>' + DB.branches[0].phone + '</span></div></div>' +
+          '<div class="row-item"><span class="ri-ic">' + I('info') + '</span><div class="grow"><b>About this app</b><span>' + build.appName + ' v' + build.version + '</span></div></div></div>' +
+          '<button class="m-btn ghost" data-do="logout" style="color:var(--danger)">' + I('logout') + 'Sign out</button><p class="xs muted center">' + build.appName + ' · Powered by ChitSphere</p></div>';
+      } },
+      notifications: { title: 'Notifications', back: true, html: function () {
+        return bar('Notifications', true) + '<div class="pad"><div class="m-card">' + [['gavel', 'Auction #10 is live', 'SV-2L-C25 · bid before 10:30 AM', 'Now'], ['coins', 'Dividend credited', '₹1,240 adjusted in your December instalment', '2 d'], ['calendar', 'Instalment due in 5 days', 'SV-2L-C25 · ₹8,650', '3 d'], ['checkCircle', 'Payment received', 'RC-2026-00841 · ₹8,760', '6 d']].map(function (n) {
+          return '<div class="row-item"><span class="ri-ic">' + I(n[0]) + '</span><div class="grow"><b>' + n[1] + '</b><span>' + n[2] + '</span></div><span class="xs muted">' + n[3] + '</span></div>';
+        }).join('') + '</div></div>';
+      } },
+      support: { title: 'Support', back: true, html: function () {
+        var b = DB.branches[1];
+        return bar('Help & support', true) + '<div class="pad stack"><div class="m-card"><div class="small muted">Your branch</div><b style="font-size:16px">' + b.name + '</b><div class="xs muted">Manager: ' + b.manager + '</div>' +
+          '<div class="grid g-2 mt-4" style="gap:8px"><button class="m-btn ghost">' + I('phone') + 'Call</button><button class="m-btn ghost">' + I('send') + 'WhatsApp</button></div></div>' +
+          '<div class="m-card"><div class="small strong mb-2">Raise a request</div><select class="select"><option>Payment not reflected</option><option>Update bank account</option><option>Prize amount query</option><option>Other</option></select><textarea class="textarea mt-2" placeholder="Describe the issue"></textarea><button class="m-btn mt-4" data-do="ticket">Submit</button></div></div>';
+      } }
+    };
+
+    function bar(t, back) { return '<div class="bar-title">' + (back ? '<button class="back" data-do="back" aria-label="Back">' + I('arrowL') + '</button>' : '<span style="width:8px"></span>') + '<h3>' + t + '</h3></div>'; }
+    function chitCard(c, i) {
+      var g = grp(c), s = DB.scheme(g.scheme);
+      return '<div class="m-card chit" data-go="chit" data-p="' + i + '"><div class="top"><span class="ic" style="background:' + s.color + '">' + I('coins', 'sm') + '</span><div style="flex:1;min-width:0"><b>' + g.name + '</b><div class="xs muted">' + UI.inr(g.chitValue) + ' · Ticket #' + c.ticket + '</div></div>' +
+        (c.status === 'Prized' ? '<span class="badge primary">Prized</span>' : '<span class="badge outline">Non-prized</span>') + '</div>' +
+        '<div class="prog"><i style="width:' + (c.paid / c.total * 100) + '%"></i></div><div class="meta"><span><b>' + c.paid + '</b>/' + c.total + ' paid</span><span>Next <b>' + UI.inr(c.due) + '</b> · ' + UI.date(c.dueDate) + '</span></div></div>';
+    }
+
+    /* ------------ Render & navigation ------------ */
+    var current = 'splash', param = null, timerInt;
+    function go(name, p, noHist) {
+      if (!noHist && current !== name) hist.push([current, param]);
+      current = name; param = p;
+      var sc = S[name];
+      brand();
+      $('view').innerHTML = sc.html(p);
+      $('view').scrollTop = 0;
+      $('statusbar').classList.toggle('on-brand', sc.status === 'brand');
+      var showTabs = signedIn && sc.tabs !== false;
+      $('tabbar').style.display = showTabs ? '' : 'none';
+      if (showTabs) $('tabbar').innerHTML = [['home', 'dashboard', 'Home'], ['chits', 'grid', 'My chits'], ['pay', 'wallet', 'Pay'], ['passbook', 'receipt', 'Passbook'], ['profile', 'user', 'Profile']].map(function (t) {
+        return '<button class="' + (t[0] === 'pay' ? 'pay ' : '') + ((sc.tab || '') === t[0] ? 'active' : '') + '" data-go="' + t[0] + '">' + (t[0] === 'pay' ? '<span>' + I(t[1]) + '</span>' : I(t[1])) + t[2] + '</button>';
+      }).join('');
+      document.querySelectorAll('#screenList button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-s') === name); });
+      clearInterval(timerInt);
+      if (name === 'auction') { var sec = 41 * 60 + 58; timerInt = setInterval(function () { sec--; var t = $('timer'); if (t) t.textContent = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }, 1000); }
+      if (name === 'otp') wireOtp();
+    }
+    function wireOtp() {
+      var boxes = $('otpBox').querySelectorAll('input'); boxes[0].focus();
+      boxes.forEach(function (b, i) { b.addEventListener('input', function () { b.value = b.value.replace(/\D/g, ''); if (b.value && boxes[i + 1]) boxes[i + 1].focus(); }); });
+    }
+
+    $('device').addEventListener('click', function (e) {
+      var g = e.target.closest('[data-go]');
+      if (g) { go(g.getAttribute('data-go'), g.getAttribute('data-p') ? +g.getAttribute('data-p') : null); return; }
+      var b = e.target.closest('[data-bid]');
+      if (b) { bidPct = Math.max(5, bidPct + +b.getAttribute('data-bid')); go('auction', null, true); return; }
+      var d = e.target.closest('[data-do]'); if (!d) return;
+      var act = d.getAttribute('data-do');
+      if (act === 'back') { var h = hist.pop(); go(h ? h[0] : 'home', h ? h[1] : null, true); }
+      if (act === 'verify') { signedIn = true; hist = []; go('home'); }
+      if (act === 'logout') { signedIn = false; hist = []; go('login'); }
+      if (act === 'paynow') { go('paid'); }
+      if (act === 'bid') { UI.toast('Bid of ' + bidPct.toFixed(1) + '% placed on ticket #3', 'success'); }
+      if (act === 'ticket') { UI.toast('Request sent to your branch', 'success'); }
+    });
+    $('device').addEventListener('change', function (e) {
+      if (e.target.matches('[data-pi]')) { payItems[+e.target.getAttribute('data-pi')] = e.target.checked; go('pay', null, true); }
+      if (e.target.matches('[data-do="dark"]')) Theme.set({ mode: e.target.checked ? 'dark' : 'light' });
+    });
+    /* side panels */
+    var LIST = [['splash', 'Splash / welcome'], ['login', 'Sign in'], ['otp', 'OTP'], ['home', 'Home'], ['chit', 'Chit details'], ['pay', 'Pay dues'], ['paid', 'Payment success'], ['auction', 'Live auction'], ['passbook', 'Passbook'], ['notifications', 'Notifications'], ['support', 'Support'], ['profile', 'Profile']];
+    $('screenList').innerHTML = LIST.map(function (l, i) { return '<button data-s="' + l[0] + '"><span class="mono xs muted">' + String(i + 1).padStart(2, '0') + '</span>' + l[1] + '</button>'; }).join('');
+    $('screenList').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-s]'); if (!b) return;
+      var s = b.getAttribute('data-s');
+      if (unavailable && s !== 'splash') { UI.toast(org.short + '’s app is unavailable while the organisation is ' + org.status.toLowerCase(), 'warning'); return; }
+      signedIn = ['splash', 'login', 'otp'].indexOf(s) < 0;
+      hist = []; go(s, s === 'chit' ? 0 : null, true);
+    });
+    /* Switching here loads a different build (separate store app), not an in-app switch */
+    $('orgSwitch').innerHTML = ['svchits', 'annapurna', 'nandini', 'prabhat', 'tirumala'].filter(function (sl) { return sl !== org.slug; }).map(function (sl) {
+      var t = DB.tenantBySlug(sl), a = DB.app(t.id);
+      return '<a class="list-item card" href="?org=' + sl + '" style="box-shadow:none;padding:10px 12px;color:inherit;text-decoration:none"><span class="avatar sq sm" style="background:' + t.color + ';color:#fff;border-radius:9px">' + UI.initials(t.short) + '</span><div style="flex:1;min-width:0"><b class="small">' + a.appName + '</b><div class="xs muted mono" style="overflow:hidden;text-overflow:ellipsis">' + a.pkg + '</div></div>' + I('external', 'sm') + '</a>';
+    }).join('');
+
+    var start = UI.param('screen');
+    if (start && S[start] && !unavailable) { signedIn = ['splash', 'login', 'otp'].indexOf(start) < 0; go(start, start === 'chit' ? 0 : null, true); }
+    else go('splash', null, true);
+  });
+  </script>
+</body>
+</html>

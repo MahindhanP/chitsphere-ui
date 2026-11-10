@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register your organisation · ChitSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="assets/js/theme.js"></script>
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+  <style>
+    .rstep { display: none; } .rstep.active { display: block; }
+    .reg-card { width: 100%; max-width: 820px; }
+  </style>
+</head>
+<body class="simple">
+  <header class="site-nav">
+    <a class="brand" href="index.html"><span class="sb-logo">CS</span>ChitSphere</a>
+    <div class="right">
+      <span class="small muted hide-sm">Already registered?</span><a class="btn ghost" href="login.html">Sign in</a>
+      <button class="icon-btn" data-theme-toggle aria-label="Toggle dark mode"></button>
+    </div>
+  </header>
+
+  <main class="simple-main">
+    <div class="reg-card">
+      <div id="formView">
+        <h1 style="font-size:26px">Register your organisation</h1>
+        <p class="muted mt-1">You’ll get an admin web console for your staff and a branded mobile app for your members. About 10 minutes.</p>
+
+        <div class="card mt-6"><div class="card-body" style="overflow-x:auto"><div class="stepper" id="stepper"></div></div></div>
+
+        <form id="f" novalidate class="mt-4">
+          <!-- 1 Organisation -->
+          <section class="card rstep" data-r="0">
+            <div class="form-section">
+              <div class="form-section-head"><h3><i data-i="building"></i>Organisation details</h3><p>As printed on your chit registration certificate.</p></div>
+              <div class="form-grid">
+                <div class="field span-2"><label>Legal name <span class="req">*</span></label><input class="input" name="name" id="orgName" required placeholder="e.g. Sri Venkata Chits Pvt. Ltd."><span class="err">Legal name is required</span></div>
+                <div class="field"><label>Company type <span class="req">*</span></label><select class="select" name="type" required><option value="">Select</option><option>Private Limited</option><option>Public Limited</option><option>Partnership firm</option><option>Proprietorship</option></select><span class="err">Select a type</span></div>
+                <div class="field"><label>Year chit business started</label><input class="input" type="number" min="1900" max="2026" placeholder="1998"></div>
+                <div class="field"><label>Number of branches <span class="req">*</span></label><select class="select" required><option value="">Select</option><option>1</option><option>2–5</option><option>6–10</option><option>11–25</option><option>More than 25</option></select><span class="err">Required</span></div>
+                <div class="field"><label>Active subscribers (approx.)</label><select class="select"><option>Under 500</option><option>500–2,000</option><option>2,000–10,000</option><option>Over 10,000</option></select></div>
+                <div class="field span-2"><label>Registered office address <span class="req">*</span></label><input class="input" name="addr" required><span class="err">Address is required</span></div>
+                <div class="field"><label>City <span class="req">*</span></label><input class="input" name="city" required><span class="err">Required</span></div>
+                <div class="field"><label>State <span class="req">*</span></label><select class="select" name="state" required><option value="">Select state</option><option>Andhra Pradesh</option><option>Telangana</option><option>Karnataka</option><option>Tamil Nadu</option><option>Kerala</option><option>Maharashtra</option><option>Other</option></select><span class="err">Required</span></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2 Documents -->
+          <section class="card rstep" data-r="1">
+            <div class="form-section">
+              <div class="form-section-head"><h3><i data-i="shieldCheck"></i>Registration & KYC</h3><p>We verify these before your organisation goes live. Your trial starts right away.</p></div>
+              <div class="form-grid">
+                <div class="field"><label>Chit registration no. <span class="req">*</span></label><input class="input mono" name="regNo" required placeholder="Registrar of Chits reg. no."><span class="err">Required</span></div>
+                <div class="field"><label>Registering authority <span class="req">*</span></label><select class="select" required><option value="">Select</option><option>Registrar of Chits — Telangana</option><option>Registrar of Chits — Andhra Pradesh</option><option>Registrar of Chits — Karnataka</option><option>Registrar of Chits — Tamil Nadu</option><option>Registrar of Chits — Kerala</option><option>Other state</option></select><span class="err">Required</span></div>
+                <div class="field"><label>PAN <span class="req">*</span></label><input class="input mono" name="pan" required maxlength="10" style="text-transform:uppercase" placeholder="AAAAA0000A"><span class="err">Required</span></div>
+                <div class="field"><label>GSTIN</label><input class="input mono" maxlength="15" style="text-transform:uppercase" placeholder="Optional"></div>
+              </div>
+            </div>
+            <div class="form-section grid g-2">
+              <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Chit registration certificate *</b><span>PDF or image, max 5 MB</span></div><input type="file"></label>
+              <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Certificate of incorporation</b><span>PDF or image</span></div><input type="file"></label>
+              <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>PAN card *</b><span>PDF or image</span></div><input type="file"></label>
+              <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>GST certificate</b><span>PDF or image</span></div><input type="file"></label>
+            </div>
+          </section>
+
+          <!-- 3 Admin -->
+          <section class="card rstep" data-r="2">
+            <div class="form-section">
+              <div class="form-section-head"><h3><i data-i="user"></i>Your admin account</h3><p>This becomes the first administrator of your console. You can add more staff later.</p></div>
+              <div class="form-grid">
+                <div class="field"><label>Full name <span class="req">*</span></label><input class="input" name="admin" required><span class="err">Required</span></div>
+                <div class="field"><label>Designation</label><input class="input" placeholder="e.g. Managing Director"></div>
+                <div class="field"><label>Work email <span class="req">*</span></label><input class="input" type="email" name="email" required><span class="err">Required</span></div>
+                <div class="field"><label>Mobile <span class="req">*</span></label>
+                  <div class="row"><div class="input-group" style="flex:1"><span class="addon">+91</span><input class="input" id="mobile" required inputmode="tel" maxlength="10"></div><button type="button" class="btn" id="sendOtp">Send OTP</button></div>
+                  <span class="err">Required</span></div>
+                <div class="field span-2 hidden" id="otpField"><label>Enter the 6-digit OTP sent to your mobile</label>
+                  <div class="row wrap"><div class="otp" id="otp"></div><span class="avail ok hidden" id="otpOk"><i data-i="checkCircle" class="sm"></i>Mobile verified</span></div>
+                  <span class="hint">Prototype: type any 6 digits.</span></div>
+                <div class="field"><label>Password <span class="req">*</span></label><input class="input" type="password" id="pwd" required minlength="8"><span class="hint" id="pwdHint">At least 8 characters, with a number</span><span class="err">Required</span></div>
+                <div class="field"><label>Confirm password <span class="req">*</span></label><input class="input" type="password" id="pwd2" required><span class="err">Passwords must match</span></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4 Workspace & plan -->
+          <section class="card rstep" data-r="3">
+            <div class="form-section">
+              <div class="form-section-head"><h3><i data-i="globe"></i>Workspace & app</h3><p>Where your staff sign in, and how your own member app will appear in Google Play and the App Store.</p></div>
+              <div class="form-grid">
+                <div class="field span-2"><label>Admin console address <span class="req">*</span></label>
+                  <div class="input-group"><span class="addon">https://</span><input class="input" id="slug" name="slug" required placeholder="yourname"><span class="addon">.chitsphere.in</span></div>
+                  <span class="avail" id="slugMsg"></span><span class="err">Choose an address</span></div>
+                <div class="field"><label>App name on the stores</label><input class="input" id="dispName" maxlength="30" placeholder="e.g. Sri Venkata Chits"><span class="hint">Up to 30 characters. You can change it before the first release.</span></div>
+                <div class="field"><label>App package ID</label><input class="input mono" id="orgCode" readonly><span class="hint">Set from your address. Permanent once published.</span></div>
+                <div class="field span-2"><div class="alert info"><i data-i="phone"></i><div><b>Your own member app</b>After verification we build your app with your logo and colours and publish it to Google Play and the App Store, usually within 3–7 days. You upload the icon and screenshots later from <b>Your member app</b> in the console.</div></div></div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-head row between" style="align-items:flex-end"><div><h3><i data-i="layers"></i>Plan</h3><p>Free for 14 days. No payment needed now.</p></div></div>
+              <div class="option-cards" id="planCards" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"></div>
+            </div>
+          </section>
+
+          <!-- 5 Review -->
+          <section class="card rstep" data-r="4">
+            <div class="form-section">
+              <div class="form-section-head"><h3><i data-i="checkCircle"></i>Review & submit</h3></div>
+              <div class="grid g-2" id="review"></div>
+              <div class="stack mt-6">
+                <label class="check"><input type="checkbox" required id="t1"> I confirm the organisation is a registered chit fund company and the documents are genuine.</label>
+                <label class="check"><input type="checkbox" required id="t2"> I agree to the <a href="#">Terms of Service</a> and <a href="#">Data Processing Agreement</a>.</label>
+              </div>
+            </div>
+          </section>
+
+          <div class="sticky-foot">
+            <span class="small muted" id="stepInfo"></span>
+            <div class="ml-auto row">
+              <button type="button" class="btn" id="prev"><i data-i="arrowL"></i>Back</button>
+              <button type="button" class="btn primary" id="next"></button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Success -->
+      <div id="doneView" class="hidden">
+        <div class="card"><div class="card-body center" style="padding:40px 24px">
+          <div class="empty" style="padding:0"><div class="e-ico" style="background:var(--success-soft);color:var(--success);width:64px;height:64px"><i data-i="checkCircle" class="lg"></i></div></div>
+          <h1 style="font-size:24px">Registration submitted</h1>
+          <p class="muted mt-1">Reference <b class="mono" style="color:var(--text)">REG-0424</b>. We’ve emailed a copy to <b id="dEmail" style="color:var(--text)"></b>.</p>
+          <div class="calc-strip mt-6" style="text-align:left">
+            <div><span>Admin console</span><b class="mono" style="font-size:14px" id="dUrl"></b></div>
+            <div><span>Member app</span><b class="mono" style="font-size:14px" id="dCode"></b></div>
+            <div><span>Trial ends</span><b style="font-size:14px">24 Nov 2026</b></div>
+          </div>
+          <div class="timeline mt-6" style="text-align:left;max-width:440px;margin-left:auto;margin-right:auto">
+            <div class="tl-item"><span class="tl-dot ok"></span><div class="tl-body"><b>Application received</b><div class="when">Just now</div></div></div>
+            <div class="tl-item"><span class="tl-dot"></span><div class="tl-body"><b>Trial workspace ready</b> — set up branches, staff and schemes now<div class="when">Available immediately</div></div></div>
+            <div class="tl-item"><span class="tl-dot muted"></span><div class="tl-body"><b>Document verification</b> by ChitSphere<div class="when">1–2 working days</div></div></div>
+            <div class="tl-item"><span class="tl-dot muted"></span><div class="tl-body"><b>Go live</b> — group creation unlocks<div class="when">After approval</div></div></div>
+            <div class="tl-item"><span class="tl-dot muted"></span><div class="tl-body"><b>Your app on Play Store &amp; App Store</b> — built and submitted by ChitSphere<div class="when">3–7 days after approval</div></div></div>
+          </div>
+          <div class="row mt-6" style="justify-content:center"><a class="btn primary lg" id="dGo">Open my admin console <i data-i="arrowR"></i></a></div>
+        </div></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  document.addEventListener('app:ready', function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var STEPS = [['Organisation', 'Company details'], ['Documents', 'Registration & KYC'], ['Admin account', 'Your login'], ['Workspace & plan', 'Address & pricing'], ['Submit', 'Review']];
+    var cur = 0, otpOk = false, slugOk = false;
+    var panels = document.querySelectorAll('.rstep');
+
+    function draw() {
+      $('stepper').innerHTML = STEPS.map(function (s, i) {
+        return '<div class="step ' + (i < cur ? 'done' : i === cur ? 'active' : '') + '"><span class="bubble">' + (i < cur ? UI.icon('check', 'sm') : i + 1) + '</span><span class="step-txt"><b>' + s[0] + '</b><span>' + s[1] + '</span></span></div>';
+      }).join('');
+      panels.forEach(function (p, i) { p.classList.toggle('active', i === cur); });
+      $('prev').disabled = cur === 0;
+      $('next').innerHTML = cur === STEPS.length - 1 ? UI.icon('send') + 'Submit registration' : 'Continue' + UI.icon('arrowR');
+      $('stepInfo').textContent = 'Step ' + (cur + 1) + ' of ' + STEPS.length;
+      if (cur === 3 && !$('slug').value) suggestSlug();
+      if (cur === 4) review();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* OTP */
+    $('otp').innerHTML = Array.from({ length: 6 }, function () { return '<input class="input" maxlength="1" inputmode="numeric">'; }).join('');
+    var boxes = $('otp').querySelectorAll('input');
+    $('sendOtp').addEventListener('click', function () {
+      if (!/^\d{10}$/.test($('mobile').value)) { $('mobile').closest('.field').classList.add('invalid'); return; }
+      $('otpField').classList.remove('hidden'); boxes[0].focus(); this.textContent = 'Resend'; UI.toast('OTP sent to +91 ' + $('mobile').value);
+    });
+    boxes.forEach(function (b, i) {
+      b.addEventListener('input', function () {
+        b.value = b.value.replace(/\D/g, '');
+        if (b.value && boxes[i + 1]) boxes[i + 1].focus();
+        otpOk = Array.prototype.every.call(boxes, function (x) { return x.value; });
+        $('otpOk').classList.toggle('hidden', !otpOk);
+      });
+      b.addEventListener('keydown', function (e) { if (e.key === 'Backspace' && !b.value && boxes[i - 1]) boxes[i - 1].focus(); });
+    });
+
+    /* Workspace slug */
+    function suggestSlug() {
+      var n = ($('orgName').value || '').toLowerCase().replace(/\b(pvt|ltd|private|limited|co|company|and|&)\b\.?/g, '').replace(/[^a-z0-9 ]/g, '').trim().split(/\s+/);
+      $('slug').value = (n[0] || '') + (n[1] && n[1].indexOf('chit') === 0 ? 'chits' : (n[1] || '').slice(0, 4));
+      $('dispName').value = $('orgName').value.replace(/\s+(Pvt|Ltd|Private|Limited|Co)\.?(?=\s|$)/gi, '').trim();
+      checkSlug();
+    }
+    function checkSlug() {
+      var v = $('slug').value.toLowerCase().replace(/[^a-z0-9]/g, '');
+      $('slug').value = v;
+      var taken = DB.tenants.some(function (t) { return t.slug === v; }) || DB.registrations.some(function (r) { return r.slug === v; });
+      slugOk = v.length >= 3 && !taken;
+      $('slugMsg').className = 'avail ' + (v ? (slugOk ? 'ok' : 'bad') : '');
+      $('slugMsg').innerHTML = !v ? '' : slugOk ? UI.icon('checkCircle', 'sm') + v + '.chitsphere.in is available' : UI.icon('x', 'sm') + (v.length < 3 ? 'Use at least 3 characters' : 'Already taken — try another');
+      $('orgCode').value = v ? 'in.' + v + '.member' : '';
+    }
+    $('slug').addEventListener('input', checkSlug);
+
+    var plan = UI.param('plan') || 'growth';
+    $('planCards').innerHTML = DB.plans.map(function (p) {
+      return '<label class="option-card"><input type="radio" name="plan" value="' + p.id + '"' + (p.id === plan ? ' checked' : '') + '><div class="oc-body"><div class="row between"><b>' + p.name + '</b>' + (p.featured ? '<span class="badge hl">Popular</span>' : '') + '</div>' +
+        '<div style="font-size:20px;font-weight:700;margin:4px 0">' + UI.inr(p.price) + '<small class="muted" style="font-size:12px;font-weight:500"> /month</small></div><span>' + p.limits.branches + ' branches · ' + p.limits.groups + ' groups · ' + UI.num(p.limits.subscribers) + ' members</span></div></label>';
+    }).join('');
+
+    function review() {
+      var f = new FormData($('f')), p = DB.plan(f.get('plan'));
+      function card(t, rows) { return '<div class="card" style="box-shadow:none"><div class="card-head"><h4>' + t + '</h4></div><div class="card-body"><dl class="kv small">' + rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + (UI.esc(r[1]) || '—') + '</dd>'; }).join('') + '</dl></div></div>'; }
+      $('review').innerHTML = card('Organisation', [['Name', f.get('name')], ['Type', f.get('type')], ['Location', f.get('city') + ', ' + f.get('state')], ['Reg. no.', f.get('regNo')]]) +
+        card('Admin', [['Name', f.get('admin')], ['Email', f.get('email')], ['Mobile', '+91 ' + $('mobile').value + (otpOk ? ' ✓' : '')]]) +
+        card('Workspace', [['Console', f.get('slug') + '.chitsphere.in'], ['App name', $('dispName').value], ['Package', $('orgCode').value]]) +
+        card('Plan', [['Plan', p.name + ' · 14-day trial'], ['After trial', UI.inr(p.price) + ' / month + GST']]);
+    }
+
+    $('next').addEventListener('click', function () {
+      if (!UI.validate(panels[cur])) return;
+      if (cur === 2) {
+        if (!otpOk) { UI.toast('Verify your mobile number with OTP', 'danger'); return; }
+        if ($('pwd').value !== $('pwd2').value) { $('pwd2').closest('.field').classList.add('invalid'); return; }
+      }
+      if (cur === 3 && !slugOk) { UI.toast('Choose an available console address', 'danger'); return; }
+      if (cur === STEPS.length - 1) {
+        $('dEmail').textContent = $('f').email.value;
+        $('dUrl').textContent = $('slug').value + '.chitsphere.in';
+        $('dCode').textContent = $('orgCode').value; $('dCode').title = $('dispName').value;
+        $('dGo').href = 'login.html?org=' + encodeURIComponent($('slug').value) + '&name=' + encodeURIComponent($('dispName').value || $('orgName').value);
+        $('formView').classList.add('hidden'); $('doneView').classList.remove('hidden');
+        window.scrollTo({ top: 0 });
+        return;
+      }
+      cur++; draw();
+    });
+    $('prev').addEventListener('click', function () { if (cur) { cur--; draw(); } });
+    draw();
+  });
+  </script>
+</body>
+</html>

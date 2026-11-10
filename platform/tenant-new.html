@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Onboard tenant · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <style>
+    .wstep { display: none; }
+    .wstep.active { display: block; }
+    .tb-preview { display: grid; grid-template-columns: 64px 1fr; height: 150px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    .tb-preview .side { background: var(--tb-c, #072E77); display: flex; flex-direction: column; gap: 8px; padding: 10px; align-items: center; }
+    .tb-preview .side i { display: block; width: 26px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.35); }
+    .tb-preview .side i:first-child { width: 28px; height: 28px; border-radius: 6px; background: #fff; margin-bottom: 6px; }
+    .tb-preview .main { background: var(--surface-2); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .tb-preview .main i { display: block; height: 8px; border-radius: 4px; background: var(--border-strong); }
+    .tb-preview .main b { display: inline-block; height: 24px; width: 90px; border-radius: 6px; background: var(--tb-c, #072E77); margin-top: auto; }
+  </style>
+</head>
+<body data-portal="platform" data-page="tenant-new">
+<main class="content" style="max-width:1100px">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="tenants.html">Tenants</a><i data-i="chevR"></i>Onboard tenant</div>
+      <h1>Onboard a new tenant</h1>
+      <p>Set up a chit fund company’s workspace, admin user and subscription.</p>
+    </div>
+    <div class="actions"><button class="btn ghost" id="saveDraft"><i data-i="save"></i>Save draft</button></div>
+  </div>
+
+  <div class="card">
+    <div class="card-body" style="overflow-x:auto">
+      <div class="stepper" id="stepper"></div>
+    </div>
+  </div>
+
+  <form id="wizard" novalidate class="mt-6">
+    <!-- 1 Company -->
+    <section class="wstep card" data-step="0">
+      <div class="form-section">
+        <div class="form-section-head"><h3><i data-i="building"></i>Company details</h3><p>Legal identity of the chit fund company as registered with the Registrar of Chits.</p></div>
+        <div class="form-grid">
+          <div class="field span-2"><label>Legal company name <span class="req">*</span></label><input class="input" name="name" required placeholder="e.g. Sri Venkata Chits Pvt. Ltd."><span class="err">Company name is required</span></div>
+          <div class="field"><label>Display / brand name</label><input class="input" name="brand" placeholder="Shown in the app header"></div>
+          <div class="field"><label>Tenant code <span class="req">*</span></label><input class="input mono" name="code" required placeholder="SVCPL" maxlength="8" style="text-transform:uppercase"><span class="hint">Short unique code used in group names & receipts</span><span class="err">Tenant code is required</span></div>
+          <div class="field"><label>Company type <span class="req">*</span></label><select class="select" name="type" required><option value="">Select</option><option>Private Limited</option><option>Public Limited</option><option>Partnership firm</option><option>Proprietorship</option></select><span class="err">Select company type</span></div>
+          <div class="field"><label>Date of incorporation</label><input class="input" type="date" name="incorp"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-head"><h3><i data-i="pin"></i>Registered office</h3></div>
+        <div class="form-grid cols-3">
+          <div class="field span-3"><label>Address line <span class="req">*</span></label><input class="input" name="addr" required placeholder="Door no., street, area"><span class="err">Address is required</span></div>
+          <div class="field"><label>City <span class="req">*</span></label><input class="input" name="city" required><span class="err">City is required</span></div>
+          <div class="field"><label>State <span class="req">*</span></label><select class="select" name="state" required><option value="">Select state</option><option>Andhra Pradesh</option><option>Telangana</option><option>Karnataka</option><option>Tamil Nadu</option><option>Kerala</option><option>Maharashtra</option><option>Other</option></select><span class="err">Select state</span></div>
+          <div class="field"><label>PIN code <span class="req">*</span></label><input class="input" name="pin" required inputmode="numeric" maxlength="6"><span class="err">PIN code is required</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 Compliance -->
+    <section class="wstep card" data-step="1">
+      <div class="form-section">
+        <div class="form-section-head"><h3><i data-i="shieldCheck"></i>Registration & tax</h3><p>Needed before the tenant can create chit groups.</p></div>
+        <div class="form-grid">
+          <div class="field"><label>Chit registration no. <span class="req">*</span></label><input class="input mono" required placeholder="Registrar of Chits reg. no."><span class="err">Registration number is required</span></div>
+          <div class="field"><label>CIN</label><input class="input mono" placeholder="U65992TG2010PTC000000"></div>
+          <div class="field"><label>PAN <span class="req">*</span></label><input class="input mono" required maxlength="10" placeholder="AAAAA0000A" style="text-transform:uppercase"><span class="err">PAN is required</span></div>
+          <div class="field"><label>GSTIN</label><input class="input mono" maxlength="15" placeholder="36AAAAA0000A1Z5" style="text-transform:uppercase"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-head"><h3><i data-i="file"></i>KYC documents</h3><p>PDF or image, up to 5 MB each.</p></div>
+        <div class="grid g-2">
+          <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Certificate of registration (Chits)</b><span>Click or drop file</span></div><input type="file"></label>
+          <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Certificate of incorporation</b><span>Click or drop file</span></div><input type="file"></label>
+          <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>PAN card</b><span>Click or drop file</span></div><input type="file"></label>
+          <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>GST certificate</b><span>Click or drop file</span></div><input type="file"></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 Admin -->
+    <section class="wstep card" data-step="2">
+      <div class="form-section">
+        <div class="form-section-head"><h3><i data-i="user"></i>Primary administrator</h3><p>This person receives the invite and can add other users.</p></div>
+        <div class="form-grid">
+          <div class="field"><label>Full name <span class="req">*</span></label><input class="input" name="admin" required><span class="err">Name is required</span></div>
+          <div class="field"><label>Designation</label><input class="input" placeholder="e.g. Managing Director"></div>
+          <div class="field"><label>Email <span class="req">*</span></label><input class="input" type="email" name="email" required><span class="err">Email is required</span></div>
+          <div class="field"><label>Mobile <span class="req">*</span></label><div class="input-group"><span class="addon">+91</span><input class="input" required inputmode="tel" maxlength="10"></div><span class="err">Mobile is required</span></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-head"><h3><i data-i="globe"></i>Workspace access</h3></div>
+        <div class="form-grid">
+          <div class="field"><label>Workspace URL <span class="req">*</span></label><div class="input-group"><span class="addon">https://</span><input class="input" name="sub" required placeholder="svchits"><span class="addon">.chitsphere.in</span></div><span class="hint">Lowercase letters and numbers only</span><span class="err">Workspace URL is required</span></div>
+          <div class="field"><label>Login methods</label>
+            <div class="row wrap" style="gap:16px;min-height:var(--ctl-h)">
+              <label class="check"><input type="checkbox" checked> Password</label>
+              <label class="check"><input type="checkbox" checked> Mobile OTP</label>
+              <label class="check"><input type="checkbox"> SSO (Enterprise)</label>
+            </div>
+          </div>
+          <div class="field span-2"><label class="switch"><input type="checkbox" checked><span class="track"></span>Send welcome email with invite link to the administrator</label></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 Plan -->
+    <section class="wstep card" data-step="3">
+      <div class="form-section">
+        <div class="form-section-head row between" style="align-items:flex-end">
+          <div><h3><i data-i="layers"></i>Choose a plan</h3><p>Limits can be adjusted later from the tenant’s page.</p></div>
+          <div class="segmented" data-seg id="cycle"><button class="active" data-v="month">Monthly</button><button data-v="year">Yearly <span class="badge success" style="height:18px">-15%</span></button></div>
+        </div>
+        <div class="option-cards" id="planCards" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"></div>
+      </div>
+      <div class="form-section">
+        <div class="form-grid cols-3">
+          <div class="field"><label>Subscription start <span class="req">*</span></label><input class="input" type="date" required value="2026-11-10"><span class="err">Start date is required</span></div>
+          <div class="field"><label>Free trial</label><select class="select"><option>No trial</option><option selected>14 days</option><option>30 days</option></select></div>
+          <div class="field"><label>Discount</label><div class="input-group"><input class="input" type="number" min="0" max="100" value="0"><span class="addon">%</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 Branding -->
+    <section class="wstep card" data-step="4">
+      <div class="form-section">
+        <div class="form-section-head"><h3><i data-i="palette"></i>Default branding</h3><p>The tenant admin can change this later from <b>Branding &amp; theme</b>.</p></div>
+        <div class="grid g-2">
+          <div class="stack">
+            <label class="dropzone"><span class="dz-ico"><i data-i="image"></i></span><div><b>Company logo</b><span>SVG or PNG, square, min 256px</span></div><input type="file" accept="image/*"></label>
+            <div class="field"><label>Brand colour</label>
+              <div class="row wrap" id="tbSwatches"></div>
+            </div>
+            <div class="field"><label>Default appearance for staff</label>
+              <div class="segmented block" data-seg><button data-v="light" class="active">Light</button><button data-v="dark">Dark</button><button data-v="system">Follow device</button></div>
+            </div>
+          </div>
+          <div class="field"><label>Preview</label><div class="tb-preview" id="tbPreview"><div class="side"><i></i><i></i><i></i><i></i></div><div class="main"><i style="width:40%"></i><i style="width:80%"></i><i style="width:65%"></i><b></b></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 Review -->
+    <section class="wstep card" data-step="5">
+      <div class="form-section">
+        <div class="form-section-head"><h3><i data-i="checkCircle"></i>Review & create</h3><p>Check the details below. The administrator will be invited once you create the tenant.</p></div>
+        <div class="grid g-2" id="review"></div>
+        <div class="alert info mt-4"><i data-i="info"></i><div><b>What happens next</b>A dedicated workspace is provisioned, the admin receives an invite, and KYC goes to review. Group creation unlocks after KYC approval.</div></div>
+      </div>
+    </section>
+
+    <div class="sticky-foot">
+      <span class="small muted" id="stepInfo"></span>
+      <div class="ml-auto row">
+        <a class="btn ghost" href="tenants.html">Cancel</a>
+        <button type="button" class="btn" id="prev"><i data-i="arrowL"></i>Back</button>
+        <button type="button" class="btn primary" id="next">Continue<i data-i="arrowR"></i></button>
+      </div>
+    </div>
+  </form>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var STEPS = [['Company', 'Legal details'], ['Compliance', 'Registration & KYC'], ['Admin', 'Owner & access'], ['Plan', 'Subscription'], ['Branding', 'Logo & colours'], ['Review', 'Confirm']];
+  var cur = 0;
+  var stepper = document.getElementById('stepper');
+  var panels = document.querySelectorAll('.wstep');
+  var form = document.getElementById('wizard');
+
+  function draw() {
+    stepper.innerHTML = STEPS.map(function (s, i) {
+      return '<div class="step ' + (i < cur ? 'done' : i === cur ? 'active' : '') + '"><span class="bubble">' + (i < cur ? UI.icon('check', 'sm') : i + 1) + '</span><span class="step-txt"><b>' + s[0] + '</b><span>' + s[1] + '</span></span></div>';
+    }).join('');
+    panels.forEach(function (p, i) { p.classList.toggle('active', i === cur); });
+    document.getElementById('prev').disabled = cur === 0;
+    var nx = document.getElementById('next');
+    nx.innerHTML = cur === STEPS.length - 1 ? UI.icon('check') + 'Create tenant' : 'Continue' + UI.icon('arrowR');
+    document.getElementById('stepInfo').textContent = 'Step ' + (cur + 1) + ' of ' + STEPS.length;
+    if (cur === STEPS.length - 1) review();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.getElementById('next').addEventListener('click', function () {
+    if (!UI.validate(panels[cur])) { UI.toast('Please fill the required fields', 'danger'); return; }
+    if (cur === STEPS.length - 1) {
+      UI.toast('<b>Tenant created.</b> Invite sent to the administrator.', 'success');
+      setTimeout(function () { location.href = 'tenant-view.html?id=T-1010'; }, 1200);
+      return;
+    }
+    cur++; draw();
+  });
+  document.getElementById('prev').addEventListener('click', function () { if (cur > 0) { cur--; draw(); } });
+  document.getElementById('saveDraft').addEventListener('click', function () { UI.toast('Draft saved', 'success'); });
+
+  /* plans */
+  var cycle = 'month';
+  function drawPlans() {
+    var sel = (form.querySelector('input[name=plan]:checked') || {}).value || 'growth';
+    document.getElementById('planCards').innerHTML = DB.plans.map(function (p) {
+      var price = cycle === 'year' ? Math.round(p.price * 12 * 0.85) : p.price;
+      return '<label class="option-card"><input type="radio" name="plan" value="' + p.id + '"' + (p.id === sel ? ' checked' : '') + '><div class="oc-body">' +
+        '<div class="row between"><b>' + p.name + '</b>' + (p.featured ? '<span class="badge hl">Popular</span>' : '') + '</div>' +
+        '<div style="font-size:22px;font-weight:700;margin:6px 0 2px">' + UI.inr(price) + '<small class="muted" style="font-size:12px;font-weight:500"> /' + cycle + '</small></div>' +
+        '<span>' + p.tagline + '</span>' +
+        '<div class="kv mt-3" style="grid-template-columns:auto 1fr;font-size:12.5px;gap:4px 12px"><dt>Branches</dt><dd>' + p.limits.branches + '</dd><dt>Groups</dt><dd>' + p.limits.groups + '</dd><dt>Subscribers</dt><dd>' + UI.num(p.limits.subscribers) + '</dd><dt>Users</dt><dd>' + p.limits.users + '</dd></div>' +
+        '</div></label>';
+    }).join('');
+  }
+  document.getElementById('cycle').addEventListener('change', function (e) { cycle = e.detail; drawPlans(); });
+  drawPlans();
+
+  /* branding preview */
+  var sw = document.getElementById('tbSwatches'), prev = document.getElementById('tbPreview');
+  sw.innerHTML = Theme.accents.map(function (a, i) {
+    return '<button type="button" class="swatch' + (i === 0 ? ' active' : '') + '" data-c="' + a.light + '" style="width:auto;padding:8px"><span class="sw" style="background:' + a.light + '"></span></button>';
+  }).join('');
+  sw.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-c]'); if (!b) return;
+    sw.querySelectorAll('.swatch').forEach(function (x) { x.classList.toggle('active', x === b); });
+    prev.style.setProperty('--tb-c', b.getAttribute('data-c'));
+  });
+
+  function review() {
+    var f = new FormData(form);
+    var plan = DB.plan(f.get('plan') || 'growth');
+    function card(title, rows) {
+      return '<div class="card" style="box-shadow:none"><div class="card-head"><h4>' + title + '</h4></div><div class="card-body"><dl class="kv">' +
+        rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + (UI.esc(r[1]) || '<span class="muted">—</span>') + '</dd>'; }).join('') + '</dl></div></div>';
+    }
+    document.getElementById('review').innerHTML =
+      card('Company', [['Name', f.get('name')], ['Code', (f.get('code') || '').toUpperCase()], ['Type', f.get('type')], ['City', f.get('city') + ', ' + f.get('state')]]) +
+      card('Access', [['Admin', f.get('admin')], ['Email', f.get('email')], ['Workspace', (f.get('sub') || '') + '.chitsphere.in']]) +
+      card('Subscription', [['Plan', plan.name], ['Billing', cycle === 'year' ? 'Yearly' : 'Monthly'], ['Price', UI.inr(cycle === 'year' ? Math.round(plan.price * 12 * .85) : plan.price)]]) +
+      card('Limits', [['Branches', plan.limits.branches], ['Groups', plan.limits.groups], ['Users', plan.limits.users]]);
+  }
+  draw();
+});
+</script>
+</body>
+</html>

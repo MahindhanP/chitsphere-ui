@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tenants · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="platform" data-page="tenants">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Platform</a><i data-i="chevR"></i>Tenants</div>
+      <h1>Tenants</h1>
+      <p>Chit fund companies subscribed to the platform.</p>
+    </div>
+    <div class="actions">
+      <button class="btn"><i data-i="download"></i>Export CSV</button>
+      <a class="btn primary" href="tenant-new.html"><i data-i="plus"></i>Onboard tenant</a>
+    </div>
+  </div>
+
+  <div class="grid g-4 mb-4" id="statusCards"></div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search name, code, city, admin…"></div>
+      <select class="select" id="fStatus"><option value="">All statuses</option><option>Active</option><option>Trial</option><option>Past due</option><option>Pending KYC</option><option>Suspended</option></select>
+      <select class="select" id="fPlan"><option value="">All plans</option><option value="starter">Starter</option><option value="growth">Growth</option><option value="enterprise">Enterprise</option></select>
+      <div class="ml-auto row"><span class="small muted" id="selInfo"></span></div>
+    </div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<!-- Suspend confirm -->
+<div class="modal" id="mSuspend" role="dialog" aria-labelledby="mSuspendT">
+  <div class="modal-head">
+    <div class="card-title-icon" style="background:var(--danger-soft);color:var(--danger)"><i data-i="pause"></i></div>
+    <div><h3 id="mSuspendT">Suspend tenant?</h3><p>Staff of <b id="mSuspendName"></b> will lose access immediately. Subscriber data is retained.</p></div>
+  </div>
+  <div class="modal-body stack">
+    <div class="field"><label>Reason <span class="req">*</span></label>
+      <select class="select" required><option value="">Select reason</option><option>Non-payment</option><option>Compliance / regulatory hold</option><option>Requested by tenant</option><option>Other</option></select>
+      <span class="err">Choose a reason</span></div>
+    <div class="field"><label>Note to tenant admin</label><textarea class="textarea" placeholder="Optional message sent by email"></textarea></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn danger" id="doSuspend">Suspend tenant</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var T = DB.tenants;
+  var cards = [
+    ['Active', 'success', 'checkCircle'], ['Trial', 'info', 'clock'], ['Past due', 'danger', 'alert'], ['Pending KYC', 'warning', 'shield']
+  ];
+  document.getElementById('statusCards').innerHTML = cards.map(function (c) {
+    var n = T.filter(function (t) { return t.status === c[0]; }).length;
+    return '<button class="card kpi" style="text-align:left;cursor:pointer;font:inherit;color:inherit" data-status="' + c[0] + '">' +
+      '<div class="label"><span class="badge ' + c[1] + '" style="width:30px;height:30px;padding:0;justify-content:center">' + UI.icon(c[2], 'sm') + '</span>' + c[0] + '</div>' +
+      '<div class="value">' + n + '</div></button>';
+  }).join('');
+  document.querySelectorAll('[data-status]').forEach(function (b) {
+    b.addEventListener('click', function () { var s = document.getElementById('fStatus'); s.value = b.getAttribute('data-status'); s.dispatchEvent(new Event('change')); });
+  });
+
+  var current;
+  UI.table({
+    el: '#tbl', rows: T, pageSize: 8, search: '#q',
+    searchKeys: ['name', 'code', 'city', 'state', 'admin', 'id'],
+    filters: [{ el: '#fStatus', key: 'status' }, { el: '#fPlan', key: 'plan' }],
+    onRow: function (r) { location.href = 'tenant-view.html?id=' + r.id; },
+    columns: [
+      { key: 'name', label: 'Company', sort: true, render: function (r) {
+        return '<div class="ent"><span class="avatar sq" style="background:' + r.color + ';color:#fff">' + UI.initials(r.name) + '</span><div class="ent-txt"><b>' + r.name + '</b><span>' + r.id + ' · ' + r.code + '</span></div></div>'; } },
+      { key: 'city', label: 'Location', sort: true, render: function (r) { return r.city + '<div class="xs muted">' + r.state + '</div>'; } },
+      { key: 'plan', label: 'Plan', sort: true, render: function (r) { return '<span class="badge outline">' + DB.plan(r.plan).name + '</span>'; } },
+      { key: 'branches', label: 'Branches', num: true, sort: true },
+      { key: 'groups', label: 'Groups', num: true, sort: true },
+      { key: 'subscribers', label: 'Subscribers', num: true, sort: true, render: function (r) { return UI.num(r.subscribers); } },
+      { key: 'mrr', label: 'MRR', num: true, sort: true, render: function (r) { return r.mrr ? UI.inr(r.mrr) : '<span class="muted">—</span>'; } },
+      { key: 'status', label: 'Status', sort: true, render: function (r) { return UI.badge(r.status); } },
+      { key: 'renew', label: 'Renews', sort: true, render: function (r) { return '<span class="nowrap">' + UI.date(r.renew) + '</span>'; } },
+      { key: 'id', label: '', cls: 'actions-cell', render: function (r) {
+        return '<div class="dropdown"><button class="icon-btn sm" data-menu="#m' + r.id + '" aria-label="Actions">' + UI.icon('moreV') + '</button>' +
+          '<div class="menu" id="m' + r.id + '">' +
+          '<a href="tenant-view.html?id=' + r.id + '">' + UI.icon('eye') + 'View details</a>' +
+          '<a href="../tenant/dashboard.html">' + UI.icon('external') + 'Open tenant workspace</a>' +
+          '<button>' + UI.icon('layers') + 'Change plan</button>' +
+          '<button>' + UI.icon('mail') + 'Email admin</button><div class="sep"></div>' +
+          '<button class="danger" data-suspend="' + r.id + '">' + UI.icon('pause') + 'Suspend</button></div></div>'; } }
+    ]
+  });
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-suspend]');
+    if (!b) return;
+    current = DB.tenant(b.getAttribute('data-suspend'));
+    document.getElementById('mSuspendName').textContent = current.name;
+    UI.open('#mSuspend');
+  });
+  document.getElementById('doSuspend').addEventListener('click', function () {
+    if (!UI.validate(document.getElementById('mSuspend'))) return;
+    UI.close();
+    UI.toast('<b>' + current.name + '</b> has been suspended', 'warning');
+  });
+});
+</script>
+</body>
+</html>

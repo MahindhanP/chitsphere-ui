@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create scheme · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <style>
+    .summary { position: sticky; top: calc(var(--topbar-h) + 16px); }
+    .icon-pick { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .icon-pick label { cursor: pointer; }
+    .icon-pick input { position: absolute; opacity: 0; }
+    .icon-pick span { display: grid; place-items: center; height: 40px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); color: #fff; }
+    .icon-pick input:checked + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+  </style>
+</head>
+<body data-portal="tenant" data-page="schemes">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="schemes.html">Chit schemes</a><i data-i="chevR"></i><span id="crumb">Create scheme</span></div>
+      <h1 id="title">Create chit scheme</h1>
+      <p>Define the financial rules once — every group created from this scheme inherits them.</p>
+    </div>
+  </div>
+
+  <form id="f" novalidate class="grid g-main-side" style="align-items:start">
+    <div class="card">
+      <!-- Basic -->
+      <div class="form-section">
+        <div class="form-section-head"><h3><span class="card-title-icon"><i data-i="file"></i></span>Basic details</h3></div>
+        <div class="form-grid">
+          <div class="field span-2"><label for="schemeName">Scheme name <span class="req">*</span></label><input class="input" id="schemeName" name="schemeName" required placeholder="e.g. Swarna 5L / 50M"><span class="err">Scheme name is required</span></div>
+          <div class="field"><label for="chitValue">Chit value <span class="req">*</span></label><div class="input-group"><span class="addon">₹</span><input class="input" id="chitValue" name="chitValue" type="number" min="10000" max="99999999" step="1000" required placeholder="500000"></div><span class="hint">Between ₹10,000 and ₹9,99,99,999</span><span class="err">Enter a chit value from ₹10,000 to ₹9,99,99,999</span></div>
+          <div class="field"><label for="numberOfInstallment">No. of instalments <span class="req">*</span></label><input class="input" id="numberOfInstallment" name="numberOfInstallment" type="number" min="2" max="999" required placeholder="50"><span class="hint">Also the number of members / tickets</span><span class="err">Enter 2–999 instalments</span></div>
+          <div class="field"><label for="subscriptionAmount">Subscription amount</label><div class="input-group"><span class="addon">₹</span><input class="input" id="subscriptionAmount" name="subscriptionAmount" readonly placeholder="Auto-calculated"></div><span class="hint">Chit value ÷ instalments</span></div>
+          <div class="field"><label for="createDate">Effective from <span class="req">*</span></label><input class="input" id="createDate" name="createDate" type="date" required value="2026-11-10"><span class="err">Choose a date</span></div>
+          <div class="field span-2"><label>Scheme icon & colour</label>
+            <div class="icon-pick" id="iconPick"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auction -->
+      <div class="form-section">
+        <div class="form-section-head"><h3><span class="card-title-icon"><i data-i="gavel"></i></span>Auction & bidding</h3><p>Bid amounts are the discount a member forgoes to take the prize.</p></div>
+        <div class="field mb-4"><label>Auction frequency <span class="req">*</span></label>
+          <div class="option-cards" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+            <label class="option-card"><input type="radio" name="auctionType" value="Monthly" checked><div class="oc-body"><b>Monthly</b><span>Once a month</span></div></label>
+            <label class="option-card"><input type="radio" name="auctionType" value="BI_MONTHLY"><div class="oc-body"><b>Bi-monthly</b><span>Twice a month</span></div></label>
+            <label class="option-card"><input type="radio" name="auctionType" value="Weekly"><div class="oc-body"><b>Weekly</b><span>Every week</span></div></label>
+            <label class="option-card"><input type="radio" name="auctionType" value="Daily"><div class="oc-body"><b>Daily</b><span>Every day</span></div></label>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label for="minimumBid">Minimum bid <span class="req">*</span></label><div class="input-group"><input class="input" id="minimumBid" name="minimumBid" type="number" step="0.5" min="0" max="100" required value="5"><span class="addon">%</span></div><span class="err">Minimum bid is required</span></div>
+          <div class="field"><label for="maximumBid">Maximum bid <span class="req">*</span></label><div class="input-group"><input class="input" id="maximumBid" name="maximumBid" type="number" step="0.5" min="0" max="100" required value="30"><span class="addon">%</span></div><span class="hint" id="bidHint"></span><span class="err">Maximum bid is required</span></div>
+          <div class="field span-2"><label>Collection option <span class="req">*</span></label>
+            <div class="segmented block" data-seg id="collectionOption"><button type="button" class="active" data-v="BEFORE_AUCTION">Collect before auction</button><button type="button" data-v="AFTER_AUCTION">Collect after auction</button></div>
+            <span class="hint">Before auction: subscription is due before each auction date. After: due after the auction, net of dividend.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fees -->
+      <div class="form-section">
+        <div class="form-section-head"><h3><span class="card-title-icon"><i data-i="percent"></i></span>Commission & fees</h3></div>
+        <div class="form-grid cols-3">
+          <div class="field"><label for="companyCommission">Company commission <span class="req">*</span></label><div class="input-group"><input class="input" id="companyCommission" name="companyCommission" type="number" step="0.5" min="0" max="5" required value="5"><span class="addon">%</span></div><span class="hint">Foreman’s commission, max 5%</span><span class="err">Enter 0–5%</span></div>
+          <div class="field"><label for="companyTicket">Company ticket no. <span class="req">*</span></label><input class="input" id="companyTicket" name="companyTicket" type="number" min="1" required value="1"><span class="hint">Ticket reserved for the foreman</span><span class="err">Company ticket is required</span></div>
+          <div class="field"><label for="enrollmentFees">Enrolment fee <span class="req">*</span></label><div class="input-group"><span class="addon">₹</span><input class="input" id="enrollmentFees" name="enrollmentFees" type="number" min="0" required></div><span class="err">Enrolment fee is required</span></div>
+          <div class="field"><label for="minMemberForCC">Min. members for CC <span class="req">*</span></label><input class="input" id="minMemberForCC" name="minMemberForCC" type="number" min="1" required><span class="hint" id="ccHint">Members needed before applying for the Commencement Certificate</span><span class="err">Minimum members is required</span></div>
+        </div>
+      </div>
+
+      <!-- Penalties -->
+      <div class="form-section">
+        <div class="form-section-head"><h3><span class="card-title-icon"><i data-i="alert"></i></span>Late payment penalties</h3><p>Interest per month on overdue subscriptions.</p></div>
+        <div class="form-grid cols-3">
+          <div class="field"><label for="penaltyNPS">Non-prized subscriber (NPS) <span class="req">*</span></label><div class="input-group"><input class="input" id="penaltyNPS" name="penaltyNPS" type="number" step="0.25" min="0" required value="2"><span class="addon">% p.m.</span></div><span class="err">Required</span></div>
+          <div class="field"><label for="penaltyPS">Prized subscriber (PS) <span class="req">*</span></label><div class="input-group"><input class="input" id="penaltyPS" name="penaltyPS" type="number" step="0.25" min="0" required value="3"><span class="addon">% p.m.</span></div><span class="err">Required</span></div>
+          <div class="field"><label for="penaltySF">Penalty SF <span class="req">*</span></label><div class="input-group"><input class="input" id="penaltySF" name="penaltySF" type="number" step="0.25" min="0" required value="1"><span class="addon">% p.m.</span></div><span class="err">Required</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live summary -->
+    <aside class="summary stack-lg">
+      <div class="card">
+        <div class="card-head"><div><h3>Scheme preview</h3><div class="sub">Updates as you type</div></div></div>
+        <div class="card-body stack">
+          <div class="ent"><span class="avatar sq" id="pvIcon" style="background:#9A5B05;color:#fff"></span><div class="ent-txt"><b id="pvName">Untitled scheme</b><span id="pvType">Monthly</span></div></div>
+          <div class="calc-strip" style="grid-template-columns:1fr 1fr">
+            <div><span>Chit value</span><b id="pvValue">—</b></div>
+            <div><span>Subscription</span><b id="pvSub">—</b></div>
+            <div><span>Duration</span><b id="pvDur">—</b></div>
+            <div><span>Commission</span><b id="pvComm">—</b></div>
+          </div>
+          <dl class="kv small">
+            <dt>Bid (discount)</dt><dd id="pvBid">—</dd>
+            <dt>Prize amount</dt><dd id="pvPrize">—</dd>
+            <dt>Dividend / member</dt><dd id="pvDiv">—</dd>
+          </dl>
+          <p class="xs muted">Dividend = (bid discount − commission) ÷ members, shown for min–max bid.</p>
+        </div>
+      </div>
+      <div class="alert info"><i data-i="info"></i><div><b>Plan limit</b>Chit value up to ₹1 Cr per group on the Growth plan.</div></div>
+    </aside>
+
+    <div class="sticky-foot span-all">
+      <label class="switch"><input type="checkbox" id="activeNow" checked><span class="track"></span>Make available for new groups</label>
+      <div class="ml-auto row">
+        <a class="btn ghost" href="schemes.html">Cancel</a>
+        <button class="btn" type="button" id="draft">Save as draft</button>
+        <button class="btn primary" type="submit"><i data-i="check"></i><span id="submitTxt">Create scheme</span></button>
+      </div>
+    </div>
+  </form>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var f = document.getElementById('f'), $ = function (id) { return document.getElementById(id); };
+  var COLORS = ['#9A5B05', '#072E77', '#047857', '#0F766E', '#5B21B6', '#B42318', '#1F2937'];
+  var ICONS = ['coins', 'star', 'sparkles', 'wallet', 'flag', 'zap', 'bank'];
+  $('iconPick').innerHTML = COLORS.map(function (c, i) {
+    return '<label title="Icon ' + (i + 1) + '"><input type="radio" name="chitIcon" value="' + i + '"' + (i === 0 ? ' checked' : '') + '><span style="background:' + c + '">' + UI.icon(ICONS[i]) + '</span></label>';
+  }).join('');
+
+  /* edit mode */
+  var editing = DB.scheme(UI.param('id'));
+  if (editing) {
+    $('title').textContent = 'Edit ' + editing.name; $('crumb').textContent = editing.name; $('submitTxt').textContent = 'Save changes';
+    var map = { schemeName: 'name', chitValue: 'chitValue', numberOfInstallment: 'installments', minimumBid: 'minBid', maximumBid: 'maxBid', companyCommission: 'commission', companyTicket: 'companyTicket', enrollmentFees: 'enrollmentFee', minMemberForCC: 'minMembersCC', penaltyNPS: 'penaltyNPS', penaltyPS: 'penaltyPS', penaltySF: 'penaltySF' };
+    for (var k in map) $(k).value = editing[map[k]];
+    var ci = COLORS.indexOf(editing.color); if (ci >= 0) f.querySelectorAll('[name=chitIcon]')[ci].checked = true;
+    if (editing.groups) {
+      var a = document.createElement('div'); a.className = 'alert warning mb-4';
+      a.innerHTML = UI.icon('alert') + '<div><b>' + editing.groups + ' groups use this scheme</b>Changes apply only to groups created after saving. Existing groups keep their original rules.</div>';
+      document.querySelector('.page-head').after(a);
+    }
+  }
+
+  function calc() {
+    var cv = +$('chitValue').value, n = +$('numberOfInstallment').value, mn = +$('minimumBid').value, mx = +$('maximumBid').value, cm = +$('companyCommission').value;
+    var type = (f.querySelector('[name=auctionType]:checked') || {}).value || 'Monthly';
+    var unit = { Monthly: 'months', BI_MONTHLY: 'fortnights', Weekly: 'weeks', Daily: 'days' }[type];
+    var sub = cv && n ? Math.round(cv / n) : 0;
+    $('subscriptionAmount').value = sub ? UI.num(sub) : '';
+    $('pvName').textContent = $('schemeName').value || 'Untitled scheme';
+    $('pvType').textContent = { Monthly: 'Monthly', BI_MONTHLY: 'Bi-monthly', Weekly: 'Weekly', Daily: 'Daily' }[type] + ' auction';
+    $('pvValue').textContent = cv ? UI.inr(cv) : '—';
+    $('pvSub').textContent = sub ? UI.inr(sub) : '—';
+    $('pvDur').textContent = n ? n + ' ' + unit : '—';
+    $('pvComm').textContent = cv ? UI.inr(cv * cm / 100) : '—';
+    $('pvBid').textContent = cv ? UI.inr(cv * mn / 100) + ' – ' + UI.inr(cv * mx / 100) : '—';
+    $('pvPrize').textContent = cv ? UI.inr(cv - cv * mx / 100) + ' – ' + UI.inr(cv - cv * mn / 100) : '—';
+    $('pvDiv').textContent = cv && n ? UI.inr(Math.max(0, (cv * mn / 100 - cv * cm / 100) / n)) + ' – ' + UI.inr((cv * mx / 100 - cv * cm / 100) / n) : '—';
+    $('bidHint').textContent = mx && mn && mx <= mn ? 'Must be greater than minimum bid' : '';
+    $('bidHint').style.color = mx && mn && mx <= mn ? 'var(--danger)' : '';
+    if (n && !$('minMemberForCC').dataset.touched) $('minMemberForCC').value = Math.ceil(n * 0.8);
+    if (cv && !$('enrollmentFees').dataset.touched) $('enrollmentFees').value = Math.round(cv * 0.001);
+    var ic = f.querySelector('[name=chitIcon]:checked').value;
+    $('pvIcon').style.background = COLORS[ic]; $('pvIcon').innerHTML = UI.icon(ICONS[ic]);
+  }
+  ['minMemberForCC', 'enrollmentFees'].forEach(function (id) { $(id).addEventListener('input', function () { this.dataset.touched = 1; }); });
+  f.addEventListener('input', calc); f.addEventListener('change', calc);
+  calc();
+
+  function check() {
+    var ok = UI.validate(f);
+    if (ok && +$('maximumBid').value <= +$('minimumBid').value) { $('maximumBid').closest('.field').classList.add('invalid'); ok = false; }
+    if (ok && +$('companyTicket').value > +$('numberOfInstallment').value) { UI.toast('Company ticket must be within the number of instalments', 'danger'); ok = false; }
+    return ok;
+  }
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!check()) return;
+    UI.toast('<b>' + $('schemeName').value + '</b> ' + (editing ? 'updated' : 'created'), 'success');
+    setTimeout(function () { location.href = 'schemes.html'; }, 1000);
+  });
+  $('draft').addEventListener('click', function () { UI.toast('Saved as draft', 'success'); });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>App builds & releases · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="platform" data-page="apps">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Platform</a><i data-i="chevR"></i>App builds & releases</div>
+      <h1>Member app builds & releases</h1>
+      <p>Every organisation has its own app in Google Play and the App Store, built from one codebase with its name, icon, colours and package ID.</p>
+    </div>
+    <div class="actions">
+      <button class="btn primary" data-open="#mRollout"><i data-i="refresh"></i>Roll out v2.5.0 to all apps</button>
+    </div>
+  </div>
+
+  <div class="grid g-4" id="kpis"></div>
+
+  <div class="card mt-6">
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search app, organisation, package…"></div>
+      <select class="select" id="fAcc"><option value="">All publishing accounts</option><option value="ChitSphere">ChitSphere accounts</option><option value="Own">Organisation’s own accounts</option></select>
+      <span class="ml-auto small muted">Latest codebase: <b class="mono" style="color:var(--text)">2.4.0</b> · next <b class="mono" style="color:var(--text)">2.5.0</b></span>
+    </div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<div class="drawer wide" id="aDrawer" role="dialog" aria-label="App build details">
+  <div class="drawer-head"><span class="avatar sq" id="dIcon" style="border-radius:12px"></span><div style="flex:1;min-width:0"><h3 id="dName"></h3><div class="xs muted mono" id="dPkg"></div></div><button class="icon-btn" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="drawer-body stack-lg">
+    <div id="dNote"></div>
+    <div class="calc-strip" id="dStrip"></div>
+    <div><h4 class="mb-2">Build configuration</h4><dl class="kv small" id="dCfg"></dl></div>
+    <div><h4 class="mb-2">Pipeline</h4><div class="timeline" id="dPipe"></div></div>
+  </div>
+  <div class="drawer-foot">
+    <a class="btn" id="dPreview" target="_blank" style="margin-right:auto"><i data-i="phone"></i>Preview build</a>
+    <button class="btn" onclick="UI.toast('Build queued','success')"><i data-i="refresh"></i>Rebuild</button>
+    <button class="btn primary" onclick="UI.close();UI.toast('Submitted to store review','success')"><i data-i="upload"></i>Submit to stores</button>
+  </div>
+</div>
+
+<div class="modal" id="mRollout" role="dialog" aria-label="Roll out platform update">
+  <div class="modal-head"><div><h3>Roll out v2.5.0</h3><p>Rebuilds every organisation’s app from the new codebase and submits each one to the stores.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body stack">
+    <div class="field"><label>Rollout</label>
+      <div class="option-cards" style="grid-template-columns:1fr">
+        <label class="option-card"><input type="radio" name="ro" checked><div class="oc-body"><b>Staged</b><span>5 pilot apps first, the rest 48 hours later if crash rate stays under 0.5%</span></div></label>
+        <label class="option-card"><input type="radio" name="ro"><div class="oc-body"><b>All at once</b><span>Submit all eligible apps now</span></div></label>
+      </div></div>
+    <div class="field"><label>Release notes</label><textarea class="textarea">Faster payments, UPI autopay reminders and accessibility fixes.</textarea></div>
+    <div class="alert info"><i data-i="info"></i><div>Apps of suspended organisations and apps published under an organisation’s own accounts with pending approval are skipped.</div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" onclick="UI.close();UI.toast('v2.5.0 rollout started for 8 apps','success')">Start rollout</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var rows = DB.apps.map(function (a) { var t = DB.tenant(a.tenant); return Object.assign({ org: t.short, color: t.color, slug: t.slug, orgStatus: t.status }, a); });
+  var live = rows.filter(function (a) { return a.android === 'Live' && a.ios === 'Live'; }).length;
+  var review = rows.filter(function (a) { return [a.android, a.ios].some(function (s) { return s === 'In review' || s === 'Building'; }); }).length;
+  var rej = rows.filter(function (a) { return a.android === 'Rejected' || a.ios === 'Rejected'; }).length;
+  var old = rows.filter(function (a) { return a.version !== '2.4.0' && a.version !== '—'; }).length;
+  $('kpis').innerHTML = [['checkCircle', 'ok', 'Live on both stores', live], ['clock', '', 'Building / in review', review], ['alert', 'hl', 'Store rejections', rej], ['refresh', 'warn', 'On an older version', old]].map(function (k) {
+    return '<div class="card kpi"><div class="label"><span class="ico ' + k[1] + '">' + UI.icon(k[0]) + '</span>' + k[2] + '</div><div class="value">' + k[3] + '</div></div>';
+  }).join('');
+
+  UI.table({
+    el: '#tbl', rows: rows, pageSize: 10, search: '#q', searchKeys: ['appName', 'org', 'pkg'], filters: [{ el: '#fAcc', key: 'account' }],
+    onRow: function (a) { open(a); },
+    columns: [
+      { key: 'appName', label: 'App', sort: true, render: function (a) { return '<div class="ent"><span class="avatar sq" style="background:' + a.color + ';color:#fff;border-radius:10px">' + UI.initials(a.org) + '</span><div class="ent-txt"><b>' + a.appName + '</b><span class="mono">' + a.pkg + '</span></div></div>'; } },
+      { key: 'org', label: 'Organisation', sort: true, render: function (a) { return a.org + (a.orgStatus !== 'Active' ? '<div>' + UI.badge(a.orgStatus) + '</div>' : ''); } },
+      { key: 'account', label: 'Published under', render: function (a) { return a.account === 'Own' ? '<span class="badge primary">Own accounts</span>' : '<span class="badge outline">ChitSphere</span>'; } },
+      { key: 'version', label: 'Version', sort: true, render: function (a) { return '<span class="mono">' + a.version + '</span>' + (a.version !== '2.4.0' && a.version !== '—' ? ' <span class="badge warning">Outdated</span>' : ''); } },
+      { key: 'android', label: 'Google Play', render: function (a) { return UI.badge(a.android); } },
+      { key: 'ios', label: 'App Store', render: function (a) { return UI.badge(a.ios); } },
+      { key: 'installs', label: 'Installs', num: true, sort: true, render: function (a) { return a.installs ? UI.num(a.installs) : '—'; } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function () { return '<button class="btn sm ghost">Details</button>'; } }
+    ]
+  });
+
+  function open(a) {
+    $('dIcon').textContent = UI.initials(a.org); $('dIcon').style.cssText = 'background:' + a.color + ';color:#fff;border-radius:12px';
+    $('dName').textContent = a.appName; $('dPkg').textContent = a.pkg;
+    $('dNote').innerHTML = a.note ? '<div class="alert warning">' + UI.icon('alert') + '<div><b>Action needed</b>' + a.note + '</div></div>' : '';
+    $('dStrip').innerHTML = [['Version', a.version], ['Google Play', UI.badge(a.android)], ['App Store', UI.badge(a.ios)]].map(function (c) { return '<div><span>' + c[0] + '</span><b style="font-size:14px">' + c[1] + '</b></div>'; }).join('');
+    $('dCfg').innerHTML = [['Organisation', a.org + ' (' + a.tenant + ')'], ['Android package', '<span class="mono">' + a.pkg + '</span>'], ['iOS bundle ID', '<span class="mono">' + a.bundle + '</span>'], ['Publishing account', a.account === 'Own' ? 'Organisation’s own Play & Apple accounts' : 'ChitSphere developer accounts'], ['API endpoint', '<span class="mono">' + a.slug + '.chitsphere.in/api</span>'], ['Brand colour', '<span class="color-dot" style="background:' + a.color + '"></span> ' + a.color], ['Last updated', UI.date(a.updated)]]
+      .map(function (k) { return '<dt>' + k[0] + '</dt><dd>' + k[1] + '</dd>'; }).join('');
+    $('dPipe').innerHTML = DB.APP_STAGES.map(function (s, i) {
+      var tone = i < a.stage || (a.stage === 4 && i === 4) ? 'ok' : i === a.stage ? '' : 'muted';
+      return '<div class="tl-item"><span class="tl-dot ' + tone + '"></span><div class="tl-body"><b>' + s + '</b><div class="when">' + (tone === 'ok' ? 'Done' : tone === '' ? 'In progress' : 'Pending') + '</div></div></div>';
+    }).join('');
+    $('dPreview').href = '../app/index.html?org=' + a.slug;
+    UI.open('#aDrawer');
+  }
+});
+</script>
+</body>
+</html>

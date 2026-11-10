@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chit groups · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="tenant" data-page="groups">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Chit groups</div>
+      <h1>Chit groups</h1>
+      <p>Each group follows the statutory lifecycle: FD → PSO → enrolment → Commencement Certificate → auctions.</p>
+    </div>
+    <div class="actions">
+      <button class="btn"><i data-i="download"></i>Export</button>
+      <a class="btn primary" href="group-new.html"><i data-i="plus"></i>Create group</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" data-tabs id="gTabs" style="padding:0 12px"></div>
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search group name or ID…"></div>
+      <select class="select" id="fScheme"><option value="">All schemes</option></select>
+      <select class="select" id="fBranch"><option value="">All branches</option></select>
+    </div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var G = DB.groups;
+  G.forEach(function (g) { g.phase = g.status === 'Running' ? 'running' : g.status === 'Closed' ? 'closed' : 'setup'; });
+  var tabs = [['', 'All'], ['setup', 'In setup'], ['running', 'Running'], ['closed', 'Closed']];
+  document.getElementById('gTabs').innerHTML = tabs.map(function (t, i) {
+    var n = G.filter(function (g) { return !t[0] || g.phase === t[0]; }).length;
+    return '<button class="' + (i === 0 ? 'active' : '') + '" data-tab="' + t[0] + '">' + t[1] + ' <span class="count">' + n + '</span></button>';
+  }).join('');
+  var phaseSel = document.createElement('select'); phaseSel.id = 'fPhase'; phaseSel.className = 'hidden';
+  phaseSel.innerHTML = '<option value=""></option><option>setup</option><option>running</option><option>closed</option>';
+  document.body.appendChild(phaseSel);
+  document.getElementById('gTabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]'); if (!b) return;
+    phaseSel.value = b.getAttribute('data-tab'); phaseSel.dispatchEvent(new Event('change'));
+  });
+
+  document.getElementById('fScheme').innerHTML += DB.schemes.map(function (s) { return '<option value="' + s.id + '">' + s.name + '</option>'; }).join('');
+  document.getElementById('fBranch').innerHTML += DB.branches.map(function (b) { return '<option value="' + b.id + '">' + b.name + '</option>'; }).join('');
+
+  UI.table({
+    el: '#tbl', rows: G, pageSize: 10, search: '#q', searchKeys: ['name', 'id'],
+    filters: [{ el: '#fPhase', key: 'phase' }, { el: '#fScheme', key: 'scheme' }, { el: '#fBranch', key: 'branch' }],
+    onRow: function (r) { location.href = (r.stage < 8 ? 'group-new.html?id=' : 'group-view.html?id=') + r.id; },
+    columns: [
+      { key: 'name', label: 'Group', sort: true, render: function (g) { return '<div class="ent"><span class="avatar sq sm" style="background:' + DB.scheme(g.scheme).color + ';color:#fff">' + UI.icon('grid', 'sm') + '</span><div class="ent-txt"><b class="mono">' + g.name + '</b><span>' + g.id + ' · ' + g.label + '</span></div></div>'; } },
+      { key: 'scheme', label: 'Scheme', render: function (g) { return DB.scheme(g.scheme).name; } },
+      { key: 'branch', label: 'Branch', render: function (g) { return DB.branch(g.branch).name; } },
+      { key: 'chitValue', label: 'Chit value', num: true, sort: true, render: function (g) { return '<b>' + UI.inr(g.chitValue) + '</b>'; } },
+      { key: 'enrolled', label: 'Enrolled', sort: true, render: function (g) {
+        var p = g.enrolled / g.tickets * 100;
+        return '<div style="min-width:110px"><div class="xs"><b>' + g.enrolled + '</b><span class="muted"> / ' + g.tickets + '</span></div><div class="meter-bar mt-1"><div class="meter-fill ' + (p >= 100 ? 'ok' : '') + '" style="width:' + p + '%"></div></div></div>'; } },
+      { key: 'stage', label: 'Lifecycle', sort: true, render: function (g) {
+        if (g.stage >= 8) return g.status === 'Closed' ? '<span class="muted small">Completed ' + g.auctionNo + ' auctions</span>' : '<span class="small">Auction <b>' + g.auctionNo + '</b> / ' + g.tickets + '</span>';
+        return '<span class="small">' + DB.stages[g.stage].name + ' <span class="muted mono xs">' + DB.stages[g.stage].code + '</span></span>'; } },
+      { key: 'status', label: 'Status', sort: true, render: function (g) { return UI.badge(g.status); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function (g) {
+        return g.stage < 8 ? '<a class="btn sm soft" href="group-new.html?id=' + g.id + '">Continue setup</a>' : '<a class="btn sm" href="group-view.html?id=' + g.id + '">Open</a>'; } }
+    ]
+  });
+});
+</script>
+</body>
+</html>

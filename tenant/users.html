@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Users & roles · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="tenant" data-page="users">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Users & roles</div>
+      <h1>Users & roles</h1>
+      <p>Staff who can sign in to your workspace, and what each role can do.</p>
+    </div>
+    <div class="actions"><button class="btn primary" data-open="#mInvite"><i data-i="send"></i>Invite user</button></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" data-tabs style="padding:0 12px">
+      <button class="active" data-tab="users"><i data-i="users" class="sm"></i>Users</button>
+      <button data-tab="roles"><i data-i="shield" class="sm"></i>Roles & permissions</button>
+    </div>
+    <div class="tab-panel" data-tab-panel="users">
+      <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search name or email…"></div>
+        <select class="select" id="fRole"><option value="">All roles</option></select>
+        <select class="select" id="fStatus"><option value="">All statuses</option><option>Active</option><option>Invited</option><option>Disabled</option></select></div>
+      <div id="tbl"></div>
+    </div>
+    <div class="tab-panel" data-tab-panel="roles">
+      <div class="table-wrap"><table class="table" id="perm"></table></div>
+      <div class="card-foot"><span class="xs muted">Tenant Admin always has full access.</span><button class="btn primary ml-auto" onclick="UI.toast('Permissions saved','success')">Save permissions</button></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal" id="mInvite" role="dialog" aria-label="Invite user">
+  <div class="modal-head"><div><h3>Invite user</h3><p>They’ll receive an email to set a password.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body form-grid">
+    <div class="field"><label>Full name <span class="req">*</span></label><input class="input" required><span class="err">Required</span></div>
+    <div class="field"><label>Mobile</label><div class="input-group"><span class="addon">+91</span><input class="input"></div></div>
+    <div class="field span-2"><label>Email <span class="req">*</span></label><input class="input" type="email" required><span class="err">Required</span></div>
+    <div class="field"><label>Role <span class="req">*</span></label><select class="select" id="iRole" required></select><span class="err">Required</span></div>
+    <div class="field"><label>Branch access</label><select class="select" id="iBranch"><option>All branches</option></select></div>
+  </div>
+  <div class="modal-foot"><span class="xs muted" style="margin-right:auto">31 of 40 seats used</span><button class="btn" data-close>Cancel</button><button class="btn primary" id="iSend"><i data-i="send"></i>Send invite</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('fRole').innerHTML += DB.roles.map(function (r) { return '<option>' + r + '</option>'; }).join('');
+  $('iRole').innerHTML = '<option value="">Select role</option>' + DB.roles.map(function (r) { return '<option>' + r + '</option>'; }).join('');
+  $('iBranch').innerHTML += DB.branches.map(function (b) { return '<option>' + b.name + '</option>'; }).join('');
+  UI.table({
+    el: '#tbl', rows: DB.users, search: '#q', searchKeys: ['name', 'email'], filters: [{ el: '#fRole', key: 'role' }, { el: '#fStatus', key: 'status' }],
+    columns: [
+      { key: 'name', label: 'User', sort: true, render: function (u) { return '<div class="ent"><span class="avatar sm">' + UI.initials(u.name) + '</span><div class="ent-txt"><b>' + u.name + '</b><span>' + u.email + '</span></div></div>'; } },
+      { key: 'role', label: 'Role', sort: true, render: function (u) { return '<span class="badge ' + (u.role === 'Tenant Admin' ? 'primary' : 'outline') + '">' + u.role + '</span>'; } },
+      { key: 'branch', label: 'Branch access' },
+      { key: 'last', label: 'Last active' },
+      { key: 'status', label: 'Status', render: function (u) { return UI.badge(u.status); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function (u) {
+        var id = 'um' + u.email.replace(/\W/g, '');
+        return '<div class="dropdown"><button class="icon-btn sm" data-menu="#' + id + '" aria-label="Actions">' + UI.icon('moreV') + '</button><div class="menu" id="' + id + '"><button>' + UI.icon('edit') + 'Edit role</button><button>' + UI.icon('key') + 'Reset password</button>' + (u.status === 'Invited' ? '<button>' + UI.icon('send') + 'Resend invite</button>' : '') + '<div class="sep"></div><button class="danger">' + UI.icon('pause') + (u.status === 'Disabled' ? 'Enable' : 'Disable') + '</button></div></div>'; } }
+    ]
+  });
+
+  var P = ['Schemes', 'Groups', 'Enrolment', 'Auctions', 'Collections', 'Branches', 'Users', 'Reports', 'Billing'];
+  var R = DB.roles.slice(1);
+  var M = { 'Branch Manager': [2, 2, 2, 2, 2, 1, 1, 1, 0], 'Accountant': [1, 1, 1, 1, 2, 0, 0, 2, 1], 'Auction Officer': [1, 1, 1, 2, 1, 0, 0, 1, 0], 'Collection Agent': [0, 1, 1, 0, 2, 0, 0, 0, 0], 'Read only': [1, 1, 1, 1, 1, 1, 0, 1, 0] };
+  $('perm').innerHTML = '<thead><tr><th>Area</th>' + R.map(function (r) { return '<th>' + r + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    P.map(function (p, i) {
+      return '<tr><td class="strong">' + p + '</td>' + R.map(function (r) {
+        var v = M[r][i];
+        return '<td><select class="select" style="height:30px;min-width:110px;font-size:12.5px"><option' + (v === 0 ? ' selected' : '') + '>No access</option><option' + (v === 1 ? ' selected' : '') + '>View</option><option' + (v === 2 ? ' selected' : '') + '>Manage</option></select></td>';
+      }).join('') + '</tr>';
+    }).join('') + '</tbody>';
+
+  $('iSend').addEventListener('click', function () { if (!UI.validate($('mInvite'))) return; UI.close(); UI.toast('Invite sent', 'success'); });
+});
+</script>
+</body>
+</html>

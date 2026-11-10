@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tenant details · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="platform" data-page="tenants">
+<main class="content">
+  <div class="crumbs"><a href="tenants.html">Tenants</a><i data-i="chevR"></i><span id="crumbName"></span></div>
+
+  <div class="card mb-4">
+    <div class="card-body row wrap" style="gap:18px;align-items:center">
+      <span class="avatar xl" id="tAvatar"></span>
+      <div style="flex:1;min-width:240px">
+        <div class="row wrap"><h1 id="tName"></h1><span id="tStatus"></span></div>
+        <div class="row wrap small muted mt-1" style="gap:14px">
+          <span class="row" style="gap:5px"><i data-i="ticket" class="sm"></i><span id="tId"></span></span>
+          <span class="row" style="gap:5px"><i data-i="pin" class="sm"></i><span id="tCity"></span></span>
+          <span class="row" style="gap:5px"><i data-i="globe" class="sm"></i><span id="tUrl"></span></span>
+          <span class="row" style="gap:5px"><i data-i="calendar" class="sm"></i>Customer since <span id="tSince"></span></span>
+        </div>
+      </div>
+      <div class="row wrap">
+        <a class="btn" href="../tenant/dashboard.html"><i data-i="external"></i>Open workspace</a>
+        <button class="btn" data-open="#mPlan"><i data-i="layers"></i>Change plan</button>
+        <div class="dropdown"><button class="icon-btn bordered" data-menu="#mMore" aria-label="More"><i data-i="moreV"></i></button>
+          <div class="menu" id="mMore"><button><i data-i="mail"></i>Resend admin invite</button><button><i data-i="key"></i>Reset admin password</button><button><i data-i="download"></i>Export tenant data</button><div class="sep"></div><button class="danger"><i data-i="pause"></i>Suspend tenant</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabs" data-tabs style="padding:0 12px">
+      <button class="active" data-tab="overview"><i data-i="dashboard" class="sm"></i>Overview</button>
+      <button data-tab="modules"><i data-i="sliders" class="sm"></i>Modules & limits</button>
+      <button data-tab="billing"><i data-i="receipt" class="sm"></i>Billing</button>
+      <button data-tab="kyc"><i data-i="shieldCheck" class="sm"></i>KYC</button>
+    </div>
+  </div>
+
+  <!-- Overview -->
+  <div class="tab-panel" data-tab-panel="overview">
+    <div class="grid g-main-side">
+      <div class="stack-lg">
+        <div class="card">
+          <div class="card-head"><div><h3>Plan usage</h3><div class="sub" id="planSub"></div></div><div class="tools"><span class="badge primary" id="planBadge"></span></div></div>
+          <div class="card-body grid g-2" id="usage"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Company details</h3><div class="tools"><button class="btn sm ghost"><i data-i="edit"></i>Edit</button></div></div>
+          <div class="card-body"><dl class="kv" id="details"></dl></div>
+        </div>
+      </div>
+      <div class="stack-lg">
+        <div class="card">
+          <div class="card-head"><h3>Subscription</h3></div>
+          <div class="card-body">
+            <div class="kv-cards">
+              <div class="kv-card"><span>MRR</span><b id="sMrr"></b></div>
+              <div class="kv-card"><span>Next renewal</span><b id="sRenew"></b></div>
+            </div>
+            <div class="mt-4 stack small">
+              <div class="row between"><span class="muted">Billing cycle</span><b>Monthly</b></div>
+              <div class="row between"><span class="muted">Payment method</span><b>NACH · HDFC ••4421</b></div>
+              <div class="row between"><span class="muted">Outstanding</span><b id="sOut"></b></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Administrator</h3></div>
+          <div class="card-body"><div class="ent"><span class="avatar" id="aAv"></span><div class="ent-txt"><b id="aName"></b><span id="aEmail"></span></div></div>
+            <div class="row mt-4"><button class="btn sm"><i data-i="mail"></i>Email</button><button class="btn sm"><i data-i="phone"></i>Call</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modules -->
+  <div class="tab-panel" data-tab-panel="modules">
+    <div class="grid g-2">
+      <div class="card">
+        <div class="card-head"><div><h3>Enabled modules</h3><div class="sub">Turn product areas on or off for this tenant</div></div></div>
+        <div class="list" id="modules"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3>Limit overrides</h3><div class="sub">Leave blank to use the plan default</div></div></div>
+        <div class="card-body form-grid">
+          <div class="field"><label>Max branches</label><input class="input" type="number" placeholder="Plan default"></div>
+          <div class="field"><label>Max chit groups</label><input class="input" type="number" placeholder="Plan default"></div>
+          <div class="field"><label>Max subscribers</label><input class="input" type="number" placeholder="Plan default"></div>
+          <div class="field"><label>Max staff users</label><input class="input" type="number" placeholder="Plan default"></div>
+          <div class="field span-2"><label>Max chit value per group</label><div class="input-group"><span class="addon">₹</span><input class="input" type="number" placeholder="No limit"></div></div>
+        </div>
+        <div class="card-foot"><span class="xs muted">Changes are logged in the audit trail</span><button class="btn primary ml-auto" onclick="UI.toast('Limits updated','success')">Save limits</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Billing -->
+  <div class="tab-panel" data-tab-panel="billing">
+    <div class="card"><div class="card-head"><h3>Invoices</h3><div class="tools"><button class="btn sm"><i data-i="plus"></i>Manual invoice</button></div></div><div id="invTbl"></div></div>
+  </div>
+
+  <!-- KYC -->
+  <div class="tab-panel" data-tab-panel="kyc">
+    <div class="card">
+      <div class="card-head"><div><h3>KYC documents</h3><div class="sub">Approve to unlock group creation for this tenant</div></div><div class="tools"><button class="btn danger-ghost">Reject</button><button class="btn primary" onclick="UI.toast('KYC approved — tenant activated','success')"><i data-i="check"></i>Approve KYC</button></div></div>
+      <div class="list" id="kycList"></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal" id="mPlan" role="dialog" aria-label="Change plan">
+  <div class="modal-head"><div><h3>Change plan</h3><p>The new price applies from the next billing cycle.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body"><div class="option-cards" id="planOpts" style="grid-template-columns:1fr"></div></div>
+  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" onclick="UI.close();UI.toast('Plan change scheduled','success')">Confirm change</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var t = DB.tenant(UI.param('id')) || DB.tenants[0];
+  var plan = DB.plan(t.plan);
+  document.title = t.name + ' · ChitSphere Platform';
+  var $ = function (id) { return document.getElementById(id); };
+  $('crumbName').textContent = t.name;
+  $('tAvatar').textContent = UI.initials(t.name);
+  $('tAvatar').style.cssText = 'background:' + t.color + ';color:#fff';
+  $('tName').textContent = t.name;
+  $('tStatus').innerHTML = UI.badge(t.status);
+  $('tId').textContent = t.id + ' · ' + t.code;
+  $('tCity').textContent = t.city + ', ' + t.state;
+  $('tUrl').textContent = t.code.toLowerCase() + '.chitsphere.in';
+  $('tSince').textContent = UI.date(t.since);
+  $('planBadge').textContent = plan.name;
+  $('planSub').textContent = UI.inr(plan.price) + ' / month';
+  $('sMrr').textContent = t.mrr ? UI.inr(t.mrr) : '—';
+  $('sRenew').textContent = UI.date(t.renew);
+  $('sOut').innerHTML = t.status === 'Past due' ? '<span style="color:var(--danger)">' + UI.inr(t.mrr) + '</span>' : UI.inr(0);
+  $('aAv').textContent = UI.initials(t.admin); $('aName').textContent = t.admin; $('aEmail').textContent = t.email;
+
+  var lim = plan.limits;
+  $('usage').innerHTML = [['Branches', t.branches, lim.branches], ['Chit groups', t.groups, lim.groups], ['Subscribers', t.subscribers, lim.subscribers], ['Staff users', t.users, lim.users]].map(function (u) {
+    var pct = typeof u[2] === 'number' ? Math.min(100, u[1] / u[2] * 100) : 8;
+    var cls = pct > 90 ? 'danger' : pct > 75 ? 'warn' : '';
+    return '<div class="meter"><div class="meter-row"><span>' + u[0] + '</span><b>' + UI.num(u[1]) + ' <span class="muted" style="font-weight:400">/ ' + UI.num(u[2]) + '</span></b></div><div class="meter-bar"><div class="meter-fill ' + cls + '" style="width:' + pct + '%"></div></div></div>';
+  }).join('');
+
+  $('details').innerHTML = [['Legal name', t.name], ['Tenant code', t.code], ['Company type', 'Private Limited'], ['Chit reg. no.', 'RC/' + t.code + '/2019/0142'], ['PAN', 'AAJCS' + t.id.slice(-4) + 'K'], ['GSTIN', '36AAJCS' + t.id.slice(-4) + 'K1Z5'], ['Registered office', t.city + ', ' + t.state]]
+    .map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
+
+  var mods = [['gavel', 'Auctions', 'Live & offline auction management', true], ['wallet', 'Collections', 'Receipts, dues and penalties', true], ['phone', 'Own member app', (DB.app(t.id) || {}).appName + ' · ' + (DB.app(t.id) || {}).pkg, true], ['card', 'Online payments', 'UPI / card via payment gateway', true], ['gavel', 'Online bidding in app', 'Members bid from the app', t.plan !== 'starter'], ['send', 'WhatsApp notifications', 'Auction & due reminders', false], ['key', 'API access', 'REST API & webhooks', t.plan === 'enterprise']];
+  $('modules').innerHTML = mods.map(function (m) {
+    return '<div class="list-item"><span class="card-title-icon">' + UI.icon(m[0]) + '</span><div style="flex:1"><b>' + m[1] + '</b><div class="xs muted">' + m[2] + '</div></div><label class="switch"><input type="checkbox"' + (m[3] ? ' checked' : '') + '><span class="track"></span></label></div>';
+  }).join('');
+
+  UI.table({
+    el: '#invTbl', rows: DB.invoices.filter(function (i) { return i.tenant === t.id; }).concat([{ no: 'INV-2026-0988', tenant: t.id, date: '2026-09-14', due: '2026-09-24', amount: plan.price, status: 'Paid' }]),
+    columns: [
+      { key: 'no', label: 'Invoice', render: function (r) { return '<b class="mono">' + r.no + '</b>'; } },
+      { key: 'date', label: 'Issued', render: function (r) { return UI.date(r.date); } },
+      { key: 'due', label: 'Due', render: function (r) { return UI.date(r.due); } },
+      { key: 'amount', label: 'Amount', num: true, render: function (r) { return UI.inr(r.amount); } },
+      { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function () { return '<button class="icon-btn sm" aria-label="Download">' + UI.icon('download') + '</button>'; } }
+    ]
+  });
+
+  $('kycList').innerHTML = [['Certificate of registration (Chits)', 'Verified'], ['Certificate of incorporation', 'Verified'], ['PAN card', t.status === 'Pending KYC' ? 'Pending' : 'Verified'], ['GST certificate', t.status === 'Pending KYC' ? 'Pending' : 'Verified']].map(function (d) {
+    return '<div class="list-item"><span class="card-title-icon">' + UI.icon('file') + '</span><div style="flex:1"><b>' + d[0] + '</b><div class="xs muted">PDF · uploaded ' + UI.date(t.since) + '</div></div>' + UI.badge(d[1]) + '<button class="btn sm ghost">' + UI.icon('eye') + 'View</button></div>';
+  }).join('');
+
+  $('planOpts').innerHTML = DB.plans.map(function (p) {
+    return '<label class="option-card"><input type="radio" name="np"' + (p.id === t.plan ? ' checked' : '') + '><div class="oc-body row between"><div><b>' + p.name + (p.id === t.plan ? ' <span class="badge outline">Current</span>' : '') + '</b><span>' + p.tagline + '</span></div><b>' + UI.inr(p.price) + '<span class="muted" style="font-weight:400">/mo</span></b></div></label>';
+  }).join('');
+});
+</script>
+</body>
+</html>

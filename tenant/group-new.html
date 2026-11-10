@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Group setup · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <style>
+    .stage { display: none; }
+    .stage.active { display: block; }
+    .stage-nav { position: sticky; top: calc(var(--topbar-h) + 16px); }
+    .stage-head { display: flex; align-items: center; gap: 12px; padding: 16px var(--card-p); border-bottom: 1px solid var(--border); }
+    .stage-head .code { margin-left: auto; }
+    @media (max-width: 1024px) { .stage-nav { position: static; } .vstepper { flex-direction: row; overflow-x: auto; } .vstep { min-width: 190px; } .vstep::before { display: none; } }
+  </style>
+</head>
+<body data-portal="tenant" data-page="groups">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="groups.html">Chit groups</a><i data-i="chevR"></i><span id="crumb">Create group</span></div>
+      <div class="row wrap"><h1 id="title">Create chit group</h1><span id="statusBadge"></span></div>
+      <p id="subtitle">Complete each stage in order. You can save and return later — progress is kept per stage.</p>
+    </div>
+    <div class="actions"><a class="btn ghost" href="groups.html">Close</a></div>
+  </div>
+
+  <div class="calc-strip mb-4" id="summary"></div>
+
+  <div class="grid g-side-main" style="align-items:start">
+    <div class="card stage-nav">
+      <div class="card-head" style="padding-bottom:12px"><div><h4>Group lifecycle</h4><div class="sub" id="progressTxt"></div></div></div>
+      <div style="padding:0 var(--card-p)"><div class="meter-bar"><div class="meter-fill" id="progressBar"></div></div></div>
+      <nav class="vstepper" id="vstepper" aria-label="Group setup stages"></nav>
+    </div>
+
+    <form id="f" novalidate>
+      <!-- 0 General info -->
+      <section class="card stage" data-s="0">
+        <div class="stage-head"><span class="card-title-icon"><i data-i="file"></i></span><div><h3>General information</h3><div class="xs muted">Group identity, branches and auction schedule</div></div></div>
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="field"><label>Scheme <span class="req">*</span></label><select class="select" id="schemeName" required></select><span class="err">Select a scheme</span></div>
+            <div class="field"><label>Group name <span class="req">*</span></label><input class="input mono" id="groupName" required placeholder="SV-5L-A26"><span class="hint">Suggested from scheme & year — editable</span><span class="err">Group name is required</span></div>
+          </div>
+          <div class="calc-strip mt-4" id="schemeStrip"></div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-head"><h3>Branches</h3><p>The primary branch owns the group; allowed branches can enrol subscribers into it.</p></div>
+          <div class="form-grid">
+            <div class="field"><label>Primary branch <span class="req">*</span></label><select class="select" id="branch" required></select><span class="err">Select a branch</span></div>
+            <div class="field"><label>Label in member app</label><select class="select" id="label"><option>Popular</option><option>Growth</option><option>Trending</option><option>Dividend</option></select></div>
+            <div class="field span-2"><label>Allowed branches (chitGroupBranches)</label><div class="chip-select" id="allowedBranches"></div></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-head"><h3>Auction schedule</h3></div>
+          <div class="field mb-4"><label>Auction mode</label>
+            <div class="segmented" data-seg id="auctionMode"><button type="button" class="active" data-v="open">Open bid</button><button type="button" data-v="fixed">Fixed bid</button><button type="button" data-v="online">Online bid</button></div>
+          </div>
+          <div class="form-grid cols-4">
+            <div class="field"><label>Auction start date <span class="req">*</span></label><input class="input" type="date" id="auctionStartDate" required><span class="err">Required</span></div>
+            <div class="field"><label>Start time <span class="req">*</span></label><input class="input" type="time" id="auctionStartTime" value="11:00" required><span class="err">Required</span></div>
+            <div class="field"><label>Auction end date</label><input class="input" type="date" id="auctionEndDate" readonly></div>
+            <div class="field"><label>End time</label><input class="input" type="time" value="12:00"></div>
+          </div>
+          <div class="form-grid mt-4 hidden" id="fixedBid">
+            <div class="field"><label>Fixed bid %</label><div class="input-group"><input class="input" type="number" value="25"><span class="addon">%</span></div></div>
+            <div class="field"><label>Applies to instalments</label><input class="input" placeholder="e.g. 2–10"></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-head"><h3>Dues & eligibility</h3></div>
+          <div class="form-grid cols-3">
+            <div class="field"><label>Overdue type <span class="req">*</span></label><select class="select" id="overDueType" required><option value="AFTER_AUCTION">After auction</option><option value="BEFORE_NEXT_AUCTION">Before next auction</option><option value="FIXED">Fixed days</option></select></div>
+            <div class="field"><label>Overdue value</label><div class="input-group"><input class="input" type="number" id="overDueValue" value="7"><span class="addon">days</span></div></div>
+            <div class="field"><label>Min. subscription to bid</label><div class="input-group"><span class="addon">₹</span><input class="input" type="number" id="minSubscriptionAmount"></div><span class="hint">Paid-up amount needed to participate</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1 FD applied -->
+      <section class="card stage" data-s="1">
+        <div class="stage-head"><span class="card-title-icon"><i data-i="bank"></i></span><div><h3>FD applied</h3><div class="xs muted">Security deposit equal to the chit value, lodged in an approved bank</div></div></div>
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="field"><label>Bank <span class="req">*</span></label><select class="select" required><option value="">Select bank</option><option>State Bank of India</option><option>HDFC Bank</option><option>ICICI Bank</option><option>Canara Bank</option><option>Union Bank of India</option></select><span class="err">Select a bank</span></div>
+            <div class="field"><label>Bank branch</label><input class="input" placeholder="e.g. Ameerpet"></div>
+            <div class="field"><label>FD amount <span class="req">*</span></label><div class="input-group"><span class="addon">₹</span><input class="input" type="number" id="fdAmount" required></div><span class="hint">Defaults to the chit value</span><span class="err">Required</span></div>
+            <div class="field"><label>Applied on <span class="req">*</span></label><input class="input" type="date" required value="2026-11-10"><span class="err">Required</span></div>
+            <div class="field"><label>Challan reference no. <span class="req">*</span></label><input class="input mono" required><span class="err">Required</span></div>
+            <div class="field"><label>Cheque / UTR no.</label><input class="input mono"></div>
+          </div>
+        </div>
+        <div class="form-section"><label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Upload FD application / covering letter</b><span>PDF or image, max 5 MB</span></div><input type="file"></label></div>
+      </section>
+
+      <!-- 2 FD update -->
+      <section class="card stage" data-s="2">
+        <div class="stage-head"><span class="card-title-icon"><i data-i="bank"></i></span><div><h3>FD update</h3><div class="xs muted">Record the issued fixed deposit receipt</div></div></div>
+        <div class="form-section">
+          <div class="form-grid cols-3">
+            <div class="field"><label>FD number <span class="req">*</span></label><input class="input mono" required><span class="err">Required</span></div>
+            <div class="field"><label>FD date <span class="req">*</span></label><input class="input" type="date" id="fdDate" required><span class="err">Required</span></div>
+            <div class="field"><label>Maturity date <span class="req">*</span></label><input class="input" type="date" id="fdMaturityDate" required><span class="err">Required</span></div>
+            <div class="field"><label>Rate of interest</label><div class="input-group"><input class="input" type="number" step="0.05" id="roi" value="6.8"><span class="addon">% p.a.</span></div></div>
+            <div class="field"><label>Maturity amount</label><div class="input-group"><span class="addon">₹</span><input class="input" id="fdMaturityAmount" readonly></div><span class="hint">Estimated, quarterly compounding</span></div>
+          </div>
+        </div>
+        <div class="form-section"><label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Upload FD certificate <span class="req">*</span></b><span>Scanned receipt, PDF or image</span></div><input type="file"></label></div>
+      </section>
+
+      <!-- 3 PSO applied -->
+      <section class="card stage" data-s="3">
+        <div class="stage-head"><span class="card-title-icon"><i data-i="shield"></i></span><div><h3>PSO applied</h3><div class="xs muted">Request Previous Sanction Order from the Registrar of Chits</div></div></div>
+        <div class="form-section">
+          <div class="alert info mb-4"><i data-i="info"></i><div><b>Generate application</b>We can prefill the PSO application using group & FD details.</div><button type="button" class="btn sm ml-auto" onclick="UI.toast('PSO application form generated','success')"><i data-i="download"></i>Generate form</button></div>
+          <div class="form-grid">
+            <div class="field"><label>Registrar office <span class="req">*</span></label><select class="select" required><option value="">Select</option><option>Registrar of Chits, Hyderabad</option><option>Asst. Registrar of Chits, Warangal</option><option>Asst. Registrar of Chits, Karimnagar</option></select><span class="err">Required</span></div>
+            <div class="field"><label>Applied on <span class="req">*</span></label><input class="input" type="date" required value="2026-11-10"><span class="err">Required</span></div>
+            <div class="field span-2"><label>Document reference no. <span class="req">*</span></label><input class="input mono" required><span class="err">Required</span></div>
+          </div>
+        </div>
+        <div class="form-section"><label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Upload acknowledged application</b><span>PDF, max 5 MB</span></div><input type="file"></label></div>
+      </section>
+
+      <!-- 4 PSO update -->
+      <section class="card stage" data-s="4">
+        <div class="stage-head"><span class="card-title-icon"><i data-i="shieldCheck"></i></span><div><h3>PSO update</h3><div class="xs muted">Record the sanction order received</div></div></div>
+        <div class="form-section">
+          <div class="form-grid cols-3">
+            <div class="field"><label>PSO number <span class="req">*</span></label><input class="input mono" required><span class="err">Required</span></div>
+            <div class="field"><label>PSO date <span class="req">*</span></label><input class="input" type="date" required><span class="err">Required</span></div>
+            <div class="field"><label>Valid until</label><input class="input" type="date"><span class="hint">Group must commence before this date</span></div>
+          </div>
+        </div>
+        <div class="form-section"><label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Upload PSO certificate <span class="req">*</span></b><span>PDF or image</span></div><input type="file"></label></div>
+      </section>
+
+      <!-- 5 Enrolment -->
+      <section class="card stage" data-s="5">
+        <div class="stage-head"><span class="card-title-icon"><i data-i="users"></i></span><div><h3>Enrolment</h3><div class="xs muted">Enrol subscribers against tickets until the minimum for CC is reached</div></div>
+          <div class="ml-auto row"><button type="button" class="btn sm"><i data-i="upload"></i>Bulk import</button><button type="button" class="btn sm primary" data-open="#mMember"><i data-i="plus"></i>Enrol subscriber</button></div></div>
+        <div class="form-section">
+          <div class="grid g-3">
+            <div class="kv-card"><span>Tickets enrolled</span><b id="enrCount"></b></div>
+            <div class="kv-card"><span>Required for CC</span><b id="enrMin"></b></div>
+            <div class="kv-card"><span>Vacant tickets</span><b id="enrVacant"></b></div>
+          </div>
+          <div class="meter mt-4"><div class="meter-bar" style="height:10px"><div class="meter-fill" id="enrBar"></div></div><div class="xs muted" id="enrMsg"></div></div>
+        </div>
+        <div id="memberTbl" style="border-top:1px solid var(--border)"></div>
+      </section>
+
+      <!-- 6 CC applied -->
+      <section class="card stage" data-s="6">
+        <div class="stage-head"><span class="card-title-icon"><i data-i="flag"></i></span><div><h3>CC applied</h3><div class="xs muted">Apply for the Commencement Certificate after minimum enrolment</div></div></div>
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="field"><label>Applied on <span class="req">*</span></label><input class="input" type="date" required value="2026-11-10"><span class="err">Required</span></div>
+            <div class="field"><label>Challan reference no. <span class="req">*</span></label><input class="input mono" required><span class="err">Required</span></div>
+            <div class="field span-2"><label>Remarks</label><textarea class="textarea" placeholder="Optional notes for the file"></textarea></div>
+          </div>
+        </div>
+        <div class="form-section"><label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Upload CC application & subscriber list</b><span>PDF, max 10 MB</span></div><input type="file"></label></div>
+      </section>
+
+      <!-- 7 CC update -->
+      <section class="card stage" data-s="7">
+        <div class="stage-head"><span class="card-title-icon"><i data-i="checkCircle"></i></span><div><h3>CC update</h3><div class="xs muted">Record the Commencement Certificate — the group then goes live</div></div></div>
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="field"><label>CC number <span class="req">*</span></label><input class="input mono" required><span class="err">Required</span></div>
+            <div class="field"><label>CC date <span class="req">*</span></label><input class="input" type="date" required><span class="err">Required</span></div>
+          </div>
+        </div>
+        <div class="form-section"><label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Upload CC certificate <span class="req">*</span></b><span>PDF or image</span></div><input type="file"></label>
+          <div class="alert success mt-4"><i data-i="zap"></i><div><b>Ready to commence</b>Saving this stage marks the group <b>Running</b> and schedules the first auction.</div></div>
+        </div>
+      </section>
+
+      <div class="sticky-foot">
+        <span class="small muted" id="stageInfo"></span>
+        <div class="ml-auto row">
+          <button type="button" class="btn" id="back"><i data-i="arrowL"></i>Back</button>
+          <button type="button" class="btn ghost" id="later">Save & finish later</button>
+          <button type="button" class="btn primary" id="next"></button>
+        </div>
+      </div>
+    </form>
+  </div>
+</main>
+
+<div class="modal" id="mMember" role="dialog" aria-label="Enrol subscriber">
+  <div class="modal-head"><div><h3>Enrol subscriber</h3><p>Allot a ticket to an existing or new subscriber.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body form-grid">
+    <div class="field span-2"><label>Subscriber <span class="req">*</span></label><div class="input-icon"><i data-i="search"></i><input class="input" id="mName" required placeholder="Search by name, mobile or ID"></div><span class="err">Choose a subscriber</span></div>
+    <div class="field"><label>Ticket no.</label><input class="input" id="mTicket" readonly></div>
+    <div class="field"><label>Branch</label><select class="select" id="mBranch"></select></div>
+    <div class="field span-2"><label>Nominee</label><input class="input" placeholder="Name & relationship"></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" id="mSave">Enrol</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var STAGES = DB.stages;
+  var group = DB.group(UI.param('id'));
+  var reached = group ? group.stage : 0;       // highest stage unlocked
+  var cur = Math.min(reached, 7);
+  var members = group ? DB.members.slice(0, Math.min(8, group.enrolled)) : [];
+  var enrolledTotal = group ? group.enrolled : 0;
+
+  /* ---- populate GIS selects ---- */
+  $('schemeName').innerHTML = '<option value="">Select scheme</option>' + DB.schemes.filter(function (s) { return s.status !== 'Inactive'; }).map(function (s) { return '<option value="' + s.id + '">' + s.name + '</option>'; }).join('');
+  $('branch').innerHTML = '<option value="">Select branch</option>' + DB.branches.filter(function (b) { return b.status === 'Active'; }).map(function (b) { return '<option value="' + b.id + '">' + b.name + '</option>'; }).join('');
+  $('mBranch').innerHTML = DB.branches.map(function (b) { return '<option>' + b.name + '</option>'; }).join('');
+  $('allowedBranches').innerHTML = DB.branches.filter(function (b) { return b.status === 'Active'; }).map(function (b) { return '<label><input type="checkbox" value="' + b.id + '"><span>' + b.name + '</span></label>'; }).join('');
+
+  if (group) {
+    $('title').textContent = group.name; $('crumb').textContent = group.name;
+    $('statusBadge').innerHTML = UI.badge(group.status);
+    $('schemeName').value = group.scheme; $('groupName').value = group.name; $('branch').value = group.branch; $('label').value = group.label;
+    $('auctionStartDate').value = group.startDate;
+    var cb = document.querySelector('#allowedBranches input[value="' + group.branch + '"]'); if (cb) cb.checked = true;
+  } else if (UI.param('scheme')) {
+    $('schemeName').value = UI.param('scheme');
+  }
+  if (!$('auctionStartDate').value) $('auctionStartDate').value = '2027-01-05';
+
+  function scheme() { return DB.scheme($('schemeName').value); }
+  function onScheme() {
+    var s = scheme();
+    $('schemeStrip').innerHTML = s ? [['Chit value', UI.inr(s.chitValue)], ['Tickets', s.installments], ['Subscription', UI.inr(s.chitValue / s.installments)], ['Auction', s.auctionType], ['Bid range', s.minBid + '–' + s.maxBid + '%']].map(function (c) { return '<div><span>' + c[0] + '</span><b>' + c[1] + '</b></div>'; }).join('')
+      : '<div><span>Scheme</span><b class="muted" style="font-weight:500">Select a scheme to see its rules</b></div>';
+    if (s && !group && !$('groupName').dataset.touched) {
+      var v = s.chitValue >= 1e5 ? Math.round(s.chitValue / 1e5) + 'L' : Math.round(s.chitValue / 1e3) + 'K';
+      $('groupName').value = 'SV-' + v + '-' + String.fromCharCode(65 + DB.groups.length % 26) + '27';
+    }
+    if (s) {
+      $('fdAmount').value = s.chitValue;
+      $('minSubscriptionAmount').placeholder = Math.round(s.chitValue / s.installments);
+      var d = new Date($('auctionStartDate').value);
+      if (!isNaN(d)) { d.setMonth(d.getMonth() + s.installments - 1); $('auctionEndDate').value = d.toISOString().slice(0, 10); }
+    }
+    drawSummary(); drawEnrol(); fdCalc();
+  }
+  $('schemeName').addEventListener('change', onScheme);
+  $('auctionStartDate').addEventListener('change', onScheme);
+  $('groupName').addEventListener('input', function () { this.dataset.touched = 1; drawSummary(); });
+  $('branch').addEventListener('change', function () {
+    var cb = document.querySelector('#allowedBranches input[value="' + this.value + '"]'); if (cb) cb.checked = true; drawSummary();
+  });
+  $('auctionMode').addEventListener('change', function (e) { $('fixedBid').classList.toggle('hidden', e.detail !== 'fixed'); });
+
+  /* FD maturity estimate */
+  function fdCalc() {
+    var p = +$('fdAmount').value, r = +$('roi').value / 100, s = scheme();
+    var d1 = new Date($('fdDate').value);
+    if (!isNaN(d1) && s && !$('fdMaturityDate').value) { var d2 = new Date(d1); d2.setMonth(d2.getMonth() + s.installments); $('fdMaturityDate').value = d2.toISOString().slice(0, 10); }
+    var years = s ? s.installments / 12 : 0;
+    $('fdMaturityAmount').value = p && r && years ? UI.num(Math.round(p * Math.pow(1 + r / 4, 4 * years))) : '';
+  }
+  ['fdAmount', 'roi', 'fdDate'].forEach(function (id) { $(id).addEventListener('input', fdCalc); $(id).addEventListener('change', fdCalc); });
+
+  /* ---- summary strip ---- */
+  function drawSummary() {
+    var s = scheme(), b = DB.branch($('branch').value);
+    $('summary').innerHTML = [['Group', $('groupName').value || '—'], ['Scheme', s ? s.name : '—'], ['Chit value', s ? UI.inr(s.chitValue) : '—'], ['Primary branch', b ? b.name : '—'], ['Stage', STAGES[cur].name + ' (' + (cur + 1) + '/8)']]
+      .map(function (c) { return '<div><span>' + c[0] + '</span><b style="font-size:14px">' + UI.esc(c[1]) + '</b></div>'; }).join('');
+  }
+
+  /* ---- enrolment ---- */
+  var mt;
+  function drawEnrol() {
+    var s = scheme(); var total = s ? s.installments : (group ? group.tickets : 0), min = s ? s.minMembersCC : 0;
+    $('enrCount').textContent = enrolledTotal + ' / ' + total;
+    $('enrMin').textContent = min;
+    $('enrVacant').textContent = Math.max(0, total - enrolledTotal);
+    $('enrBar').style.width = (total ? enrolledTotal / total * 100 : 0) + '%';
+    $('enrBar').className = 'meter-fill ' + (enrolledTotal >= min && min ? 'ok' : '');
+    $('enrMsg').innerHTML = !min ? 'Select a scheme first.' : enrolledTotal >= min ? '<span style="color:var(--success);font-weight:600">Minimum reached</span> — you can apply for the Commencement Certificate.' : (min - enrolledTotal) + ' more subscribers needed before CC can be applied.';
+    $('mTicket').value = enrolledTotal + 1;
+    if (mt) mt.render();
+  }
+  mt = UI.table({
+    el: '#memberTbl', rows: function () { return members; }, pageSize: 6,
+    columns: [
+      { key: 'ticket', label: 'Ticket', render: function (m) { return '<b class="mono">#' + m.ticket + '</b>'; } },
+      { key: 'name', label: 'Subscriber', render: function (m) { return '<div class="ent"><span class="avatar sm">' + UI.initials(m.name) + '</span><div class="ent-txt"><b>' + m.name + '</b><span>' + m.phone + '</span></div></div>'; } },
+      { key: 'branch', label: 'Branch' },
+      { key: 'kyc', label: 'KYC', render: function (m) { return UI.badge(m.kyc); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function () { return '<button type="button" class="icon-btn sm" aria-label="Remove">' + UI.icon('trash') + '</button>'; } }
+    ]
+  });
+  $('mSave').addEventListener('click', function () {
+    if (!UI.validate($('mMember'))) return;
+    enrolledTotal++;
+    members.unshift({ ticket: enrolledTotal, name: $('mName').value, phone: '+91 9•••• •••••', branch: $('mBranch').value, kyc: 'Pending' });
+    $('mName').value = '';
+    UI.close(); drawEnrol(); UI.toast('Subscriber enrolled on ticket #' + enrolledTotal, 'success');
+  });
+
+  /* ---- stepper ---- */
+  function drawStepper() {
+    $('vstepper').innerHTML = STAGES.map(function (s, i) {
+      var st = i < reached ? 'done' : '';
+      if (i === cur) st += ' active';
+      var locked = i > reached;
+      return '<button type="button" class="vstep ' + st + '" data-go="' + i + '"' + (locked ? ' disabled style="opacity:.55;cursor:not-allowed"' : '') + '>' +
+        '<span class="bubble">' + (i < reached ? UI.icon('check') : i + 1) + '</span>' +
+        '<span class="vtxt"><b>' + s.name + '<span class="code">' + s.code + '</span></b><span>' + s.desc + '</span></span></button>';
+    }).join('');
+    document.querySelectorAll('.stage').forEach(function (p) { p.classList.toggle('active', +p.getAttribute('data-s') === cur); });
+    var pct = Math.min(reached, 8) / 8 * 100;
+    $('progressBar').style.width = pct + '%';
+    $('progressTxt').textContent = Math.min(reached, 8) + ' of 8 stages complete';
+    $('back').disabled = cur === 0;
+    $('next').innerHTML = cur === 7 ? UI.icon('zap') + 'Save & commence group' : cur === 3 ? 'Generate form & continue' + UI.icon('arrowR') : 'Save & continue' + UI.icon('arrowR');
+    $('stageInfo').innerHTML = 'Stage ' + (cur + 1) + ' of 8 · <span class="mono">' + STAGES[cur].code + '</span>';
+    drawSummary();
+  }
+  $('vstepper').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-go]'); if (!b || b.disabled) return;
+    cur = +b.getAttribute('data-go'); drawStepper(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  $('back').addEventListener('click', function () { if (cur > 0) { cur--; drawStepper(); } });
+  $('later').addEventListener('click', function () { UI.toast('Progress saved. Resume any time from Chit groups.', 'success'); });
+
+  var MSG = ['General information saved', 'FD application saved', 'FD details updated', 'PSO form generated and saved', 'PSO details updated', 'Minimum enrolment completed', 'CC application saved', 'CC updated — group is now running'];
+  $('next').addEventListener('click', function () {
+    var panel = document.querySelector('.stage[data-s="' + cur + '"]');
+    if (!UI.validate(panel)) { UI.toast('Please complete the required fields', 'danger'); return; }
+    if (cur === 0 && !document.querySelector('#allowedBranches input:checked')) { UI.toast('Select at least one allowed branch', 'danger'); return; }
+    if (cur === 5) {
+      var s = scheme();
+      if (s && enrolledTotal < s.minMembersCC) { UI.toast('Enrol at least ' + s.minMembersCC + ' subscribers before applying for CC', 'warning'); return; }
+    }
+    UI.toast(MSG[cur], 'success');
+    if (cur === 7) { setTimeout(function () { location.href = 'group-view.html?id=' + (group ? group.id : 'GRP-2411'); }, 1100); reached = 8; drawStepper(); return; }
+    if (cur + 1 > reached) reached = cur + 1;
+    cur++;
+    drawStepper(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  onScheme();
+  drawStepper();
+});
+</script>
+</body>
+</html>

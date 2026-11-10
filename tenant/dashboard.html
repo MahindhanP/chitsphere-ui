@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="tenant" data-page="dashboard">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <h1>Welcome back, Ravi</h1>
+      <p>Sri Venkata Chits · 7 branches · Tuesday, 10 November 2026</p>
+    </div>
+    <div class="actions">
+      <select class="select" style="width:auto"><option>All branches</option><option>Ameerpet (HO)</option><option>Kukatpally</option><option>Dilsukhnagar</option></select>
+      <a class="btn" href="scheme-new.html"><i data-i="file"></i>New scheme</a>
+      <a class="btn primary" href="group-new.html"><i data-i="plus"></i>New group</a>
+    </div>
+  </div>
+
+  <div class="grid g-4">
+    <div class="card kpi"><div class="label"><span class="ico"><i data-i="grid"></i></span>Running groups</div><div class="value" id="kRun"></div><div class="delta"><span id="kPipe"></span>&nbsp;in setup</div></div>
+    <div class="card kpi"><div class="label"><span class="ico hl"><i data-i="coins"></i></span>Chit value under management</div><div class="value" id="kAum"></div><div class="delta"><span class="up"><i data-i="trendUp"></i>8.2%</span> vs last quarter</div></div>
+    <div class="card kpi"><div class="label"><span class="ico ok"><i data-i="wallet"></i></span>Collections this month</div><div class="value">₹1.84 Cr</div><div class="delta">91% of ₹2.02 Cr due</div></div>
+    <div class="card kpi"><div class="label"><span class="ico warn"><i data-i="users"></i></span>Active subscribers</div><div class="value">4,210</div><div class="delta"><span class="up"><i data-i="trendUp"></i>146</span> joined this month</div></div>
+  </div>
+
+  <div class="grid g-main-side mt-6">
+    <div class="card">
+      <div class="card-head"><div><h3>Collections vs dues</h3><div class="sub">Last 8 months, ₹ lakh</div></div><div class="tools legend"><span><i></i>Collected</span><span><i class="c2"></i>Outstanding</span></div></div>
+      <div class="card-body"><div id="colChart"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h3>Upcoming auctions</h3><div class="sub">Next 14 days</div></div></div>
+      <div class="list">
+        <div class="list-item"><div class="avatar sq" style="background:var(--highlight-soft);color:var(--highlight)"><i data-i="gavel" class="sm"></i></div><div style="flex:1"><b>SV-1LW-E26</b><div class="xs muted">Weekly · Warangal</div></div><div class="right"><b class="small">Wed, 11 Nov</b><div class="xs muted">6:00 PM</div></div></div>
+        <div class="list-item"><div class="avatar sq"><i data-i="gavel" class="sm"></i></div><div style="flex:1"><b>SV-2L-C25 · #10</b><div class="xs muted">₹2,00,000 · Dilsukhnagar</div></div><div class="right"><b class="small">Sun, 15 Nov</b><div class="xs muted">11:00 AM</div></div></div>
+        <div class="list-item"><div class="avatar sq"><i data-i="gavel" class="sm"></i></div><div style="flex:1"><b>SV-1LW-E26</b><div class="xs muted">Weekly · Warangal</div></div><div class="right"><b class="small">Wed, 18 Nov</b><div class="xs muted">6:00 PM</div></div></div>
+        <div class="list-item"><div class="avatar sq"><i data-i="gavel" class="sm"></i></div><div style="flex:1"><b>SV-5L-A24 · #24</b><div class="xs muted">₹5,00,000 · Ameerpet</div></div><div class="right"><b class="small">Sat, 5 Dec</b><div class="xs muted">11:00 AM</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g-main-side mt-6">
+    <div class="card flush">
+      <div class="card-head"><div><h3>Groups in setup</h3><div class="sub">Compliance stage of groups not yet commenced</div></div><div class="tools"><a class="btn sm ghost" href="groups.html">All groups <i data-i="arrowR"></i></a></div></div>
+      <div id="setupTbl"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Plan usage</h3><div class="tools"><a class="btn sm ghost" href="subscription.html">Manage</a></div></div>
+      <div class="card-body stack">
+        <div class="meter"><div class="meter-row"><span>Chit groups</span><b>84 / 120</b></div><div class="meter-bar"><div class="meter-fill" style="width:70%"></div></div></div>
+        <div class="meter"><div class="meter-row"><span>Branches</span><b>7 / 10</b></div><div class="meter-bar"><div class="meter-fill" style="width:70%"></div></div></div>
+        <div class="meter"><div class="meter-row"><span>Subscribers</span><b>4,210 / 6,000</b></div><div class="meter-bar"><div class="meter-fill" style="width:70%"></div></div></div>
+        <div class="meter"><div class="meter-row"><span>Staff users</span><b>31 / 40</b></div><div class="meter-bar"><div class="meter-fill warn" style="width:78%"></div></div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var G = DB.groups;
+  document.getElementById('kRun').textContent = G.filter(function (g) { return g.status === 'Running'; }).length + ' of ' + G.length;
+  document.getElementById('kPipe').textContent = G.filter(function (g) { return g.stage < 8; }).length;
+  document.getElementById('kAum').textContent = UI.inrShort(G.filter(function (g) { return g.status !== 'Closed'; }).reduce(function (s, g) { return s + g.chitValue; }, 0) * 9.3);
+
+  var m = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'], c = [148, 152, 160, 158, 171, 176, 182, 184], o = [14, 15, 12, 16, 13, 15, 17, 18];
+  UI.bars('#colChart', m.map(function (x, i) { return { label: x, a: c[i], b: o[i] }; }), { tip: function (d) { return d.label + ': ₹' + d.a + 'L collected, ₹' + d.b + 'L due'; } });
+
+  UI.table({
+    el: '#setupTbl', pageSize: 5,
+    rows: G.filter(function (g) { return g.stage < 8; }),
+    onRow: function (r) { location.href = 'group-new.html?id=' + r.id; },
+    columns: [
+      { key: 'name', label: 'Group', render: function (r) { return '<b class="mono">' + r.name + '</b><div class="xs muted">' + DB.scheme(r.scheme).name + '</div>'; } },
+      { key: 'stage', label: 'Stage', render: function (r) {
+        var st = DB.stages[Math.min(r.stage, 7)];
+        return '<div style="min-width:160px"><div class="row between xs"><span>' + st.name + '</span><span class="muted">' + r.stage + '/8</span></div><div class="meter-bar mt-1"><div class="meter-fill" style="width:' + (r.stage / 8 * 100) + '%"></div></div></div>'; } },
+      { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function () { return '<button class="btn sm soft">Continue</button>'; } }
+    ]
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Billing · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body data-portal="platform" data-page="billing">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Platform</a><i data-i="chevR"></i>Billing & invoices</div>
+      <h1>Billing & invoices</h1>
+      <p>Subscription invoices raised to tenants. GST at 18% is included in the amounts shown.</p>
+    </div>
+    <div class="actions">
+      <button class="btn"><i data-i="download"></i>Export</button>
+      <button class="btn primary" data-open="#mInvoice"><i data-i="plus"></i>Create invoice</button>
+    </div>
+  </div>
+
+  <div class="grid g-4">
+    <div class="card kpi"><div class="label"><span class="ico ok"><i data-i="checkCircle"></i></span>Collected (Nov)</div><div class="value" id="kPaid"></div><div class="delta" id="kPaidN"></div></div>
+    <div class="card kpi"><div class="label"><span class="ico warn"><i data-i="clock"></i></span>Pending</div><div class="value" id="kPend"></div><div class="delta" id="kPendN"></div></div>
+    <div class="card kpi"><div class="label"><span class="ico hl"><i data-i="alert"></i></span>Overdue</div><div class="value" id="kOver"></div><div class="delta" id="kOverN"></div></div>
+    <div class="card kpi"><div class="label"><span class="ico"><i data-i="activity"></i></span>Collection rate</div><div class="value">94.2%</div><div class="delta"><span class="up"><i data-i="trendUp"></i>1.8 pts</span> vs October</div></div>
+  </div>
+
+  <div class="card mt-6">
+    <div class="tabs" data-tabs id="invTabs" style="padding:0 12px">
+      <button class="active" data-tab="">All</button>
+      <button data-tab="Paid">Paid</button>
+      <button data-tab="Pending">Pending</button>
+      <button data-tab="Overdue">Overdue</button>
+      <button data-tab="Void">Void</button>
+    </div>
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search invoice no. or tenant…"></div>
+      <select class="select hidden" id="fStatus"><option value=""></option><option>Paid</option><option>Pending</option><option>Overdue</option><option>Void</option></select>
+      <input class="input" type="month" value="2026-11" style="width:auto">
+    </div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<div class="modal" id="mInvoice" role="dialog" aria-label="Create invoice">
+  <div class="modal-head"><div><h3>Create invoice</h3><p>For add-ons, overages or one-time setup fees.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body form-grid">
+    <div class="field span-2"><label>Tenant <span class="req">*</span></label><select class="select" required id="invTenant"></select><span class="err">Choose a tenant</span></div>
+    <div class="field span-2"><label>Description <span class="req">*</span></label><input class="input" required placeholder="e.g. Onboarding & data migration"><span class="err">Description is required</span></div>
+    <div class="field"><label>Amount (excl. GST) <span class="req">*</span></label><div class="input-group"><span class="addon">₹</span><input class="input" type="number" id="invAmt" required></div><span class="err">Amount is required</span></div>
+    <div class="field"><label>Due date</label><input class="input" type="date" value="2026-11-20"></div>
+    <div class="span-2 calc-strip"><div><span>Subtotal</span><b id="invSub">₹0</b></div><div><span>GST 18%</span><b id="invGst">₹0</b></div><div><span>Total</span><b id="invTot">₹0</b></div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" id="invSave"><i data-i="send"></i>Create & send</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var I = DB.invoices;
+  function sum(st) { var l = I.filter(function (i) { return i.status === st; }); return [l.reduce(function (s, i) { return s + i.amount; }, 0), l.length]; }
+  var p = sum('Paid'), pe = sum('Pending'), o = sum('Overdue');
+  document.getElementById('kPaid').textContent = UI.inrShort(p[0]); document.getElementById('kPaidN').textContent = p[1] + ' invoices';
+  document.getElementById('kPend').textContent = UI.inrShort(pe[0]); document.getElementById('kPendN').textContent = pe[1] + ' invoice';
+  document.getElementById('kOver').textContent = UI.inrShort(o[0]); document.getElementById('kOverN').textContent = o[1] + ' invoice · 8 days late';
+
+  var rows = I.map(function (i) { var t = DB.tenant(i.tenant); return Object.assign({ tname: t.name, tcolor: t.color }, i); });
+  UI.table({
+    el: '#tbl', rows: rows, search: '#q', searchKeys: ['no', 'tname'],
+    filters: [{ el: '#fStatus', key: 'status' }],
+    columns: [
+      { key: 'no', label: 'Invoice', sort: true, render: function (r) { return '<b class="mono">' + r.no + '</b>'; } },
+      { key: 'tname', label: 'Tenant', sort: true, render: function (r) { return '<div class="ent"><span class="avatar sq sm" style="background:' + r.tcolor + ';color:#fff">' + UI.initials(r.tname) + '</span><div class="ent-txt"><b>' + r.tname + '</b><span>' + r.tenant + '</span></div></div>'; } },
+      { key: 'date', label: 'Issued', sort: true, render: function (r) { return UI.date(r.date); } },
+      { key: 'due', label: 'Due', sort: true, render: function (r) { return UI.date(r.due); } },
+      { key: 'amount', label: 'Amount', num: true, sort: true, render: function (r) { return '<b>' + UI.inr(r.amount) + '</b>'; } },
+      { key: 'status', label: 'Status', sort: true, render: function (r) { return UI.badge(r.status); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function (r) {
+        return (r.status === 'Overdue' || r.status === 'Pending' ? '<button class="btn sm soft" onclick="UI.toast(\'Reminder sent to ' + r.tname.replace(/'/g, '') + '\',\'success\')">' + UI.icon('send') + 'Remind</button> ' : '') +
+          '<button class="icon-btn sm" aria-label="Download PDF">' + UI.icon('download') + '</button>'; } }
+    ]
+  });
+
+  /* status tabs drive the hidden filter */
+  document.getElementById('invTabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]'); if (!b) return;
+    var s = document.getElementById('fStatus'); s.value = b.getAttribute('data-tab'); s.dispatchEvent(new Event('change'));
+  });
+
+  var sel = document.getElementById('invTenant');
+  sel.innerHTML = '<option value="">Select tenant</option>' + DB.tenants.map(function (t) { return '<option>' + t.name + '</option>'; }).join('');
+  document.getElementById('invAmt').addEventListener('input', function () {
+    var a = +this.value || 0;
+    document.getElementById('invSub').textContent = UI.inr(a);
+    document.getElementById('invGst').textContent = UI.inr(a * .18);
+    document.getElementById('invTot').textContent = UI.inr(a * 1.18);
+  });
+  document.getElementById('invSave').addEventListener('click', function () {
+    if (!UI.validate(document.getElementById('mInvoice'))) return;
+    UI.close(); UI.toast('Invoice created and emailed', 'success');
+  });
+});
+</script>
+</body>
+</html>

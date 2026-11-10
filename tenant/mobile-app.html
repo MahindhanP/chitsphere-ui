@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your member app · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <style>
+    .qr { width: 120px; height: 120px; border-radius: var(--radius); background: #fff; padding: 9px; border: 1px solid var(--border); flex: none; display: grid; grid-template-columns: repeat(13, 1fr); gap: 1px; }
+    .qr i { background: #0F172A; border-radius: 1px; } .qr i.o { background: transparent; }
+    .app-icon { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 22px; flex: none; box-shadow: var(--shadow); }
+    .store-row { display: grid; grid-template-columns: 120px 1fr auto; gap: 16px; align-items: center; padding: 16px var(--card-p); border-bottom: 1px solid var(--border); }
+    .store-row:last-child { border-bottom: 0; }
+    .store-row .stepper .step-txt { display: none; }
+    .store-row .stepper .bubble { width: 24px; height: 24px; font-size: 11px; }
+    .shots { display: flex; gap: 8px; overflow-x: auto; }
+    .shots div { width: 64px; height: 128px; border-radius: 10px; flex: none; border: 1px solid var(--border); background: linear-gradient(var(--brand) 0 32%, var(--surface-2) 32%); position: relative; }
+    .shots div::after { content: ""; position: absolute; left: 8px; right: 8px; top: 38%; height: 22px; border-radius: 5px; background: var(--surface); box-shadow: var(--shadow-sm); }
+    @media (max-width: 760px) { .store-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body data-portal="tenant" data-page="mobile">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Your member app</div>
+      <h1>Your member app</h1>
+      <p>Your own app on Google Play and the App Store, under your company’s name and icon. Members install it, sign in with their mobile number, and see only your chits.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="branding.html"><i data-i="palette"></i>Edit branding</a>
+      <a class="btn primary" href="../app/index.html?org=svchits" target="_blank"><i data-i="phone"></i>Preview app</a>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body row wrap" style="gap:18px">
+      <div class="app-icon" id="appIcon" style="background:var(--brand)">SV</div>
+      <div style="flex:1;min-width:220px">
+        <div class="row wrap"><h2 id="appName"></h2><span class="badge outline">v<span id="appVer"></span></span></div>
+        <div class="small muted mt-1 mono" id="appPkg"></div>
+        <div class="row wrap mt-2" style="gap:12px"><span class="small">Google Play <span id="stA"></span></span><span class="small">App Store <span id="stI"></span></span></div>
+      </div>
+      <div class="row wrap"><button class="btn" data-open="#mInvite"><i data-i="send"></i>Invite members</button><button class="btn" data-open="#mRelease"><i data-i="upload"></i>Request new release</button></div>
+    </div>
+  </div>
+
+  <div class="grid g-4">
+    <div class="card kpi"><div class="label"><span class="ico"><i data-i="download"></i></span>Installs</div><div class="value" id="kInst"></div><div class="delta">68% of 4,210 members</div></div>
+    <div class="card kpi"><div class="label"><span class="ico ok"><i data-i="wallet"></i></span>Paid via app (Nov)</div><div class="value">₹71.4 L</div><div class="delta"><span class="up"><i data-i="trendUp"></i>39%</span> of collections</div></div>
+    <div class="card kpi"><div class="label"><span class="ico hl"><i data-i="gavel"></i></span>Online bids (Nov)</div><div class="value">412</div><div class="delta">across 21 auctions</div></div>
+    <div class="card kpi"><div class="label"><span class="ico warn"><i data-i="star"></i></span>Store rating</div><div class="value" id="kRate"></div><div class="delta">from 318 reviews</div></div>
+  </div>
+
+  <div class="card mt-6">
+    <div class="tabs" data-tabs style="padding:0 12px">
+      <button class="active" data-tab="release"><i data-i="activity" class="sm"></i>Release status</button>
+      <button data-tab="listing"><i data-i="file" class="sm"></i>Store listing</button>
+      <button data-tab="features"><i data-i="sliders" class="sm"></i>Member features</button>
+      <button data-tab="share"><i data-i="send" class="sm"></i>Download links</button>
+    </div>
+
+    <!-- Release -->
+    <div class="tab-panel" data-tab-panel="release">
+      <div id="storeRows"></div>
+      <div class="card-body" style="border-top:1px solid var(--border)">
+        <div class="alert info"><i data-i="info"></i><div><b>What needs a store release?</b>Changing the app name, icon or splash screen needs a new release (store review takes 1–7 days). Colours, features, schemes and content update instantly, with no release needed.</div></div>
+      </div>
+      <div class="card-head" style="border-top:1px solid var(--border)"><h3>Release history</h3></div>
+      <div id="relTbl"></div>
+    </div>
+
+    <!-- Listing -->
+    <div class="tab-panel" data-tab-panel="listing">
+      <div class="card-body grid g-main-side" style="align-items:start">
+        <div class="form-grid">
+          <div class="field span-2"><label>App name on stores <span class="req">*</span></label><input class="input" id="lName" maxlength="30" required><span class="hint">Max 30 characters. Changing this needs a new release.</span></div>
+          <div class="field"><label>Android package ID</label><input class="input mono" id="lPkg" readonly><span class="hint">Permanent — cannot be changed after first publish</span></div>
+          <div class="field"><label>iOS bundle ID</label><input class="input mono" id="lBundle" readonly></div>
+          <div class="field span-2"><label>Short description</label><input class="input" maxlength="80" value="Pay chit instalments, track dividends and bid in auctions."></div>
+          <div class="field span-2"><label>Full description</label><textarea class="textarea" rows="5">Official app of Sri Venkata Chits Pvt. Ltd., a registered chit fund company in Telangana since 1998. See all your chit groups, pay instalments by UPI, download receipts, check dividends and take part in auctions from your phone.</textarea></div>
+          <div class="field"><label>Category</label><select class="select"><option>Finance</option></select></div>
+          <div class="field"><label>Support email <span class="req">*</span></label><input class="input" value="care@svchits.in"></div>
+          <div class="field span-2"><label>Privacy policy URL <span class="req">*</span></label><input class="input" value="https://svchits.in/privacy"><span class="hint">Required by Google Play and Apple. We can host a template one for you.</span></div>
+        </div>
+        <div class="stack">
+          <div class="field"><label>App icon</label><div class="row"><div class="app-icon" style="background:var(--brand)">SV</div><label class="dropzone" style="flex:1;padding:12px"><span class="dz-ico"><i data-i="image"></i></span><div><b>Upload 1024×1024</b><span>PNG, no transparency</span></div><input type="file" accept="image/png"></label></div></div>
+          <div class="field"><label>Screenshots</label><div class="shots"><div></div><div></div><div></div><div></div></div><span class="hint">Generated automatically from your branding. You can replace them.</span></div>
+        </div>
+      </div>
+      <div class="card-foot"><span class="xs muted">Saved changes go out in the next release</span><button class="btn primary ml-auto" onclick="UI.toast('Store listing saved','success')">Save listing</button></div>
+    </div>
+
+    <!-- Features -->
+    <div class="tab-panel" data-tab-panel="features">
+      <div class="list" id="features"></div>
+      <div class="card-foot"><span class="xs muted">Takes effect in the app within minutes. No store release needed.</span><button class="btn primary ml-auto" onclick="UI.toast('App settings saved','success')">Save</button></div>
+    </div>
+
+    <!-- Share -->
+    <div class="tab-panel" data-tab-panel="share">
+      <div class="card-body row wrap" style="gap:24px">
+        <div class="qr" id="qr" aria-label="QR code"></div>
+        <div class="stack" style="flex:1;min-width:240px">
+          <div class="field"><label>Smart download link (opens the right store)</label><div class="input-group"><input class="input mono" readonly value="https://svchits.chitsphere.in/app"><button class="btn ghost" style="border:0;border-radius:0" onclick="UI.toast('Link copied','success')"><i data-i="copy"></i></button></div></div>
+          <div class="grid g-2">
+            <div class="field"><label>Google Play</label><input class="input mono small" readonly id="playUrl"></div>
+            <div class="field"><label>App Store</label><input class="input mono small" readonly value="https://apps.apple.com/in/app/id6471208833"></div>
+          </div>
+          <div class="row wrap"><button class="btn sm"><i data-i="download"></i>QR poster for branches</button><button class="btn sm"><i data-i="download"></i>Store badges for your website</button></div>
+        </div>
+      </div>
+      <div class="card-foot small muted"><i data-i="shieldCheck" class="sm"></i>Only members already enrolled with you can sign in, using their registered mobile number and an OTP.</div>
+    </div>
+  </div>
+
+  <div class="card mt-6">
+    <div class="card-head"><div><h3>Publishing account</h3><div class="sub">Whose Google Play and Apple developer accounts the app is listed under</div></div></div>
+    <div class="card-body">
+      <div class="option-cards" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+        <label class="option-card"><input type="radio" name="acct" checked><div class="oc-body"><b>Published by ChitSphere for you</b><span>Listed under our developer accounts with “Sri Venkata Chits” as the app name. Nothing for you to set up. All plans.</span></div></label>
+        <label class="option-card"><input type="radio" name="acct" disabled><div class="oc-body"><b>Your own developer accounts <span class="badge outline">Enterprise</span></b><span>Listed as published by Sri Venkata Chits Pvt. Ltd. You add us as a release manager. Requires a D-U-N-S number for Apple.</span></div></label>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal" id="mRelease" role="dialog" aria-label="Request new release">
+  <div class="modal-head"><div><h3>Request a new release</h3><p>We build, sign and submit it to the stores for you.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body stack">
+    <div class="field"><label>What changed?</label>
+      <div class="chip-select"><label><input type="checkbox" checked><span>App icon</span></label><label><input type="checkbox"><span>App name</span></label><label><input type="checkbox"><span>Splash screen</span></label><label><input type="checkbox" checked><span>Store listing text</span></label><label><input type="checkbox"><span>Screenshots</span></label></div></div>
+    <div class="field"><label>Platforms</label><div class="row" style="gap:16px"><label class="check"><input type="checkbox" checked> Google Play</label><label class="check"><input type="checkbox" checked> App Store</label></div></div>
+    <div class="field"><label>Release notes (shown in stores)</label><textarea class="textarea">Updated app icon and description.</textarea></div>
+    <div class="alert warning"><i data-i="clock"></i><div>Google Play usually reviews in 1–3 days, Apple in 1–7 days. Members get the update automatically.</div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" onclick="UI.close();UI.toast('Release requested — we’ll email you at each stage','success')"><i data-i="upload"></i>Request release</button></div>
+</div>
+
+<div class="modal" id="mInvite" role="dialog" aria-label="Invite members">
+  <div class="modal-head"><div><h3>Invite members to install the app</h3><p>Sends an SMS with your app’s download link.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body stack">
+    <div class="option-cards" style="grid-template-columns:1fr">
+      <label class="option-card"><input type="radio" name="who" checked><div class="oc-body"><b>Members who haven’t installed it</b><span>1,364 members</span></div></label>
+      <label class="option-card"><input type="radio" name="who"><div class="oc-body"><b>Members of a group</b><span>Pick groups on the next step</span></div></label>
+      <label class="option-card"><input type="radio" name="who"><div class="oc-body"><b>Members of a branch</b><span>Pick branches on the next step</span></div></label>
+    </div>
+    <div class="field"><label>Message preview</label><textarea class="textarea" readonly>Sri Venkata Chits: Pay instalments, see dividends and bid online in our new app. Download: svchits.chitsphere.in/app</textarea><span class="hint">Uses 1,364 SMS credits</span></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" onclick="UI.close();UI.toast('Invites queued for 1,364 members','success')"><i data-i="send"></i>Send invites</button></div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var a = DB.app('T-1001');
+  $('appName').textContent = a.appName; $('appVer').textContent = a.version; $('appPkg').textContent = a.pkg;
+  $('stA').innerHTML = UI.badge(a.android); $('stI').innerHTML = UI.badge(a.ios);
+  $('kInst').textContent = UI.num(a.installs); $('kRate').textContent = a.rating + ' ★';
+  $('lName').value = a.appName; $('lPkg').value = a.pkg; $('lBundle').value = a.bundle;
+  $('playUrl').value = 'https://play.google.com/store/apps/details?id=' + a.pkg;
+
+  function steps(n) {
+    return '<div class="stepper">' + DB.APP_STAGES.map(function (s, i) {
+      return '<div class="step ' + (i < n ? 'done' : i === n ? 'active' : '') + '" title="' + s + '"><span class="bubble">' + (i < n || n === 4 ? UI.icon('check', 'sm') : i + 1) + '</span></div>';
+    }).join('') + '</div><div class="row between xs muted mt-1">' + DB.APP_STAGES.map(function (s) { return '<span>' + s + '</span>'; }).join('') + '</div>';
+  }
+  $('storeRows').innerHTML = [['Google Play', a.android, 'Version 2.4.0 (code 240) · 2 Nov 2026'], ['App Store', a.ios, 'Version 2.4.0 (build 88) · 2 Nov 2026']].map(function (s) {
+    return '<div class="store-row"><div><b>' + s[0] + '</b><div class="mt-1">' + UI.badge(s[1]) + '</div></div><div>' + steps(4) + '</div><div class="xs muted right">' + s[2] + '</div></div>';
+  }).join('');
+
+  UI.table({
+    el: '#relTbl', pageSize: 5,
+    rows: [
+      { v: '2.4.0', date: '2026-11-02', what: 'Online bidding improvements, Telugu language', by: 'ChitSphere (platform update)', st: 'Live' },
+      { v: '2.3.2', date: '2026-10-08', what: 'New app icon', by: 'Ravi Kumar', st: 'Live' },
+      { v: '2.3.0', date: '2026-08-19', what: 'UPI autopay for instalments', by: 'ChitSphere (platform update)', st: 'Live' },
+      { v: '2.0.0', date: '2026-03-01', what: 'First release', by: 'ChitSphere onboarding', st: 'Live' }
+    ],
+    columns: [
+      { key: 'v', label: 'Version', render: function (r) { return '<b class="mono">' + r.v + '</b>'; } },
+      { key: 'date', label: 'Released', render: function (r) { return UI.date(r.date); } },
+      { key: 'what', label: 'What changed' },
+      { key: 'by', label: 'Requested by' },
+      { key: 'st', label: 'Status', render: function (r) { return UI.badge(r.st); } }
+    ]
+  });
+
+  var F = [['wallet', 'Online payments', 'UPI, cards and net banking to your collection account', true],
+    ['gavel', 'Online bidding', 'Members can bid in auctions from the app', true],
+    ['receipt', 'Passbook & receipts', 'Payment history and downloadable receipts', true],
+    ['shieldCheck', 'KYC upload', 'Members submit PAN, Aadhaar and bank details for your review', true],
+    ['search', 'Browse & join new groups', 'Show open groups and accept join requests', false],
+    ['send', 'WhatsApp reminders', 'Due and auction reminders on WhatsApp', false]];
+  $('features').innerHTML = F.map(function (f) {
+    return '<div class="list-item"><span class="card-title-icon">' + UI.icon(f[0]) + '</span><div style="flex:1"><b>' + f[1] + '</b><div class="xs muted">' + f[2] + '</div></div><label class="switch"><input type="checkbox"' + (f[3] ? ' checked' : '') + '><span class="track"></span></label></div>';
+  }).join('');
+
+  var q = '', seed = 7;
+  for (var i = 0; i < 169; i++) {
+    var r = Math.floor(i / 13), c = i % 13;
+    var finder = (r < 4 && c < 4) || (r < 4 && c > 8) || (r > 8 && c < 4);
+    var on = finder ? !((r === 1 || r === 2 || r === 10 || r === 11) && (c === 1 || c === 2 || c === 10 || c === 11)) && !(r === 3 || c === 3 || r === 9 || c === 9) : ((seed = (seed * 9301 + 49297) % 233280) / 233280) > .5;
+    q += '<i class="' + (on ? '' : 'o') + '"></i>';
+  }
+  $('qr').innerHTML = q;
+});
+</script>
+</body>
+</html>
