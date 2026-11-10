@@ -6,7 +6,7 @@
 (function () {
   var KEY = 'cs.theme';
   var DEFAULTS = {
-    mode: 'system',          // light | dark | system
+    mode: 'light',           // light | dark | system
     accent: 'navy',          // preset key or 'custom'
     custom: '#072E77',       // used when accent === 'custom'
     density: 'comfortable',  // comfortable | compact
