@@ -107,6 +107,8 @@ document.addEventListener('app:ready', function () {
   document.getElementById('cards').addEventListener('click', function (e) { var c = e.target.closest('[data-sid]'); if (c) openScheme(c.getAttribute('data-sid')); });
   document.getElementById('cards').addEventListener('keydown', function (e) { var c = e.target.closest('[data-sid]'); if (c && e.key === 'Enter') openScheme(c.getAttribute('data-sid')); });
   drawCards();
+  /* Appearance -> List screens decides the default view */
+  if (Theme.get().list === 'table') document.querySelector('#view [data-v="table"]').click();
 
   function openScheme(id) {
     var s = DB.scheme(id), $ = function (x) { return document.getElementById(x); };

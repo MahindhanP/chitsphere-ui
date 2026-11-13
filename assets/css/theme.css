@@ -1,24 +1,27 @@
 /* =====================================================================
    ChitSphere – Design tokens & themes
    ---------------------------------------------------------------------
-   Theme state lives on <html> as data attributes (set by theme.js):
-     data-theme   = light | dark
-     data-accent  = navy | emerald | violet | teal | crimson | amber | graphite | custom
-     data-density = comfortable | compact
-     data-radius  = sharp | rounded | soft
-     data-sidebar = surface | brand
-   Components must ONLY use the semantic tokens below (never raw hex),
-   so every theme combination works automatically.
+   theme.js writes the theme to <html>:
+     CSS variables (inline): --primary --highlight --text --border
+                             --surface --bg --on-primary --brand --font …
+     data attributes:        data-theme (light|dark), data-sidebar,
+                             data-sb-tone, data-radius, data-density,
+                             data-weight, data-motion, data-nav,
+                             data-tabpos, data-list, data-details,
+                             data-popup, data-loader, data-progress,
+                             data-label, data-count, data-graph
+   The 6 base colours drive every other token below, so a custom palette
+   or a template only has to supply those 6 per mode.
+   Components must ONLY use semantic tokens (never raw hex).
    ===================================================================== */
 
 :root {
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
 
-  /* ---- Brand (accent) — overwritten per accent below ---- */
-  --brand: #072E77;          /* light-mode primary */
-  --brand-dark: #8AA9FF;     /* dark-mode primary  */
-  --highlight: #FF4A00;      /* secondary accent (from reference project) */
+  --brand: #072E77;
+  --brand-dark: #8AA9FF;
+  --highlight: #FF4A00;
 
   /* ---- Shape ---- */
   --radius-xs: 4px;
@@ -39,40 +42,31 @@
   --sidebar-w: 256px;
   --sidebar-w-collapsed: 72px;
   --topbar-h: 60px;
+  --topnav-h: 46px;
   --content-max: 1440px;
 
+  /* ---- Type weights ---- */
+  --fw-h1: 650; --fw-h2: 620; --fw-h3: 600; --fw-kpi: 680; --fw-strong: 600;
+
+  /* ---- Motion ---- */
   --ease: cubic-bezier(.2, .7, .2, 1);
   --t-fast: 120ms;
   --t: 200ms;
 }
 
-/* ---------------- Accent presets ---------------- */
-:root[data-accent="navy"]     { --brand:#072E77; --brand-dark:#8AA9FF; --highlight:#FF4A00; }
-:root[data-accent="emerald"]  { --brand:#047857; --brand-dark:#34D399; --highlight:#D97706; }
-:root[data-accent="violet"]   { --brand:#5B21B6; --brand-dark:#B49BFF; --highlight:#DB2777; }
-:root[data-accent="teal"]     { --brand:#0F766E; --brand-dark:#2DD4BF; --highlight:#EA580C; }
-:root[data-accent="crimson"]  { --brand:#B42318; --brand-dark:#FF8A80; --highlight:#1D4ED8; }
-:root[data-accent="amber"]    { --brand:#9A5B05; --brand-dark:#FBBF24; --highlight:#0E7490; }
-:root[data-accent="graphite"] { --brand:#1F2937; --brand-dark:#E5E7EB; --highlight:#2563EB; }
-/* data-accent="custom": theme.js sets --brand / --brand-dark inline */
-
-/* ---------------- Light ---------------- */
+/* ---------------- Light (fallback values; theme.js overrides the base 6) ---------------- */
 :root,
 :root[data-theme="light"] {
   color-scheme: light;
   --bg: #F4F6FA;
   --surface: #FFFFFF;
-  --surface-2: #F8FAFC;
-  --surface-3: #EEF2F7;
   --border: #E3E8EF;
-  --border-strong: #CBD3DF;
   --text: #0F172A;
-  --text-2: #475569;
-  --text-3: #64748B;
   --text-inverse: #FFFFFF;
 
   --primary: var(--brand);
   --on-primary: #FFFFFF;
+  --on-highlight: #FFFFFF;
 
   --success: #067647;  --success-soft: #E7F8EF;
   --warning: #B54708;  --warning-soft: #FFF6E5;
@@ -85,11 +79,8 @@
   --shadow-lg: 0 12px 32px rgba(15, 23, 42, .14), 0 2px 6px rgba(15, 23, 42, .06);
   --overlay: rgba(15, 23, 42, .45);
 
-  --chart-1: var(--primary);
-  --chart-2: var(--highlight);
   --chart-3: #12B76A;
   --chart-4: #7A5AF8;
-  --chart-grid: #E9EDF3;
 }
 
 /* ---------------- Dark ---------------- */
@@ -97,17 +88,13 @@
   color-scheme: dark;
   --bg: #0A0F1C;
   --surface: #111827;
-  --surface-2: #151E2E;
-  --surface-3: #1C2638;
   --border: #233046;
-  --border-strong: #33435E;
   --text: #E7ECF4;
-  --text-2: #A7B2C4;
-  --text-3: #7D8AA0;
   --text-inverse: #0A0F1C;
 
   --primary: var(--brand-dark);
   --on-primary: #0A0F1C;
+  --on-highlight: #0A0F1C;
 
   --success: #4ADE80;  --success-soft: rgba(74, 222, 128, .12);
   --warning: #FBBF24;  --warning-soft: rgba(251, 191, 36, .12);
@@ -120,18 +107,27 @@
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, .55);
   --overlay: rgba(2, 6, 16, .65);
 
-  --chart-grid: #1F2A3D;
   --chart-3: #4ADE80;
   --chart-4: #A78BFA;
 }
 
-/* ---------------- Derived tokens (work for every accent/mode) ---------------- */
+/* ---------------- Derived tokens (computed from the base 6) ---------------- */
 :root {
+  --surface-2: color-mix(in srgb, var(--surface) 96.5%, var(--text));
+  --surface-3: color-mix(in srgb, var(--surface) 92%, var(--text));
+  --border-strong: color-mix(in srgb, var(--border) 80%, var(--text));
+  --text-2: color-mix(in srgb, var(--text) 76%, var(--surface));
+  --text-3: color-mix(in srgb, var(--text) 60%, var(--surface));
+
   --primary-hover: color-mix(in srgb, var(--primary) 86%, var(--text));
   --primary-soft: color-mix(in srgb, var(--primary) 11%, transparent);
   --primary-soft-2: color-mix(in srgb, var(--primary) 20%, transparent);
   --primary-ring: color-mix(in srgb, var(--primary) 35%, transparent);
   --highlight-soft: color-mix(in srgb, var(--highlight) 13%, transparent);
+
+  --chart-1: var(--primary);
+  --chart-2: var(--highlight);
+  --chart-grid: color-mix(in srgb, var(--border) 70%, var(--surface));
 }
 
 /* ---------------- Sidebar style ---------------- */
@@ -145,8 +141,8 @@
   --sb-active-text: var(--primary);
   --sb-border: var(--border);
 }
-:root[data-sidebar="brand"] {
-  --sb-bg: var(--brand);
+/* dark-toned sidebar (brand colour, or a dark custom colour) → white text */
+:root[data-sb-tone="dark"] {
   --sb-text: rgba(255, 255, 255, .78);
   --sb-text-strong: #FFFFFF;
   --sb-muted: rgba(255, 255, 255, .5);
@@ -155,9 +151,19 @@
   --sb-active-text: #FFFFFF;
   --sb-border: rgba(255, 255, 255, .1);
 }
-:root[data-sidebar="brand"][data-theme="dark"] {
-  --sb-bg: color-mix(in srgb, var(--brand) 38%, #070B14);
+/* light-toned custom sidebar → dark text */
+:root[data-sb-tone="light"] {
+  --sb-text: rgba(10, 15, 28, .74);
+  --sb-text-strong: #0A0F1C;
+  --sb-muted: rgba(10, 15, 28, .5);
+  --sb-hover: rgba(10, 15, 28, .06);
+  --sb-active-bg: rgba(10, 15, 28, .1);
+  --sb-active-text: #0A0F1C;
+  --sb-border: rgba(10, 15, 28, .1);
 }
+:root[data-sidebar="brand"] { --sb-bg: var(--brand); }
+:root[data-sidebar="brand"][data-theme="dark"] { --sb-bg: color-mix(in srgb, var(--brand) 38%, #070B14); }
+:root[data-sidebar="custom"] { --sb-bg: var(--sb-custom); }
 
 /* ---------------- Density ---------------- */
 :root[data-density="compact"] {
@@ -168,16 +174,28 @@
   --gap: 16px;
   --card-p: 16px;
   --topbar-h: 52px;
+  --topnav-h: 42px;
 }
 
 /* ---------------- Corners ---------------- */
 :root[data-radius="sharp"]  { --radius-xs:2px; --radius-sm:3px; --radius:4px;  --radius-lg:6px; }
 :root[data-radius="soft"]   { --radius-xs:6px; --radius-sm:10px; --radius:16px; --radius-lg:22px; }
 
+/* ---------------- Font weight scale ---------------- */
+:root[data-weight="light"] { --fw-h1: 520; --fw-h2: 500; --fw-h3: 500; --fw-kpi: 520; --fw-strong: 550; }
+:root[data-weight="bold"]  { --fw-h1: 760; --fw-h2: 720; --fw-h3: 690; --fw-kpi: 780; --fw-strong: 680; }
+
+/* ---------------- Motion ---------------- */
+:root[data-motion="simple"] { --t-fast: 1ms; --t: 1ms; }
+:root[data-motion="high"]   { --t-fast: 180ms; --t: 340ms; --ease: cubic-bezier(.34, 1.4, .64, 1); }
+
 /* Smooth theme switching (disabled on first paint by theme.js) */
 :root.theme-anim *,
 :root.theme-anim *::before,
 :root.theme-anim *::after {
-  transition: background-color var(--t) var(--ease), border-color var(--t) var(--ease),
-              color var(--t) var(--ease), fill var(--t) var(--ease) !important;
+  transition: background-color 200ms var(--ease), border-color 200ms var(--ease),
+              color 200ms var(--ease), fill 200ms var(--ease) !important;
 }
+:root[data-motion="simple"].theme-anim *,
+:root[data-motion="simple"].theme-anim *::before,
+:root[data-motion="simple"].theme-anim *::after { transition: none !important; }

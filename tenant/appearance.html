@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Appearance · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- every selectable font, so the font tiles render in their own face -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&family=DM+Sans:opsz,wght@9..40,300..800&family=Manrope:wght@300..800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js?v=4"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css?v=4">
+  <link rel="stylesheet" href="../assets/css/app.css?v=4">
+  <style>
+    /* ---------------- Studio layout ---------------- */
+    .content.studio { max-width: 1680px; }
+    .studio-grid { display: grid; grid-template-columns: minmax(380px, 440px) minmax(0, 1fr); gap: var(--gap); align-items: start; }
+    .studio-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .studio-preview { position: sticky; top: calc(var(--topbar-h) + 16px); height: calc(100vh - var(--topbar-h) - 32px); min-height: 560px; display: flex; flex-direction: column; min-width: 0; }
+    :root[data-nav="topbar"] .studio-preview { top: calc(var(--topbar-h) + var(--topnav-h) + 16px); height: calc(100vh - var(--topbar-h) - var(--topnav-h) - 32px); }
+
+    /* ---------------- Tier switch ---------------- */
+    .tier-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px; background: var(--surface-3); border-radius: var(--radius-lg); border: 1px solid var(--border); }
+    .tier-btn { display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 12px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-2); font: inherit; cursor: pointer; transition: background var(--t-fast), box-shadow var(--t-fast); }
+    .tier-btn:hover { color: var(--text); }
+    .tier-btn .ti { width: 32px; height: 32px; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--surface); color: var(--text-3); flex: none; }
+    .tier-btn b { display: block; color: var(--text); font-size: 14px; }
+    .tier-btn span.d { font-size: 12px; color: var(--text-3); line-height: 1.35; display: block; margin-top: 2px; }
+    .tier-btn.active { background: var(--surface); box-shadow: var(--shadow); }
+    .tier-btn.active .ti { background: var(--primary); color: var(--on-primary); }
+
+    .panel-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+    .panel-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; }
+    .panel-head h3 { font-size: 14px; }
+    .panel-head .sub { font-size: 12px; color: var(--text-3); }
+    .panel-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 18px; }
+
+    /* ---------------- Template gallery ---------------- */
+    .tpl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .tpl-card { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface); cursor: pointer; text-align: left; font: inherit; color: var(--text); transition: border-color var(--t-fast), box-shadow var(--t-fast); }
+    .tpl-card:hover { border-color: var(--border-strong); }
+    .tpl-card.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+    .tpl-card .tc-check { position: absolute; top: 12px; right: 12px; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: none; place-items: center; box-shadow: 0 0 0 2px var(--surface); z-index: 1; }
+    .tpl-card .tc-check svg { width: 12px; height: 12px; stroke-width: 3; }
+    .tpl-card.active .tc-check { display: grid; }
+    .tc-prev { height: 74px; border-radius: 6px; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid rgba(0,0,0,.08); }
+    .tc-half { display: flex; gap: 4px; padding: 5px; }
+    .tc-half .sbx { width: 14px; border-radius: 3px; }
+    .tc-half .mn { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .tc-half .crd { flex: 1; border-radius: 3px; padding: 4px; display: flex; flex-direction: column; gap: 3px; border: 1px solid; }
+    .tc-half .crd i { display: block; height: 3px; border-radius: 2px; }
+    .tc-half .btnx { height: 9px; width: 60%; border-radius: 3px; }
+    .tc-meta b { font-size: 13px; display: block; }
+    .tc-meta span { font-size: 11.5px; color: var(--text-3); }
+    .tc-chips { display: flex; gap: 4px; align-items: center; }
+    .tc-chips i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+
+    /* ---------------- Option tiles ---------------- */
+    .opt { display: flex; flex-direction: column; gap: 8px; }
+    .opt-head { display: flex; align-items: baseline; gap: 8px; }
+    .opt-head .label { font-size: 13px; }
+    .opt-head .now { margin-left: auto; font-size: 12px; color: var(--text-3); }
+    .opt-head .chg { width: 6px; height: 6px; border-radius: 50%; background: var(--highlight); display: none; }
+    .opt.changed .opt-head .chg { display: inline-block; }
+    .opt-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+    .opt-tiles.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opt-tiles.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .opt-tile { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 6px 8px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text-2); font: inherit; font-size: 12.5px; font-weight: 550; cursor: pointer; text-align: center; transition: border-color var(--t-fast), background var(--t-fast); }
+    .opt-tile:hover { border-color: var(--border-strong); color: var(--text); }
+    .opt-tile.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; color: var(--text); background: color-mix(in srgb, var(--primary) 4%, var(--surface)); }
+    .opt-tile .ot-ill { display: block; border-radius: 6px; overflow: hidden; }
+    .opt-tile .ot-ill svg { display: block; width: 100%; height: auto; }
+    .opt-tile .ot-sub { display: block; font-size: 11px; font-weight: 400; color: var(--text-3); margin-top: -4px; line-height: 1.3; }
+    .opt-tile .ot-big { display: grid; place-items: center; height: 52px; font-size: 26px; color: var(--text); background: var(--surface-2); border-radius: 6px; }
+
+    .ill .bg { fill: var(--surface-2); }
+    .ill .fr { fill: none; stroke: var(--border); }
+    .ill .sf { fill: var(--surface); stroke: var(--border); stroke-width: .8; }
+    .ill .sf0 { fill: var(--surface); }
+    .ill .ln { fill: var(--border-strong); }
+    .ill .pr { fill: var(--primary); }
+    .ill .ps { fill: var(--primary-soft-2); }
+    .ill .hl { fill: var(--highlight); }
+    .ill .dim { fill: var(--text); opacity: .22; }
+    .ill .st { fill: none; stroke: var(--primary); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .ill .ax { fill: none; stroke: var(--border-strong); stroke-width: 1; }
+    .ill .wh { fill: #fff; }
+
+    /* ---------------- Accordion sections ---------------- */
+    .sec { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .sec > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none; }
+    .sec > summary::-webkit-details-marker { display: none; }
+    .sec > summary:hover { background: var(--surface-2); }
+    .sec .s-ico { width: 34px; height: 34px; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); flex: none; }
+    .sec .s-txt { flex: 1; min-width: 0; }
+    .sec .s-txt b { display: block; font-size: 14px; }
+    .sec .s-txt span { font-size: 12px; color: var(--text-3); }
+    .sec .s-chev { color: var(--text-3); transition: transform var(--t) var(--ease); }
+    .sec[open] .s-chev { transform: rotate(180deg); }
+    .sec .s-count { display: none; }
+    .sec .s-count.on { display: inline-flex; }
+    .sec-body { padding: 4px 16px 18px; display: flex; flex-direction: column; gap: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+    .sec-reset { align-self: flex-start; }
+
+    /* ---------------- Palette editor ---------------- */
+    .clr-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 104px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+    .clr-row:last-child { border-bottom: 0; }
+    .clr-row b { font-size: 13px; display: block; }
+    .clr-row span.d { font-size: 11.5px; color: var(--text-3); }
+    .clr { position: relative; width: 40px; height: 40px; border-radius: var(--radius-sm); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), 0 0 0 1px var(--border); display: block; }
+    .clr input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: 0; padding: 0; }
+    .clr-row .input { height: 32px; font-size: 12.5px; text-transform: uppercase; }
+    .clr-row.locked { opacity: .6; }
+    .clr-row.locked .clr { pointer-events: none; }
+    .checks { display: grid; gap: 6px; }
+    .check-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-2); }
+    .check-row .sample { width: 28px; height: 20px; border-radius: 4px; display: grid; place-items: center; font-size: 11px; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); flex: none; }
+    .check-row .badge { margin-left: auto; }
+
+    /* ---------------- Preview ---------------- */
+    .pv-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .pv-bar .segmented button { height: 30px; }
+    .pv-bar .btn { height: 32px; font-size: 12.5px; padding: 0 10px; }
+    .pv-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--success); }
+    .pv-live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent); animation: live 1.8s infinite; }
+    @keyframes live { 50% { opacity: .35; } }
+    .pv-stage { flex: 1; min-height: 0; position: relative; border-radius: var(--radius-lg); background:
+      radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--text) 10%, transparent) 1px, transparent 0) 0 0 / 18px 18px, var(--surface-2);
+      border: 1px solid var(--border); overflow: hidden; display: grid; place-items: center; }
+    .browser { position: absolute; inset: 14px; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid var(--border-strong); background: var(--surface); }
+    .browser-bar { height: 34px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: var(--surface-3); border-bottom: 1px solid var(--border); }
+    .browser-bar .dots { display: flex; gap: 6px; }
+    .browser-bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+    .browser-bar .url { flex: 1; max-width: 420px; margin: 0 auto; height: 22px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--border); font-size: 11.5px; color: var(--text-3); display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .browser-bar .url svg { width: 12px; height: 12px; }
+    .viewport { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+    .viewport iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: var(--bg); }
+    .pv-stage.mobile .browser { inset: auto; position: relative; border-radius: 38px; border: 10px solid #0B0F19; box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,.06); }
+    .pv-stage.mobile .browser-bar { display: none; }
+    .pv-stage.mobile .viewport { border-radius: 28px; }
+    .pv-stage.mobile .notch { display: block; }
+    .notch { display: none; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 90px; height: 22px; border-radius: 14px; background: #0B0F19; z-index: 2; }
+    .pv-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--text-3); }
+    .pv-foot svg { width: 14px; height: 14px; }
+
+    .save-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-3); }
+    .save-state.dirty { color: var(--warning); font-weight: 600; }
+    .save-state.dirty::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    @media (max-width: 1180px) {
+      .studio-grid { grid-template-columns: minmax(0, 1fr); }
+      .studio-preview { position: relative; top: 0; height: 560px; order: -1; }
+      :root[data-nav="topbar"] .studio-preview { top: 0; height: 560px; }
+    }
+    @media (max-width: 640px) {
+      .tpl-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+      .studio-preview { height: 520px; }
+      .pv-demos { display: none; }
+      .tier-btn .ti { display: none; }
+    }
+  </style>
+</head>
+<body data-portal="tenant" data-page="appearance">
+<main class="content studio">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Account<i data-i="chevR"></i>Appearance</div>
+      <h1>Appearance</h1>
+      <p>Start from a ready-made template or build your own theme. Every change shows live in the preview.</p>
+    </div>
+    <div class="actions" style="align-items:center">
+      <span class="save-state" id="saveState">All changes saved</span>
+      <button class="btn ghost" id="discard" disabled><i data-i="reset"></i>Discard</button>
+      <button class="btn primary" id="save" disabled><i data-i="save"></i>Save &amp; apply</button>
+    </div>
+  </div>
+
+  <div class="studio-grid">
+    <!-- ================= Settings ================= -->
+    <section class="studio-panel" aria-label="Appearance settings">
+      <div class="tier-switch" role="tablist" aria-label="Theme type">
+        <button class="tier-btn" data-tier="template" role="tab"><span class="ti"><i data-i="layers"></i></span><span><b>Templates</b><span class="d">Ready-made light &amp; dark themes with a few quick settings</span></span></button>
+        <button class="tier-btn" data-tier="custom" role="tab"><span class="ti"><i data-i="sliders"></i></span><span><b>Custom</b><span class="d">Full control over colours, layout and component styles</span></span></button>
+      </div>
+
+      <!-- ---------- Template tier ---------- -->
+      <div id="tierTemplate" class="stack-lg" style="gap:16px">
+        <div class="panel-card">
+          <div class="panel-head"><div><h3>Choose a template</h3><div class="sub">Each one has a matching light and dark version</div></div></div>
+          <div class="panel-body"><div class="tpl-grid" id="tplGrid"></div></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-head"><div><h3>Quick adjustments</h3><div class="sub">Fine-tune the template you picked</div></div></div>
+          <div class="panel-body" id="quickBody"></div>
+        </div>
+        <div class="alert info" style="align-items:center">
+          <i data-i="sparkles"></i>
+          <div style="flex:1"><b>Need more control?</b>Custom mode adds colour editing, navigation, tabs, lists, popups, loaders and component styles. It starts from <span id="baseName"></span>.</div>
+        </div>
+        <button class="btn" id="goCustom" style="align-self:flex-start"><i data-i="sliders"></i>Customise this template<i data-i="arrowR"></i></button>
+      </div>
+
+      <!-- ---------- Custom tier ---------- -->
+      <div id="tierCustom" class="stack-lg hidden" style="gap:12px">
+        <div class="panel-card">
+          <div class="panel-body" style="padding-top:14px;gap:10px">
+            <div class="row" style="gap:10px">
+              <div class="field" style="flex:1"><label for="basePreset">Starting template</label><select class="select" id="basePreset"></select></div>
+              <button class="btn ghost" id="resetAll" style="align-self:flex-end"><i data-i="reset"></i>Reset all</button>
+            </div>
+            <span class="xs muted">Changing the starting template replaces your colours. Layout and component choices are kept.</span>
+          </div>
+        </div>
+        <div id="sections"></div>
+        <div class="panel-card">
+          <div class="panel-body" style="padding-top:14px">
+            <div class="fixed-note"><span class="s-ico" style="width:30px;height:30px;border-radius:var(--radius-sm);display:grid;place-items:center;background:var(--surface-3);color:var(--text-3);flex:none"><i data-i="lock"></i></span>
+              <div><b style="color:var(--text);display:block;font-size:13px">Always the same</b><b>Filters</b> and <b>steppers</b> look the same in every theme, so people can always find them.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert" style="background:var(--surface-2);border:1px solid var(--border)"><i data-i="users"></i><div><b>Who sees this</b>Saving applies these settings to all staff in Sri Venkata Chits. Light or dark mode is still each person’s choice.</div></div>
+    </section>
+
+    <!-- ================= Live preview ================= -->
+    <section class="studio-preview" aria-label="Live preview">
+      <div class="pv-bar">
+        <span class="pv-live">Live preview</span>
+        <div class="segmented ml-auto" id="pvDevice" aria-label="Device">
+          <button data-v="desktop" class="active" title="Desktop"><i data-i="monitor"></i><span class="desktop-only">Desktop</span></button>
+          <button data-v="mobile" title="Mobile"><i data-i="phone"></i><span class="desktop-only">Mobile</span></button>
+        </div>
+        <div class="segmented" id="pvMode" aria-label="Preview mode">
+          <button data-v="light" title="Light"><i data-i="sun"></i></button>
+          <button data-v="dark" title="Dark"><i data-i="moon"></i></button>
+        </div>
+        <div class="pv-demos row" style="gap:6px">
+          <button class="btn" data-demo="popup" title="Open a popup"><i data-i="plusCircle"></i>Popup</button>
+          <button class="btn" data-demo="details" title="Open a details screen"><i data-i="panel"></i>Details</button>
+          <button class="btn" data-demo="loader" title="Replay the page loader"><i data-i="refresh"></i>Loader</button>
+        </div>
+      </div>
+      <div class="pv-stage" id="pvStage">
+        <div class="browser" id="pvFrameBox">
+          <div class="browser-bar"><span class="dots"><i></i><i></i><i></i></span><span class="url"><i data-i="lock"></i>svchits.chitsphere.in/dashboard</span><span style="width:46px"></span></div>
+          <div class="viewport" id="pvViewport"><span class="notch"></span><iframe id="pvFrame" title="Live preview of the workspace" src="appearance-preview.html" tabindex="0"></iframe></div>
+        </div>
+      </div>
+      <div class="pv-foot"><i data-i="info"></i><span id="pvHint">You can click around the preview: open cards, switch tabs and try the buttons.</span></div>
+    </section>
+  </div>
+</main>
+
+<script src="../assets/js/app.js?v=4"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var I = UI.icon, T = Theme, U = Theme.util;
+  var O = T.options;
+
+  /* ================================================================ state */
+  var draft = T.raw();
+  var savedJSON = JSON.stringify(T.normalise(draft));
+  var previewMode = null;            // null = follow the draft's mode
+  var device = 'desktop';
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function R() { return T.resolve(draft); }
+  function baseline() { return T.resolve({ v: 2, mode: draft.mode, preset: draft.preset, tier: 'template', values: {} }); }
+
+  /* ================================================================ illustrations
+     Tiny SVG diagrams for each option. They use the studio's own tokens. */
+  function svg(inner) { return '<svg class="ill" viewBox="0 0 120 72" aria-hidden="true"><rect x=".5" y=".5" width="119" height="71" rx="6" class="bg"/>' + inner + '<rect x=".5" y=".5" width="119" height="71" rx="6" class="fr"/></svg>'; }
+  function r(x, y, w, h, c, rx, extra) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (rx == null ? 2 : rx) + '" class="' + c + '"' + (extra || '') + '/>'; }
+  function cards3(y) { return r(36, y, 36, 20, 'sf', 3) + r(77, y, 36, 20, 'sf', 3) + r(36, y + 25, 77, 20, 'sf', 3); }
+  function lines(x, y, n, gap, w) { var s = ''; for (var i = 0; i < n; i++) s += r(x, y + i * gap, w - (i % 2) * 6, 3, 'ln', 1.5); return s; }
+  function bgPage() { return r(6, 8, 50, 14, 'sf', 3) + r(62, 8, 52, 14, 'sf', 3) + r(6, 27, 108, 38, 'sf', 3); }
+  function bar(x, y, w, h, fill, track, rx) { return r(x, y, 100, h, track || 'ln', rx) + r(x, y, w, h, 'pr', rx); }
+  function pill(x, y, color, style) {
+    var w = 30, h = 11;
+    if (style === 'soft') return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="5.5" style="fill:' + color + ';opacity:.18"/><rect x="' + (x + 6) + '" y="' + (y + 4) + '" width="18" height="3" rx="1.5" style="fill:' + color + '"/>';
+    if (style === 'solid') return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="5.5" style="fill:' + color + '"/><rect x="' + (x + 6) + '" y="' + (y + 4) + '" width="18" height="3" rx="1.5" class="wh"/>';
+    if (style === 'outline') return '<rect x="' + (x + .5) + '" y="' + (y + .5) + '" width="' + (w - 1) + '" height="' + (h - 1) + '" rx="5" style="fill:none;stroke:' + color + '"/><rect x="' + (x + 6) + '" y="' + (y + 4) + '" width="18" height="3" rx="1.5" style="fill:' + color + '"/>';
+    return '<circle cx="' + (x + 4) + '" cy="' + (y + 5.5) + '" r="3.2" style="fill:' + color + '"/><rect x="' + (x + 11) + '" y="' + (y + 4) + '" width="18" height="3" rx="1.5" class="ln"/>';
+  }
+  function kpi(x, style) {
+    var s = '';
+    if (style === 'filled') s += '<rect x="' + x + '" y="12" width="50" height="48" rx="4" style="fill:var(--primary);opacity:.1"/><rect x="' + (x + .5) + '" y="12.5" width="49" height="47" rx="4" style="fill:none;stroke:var(--primary);opacity:.35"/>';
+    else s += r(x, 12, 50, 48, 'sf', 4);
+    if (style === 'accent') s += r(x, 12, 3.5, 48, 'pr', 1.5);
+    if (style === 'icon') s += r(x + 6, 18, 10, 10, 'ps', 2.5) + r(x + 9, 21, 4, 4, 'pr', 1);
+    if (style === 'filled') s += r(x + 6, 18, 10, 10, 'pr', 2.5);
+    var ty = style === 'minimal' ? 20 : 34;
+    s += r(x + (style === 'icon' || style === 'filled' ? 20 : 7), 21, 22, 3, 'ln', 1.5);
+    s += r(x + 7, ty + (style === 'minimal' ? 4 : 0), style === 'minimal' ? 34 : 28, style === 'minimal' ? 12 : 8, 'pr', 2);
+    s += r(x + 7, 50, 20, 3, 'ln', 1.5);
+    return s;
+  }
+  var ILL = {
+    nav: {
+      sidebar: function () { return svg(r(1, 1, 27, 70, 'ps', 5) + r(6, 9, 14, 4, 'pr') + lines(6, 19, 5, 7, 16) + r(28, 1, 91, 10, 'sf0', 0) + cards3(17)); },
+      topbar: function () { return svg(r(1, 1, 118, 10, 'sf0', 0) + r(5, 4, 8, 4, 'pr') + r(1, 11, 118, 9, 'ps', 0) + r(6, 13.5, 14, 4, 'pr') + r(24, 13.5, 14, 4, 'ln') + r(42, 13.5, 14, 4, 'ln') + r(60, 13.5, 14, 4, 'ln') + r(6, 26, 50, 18, 'sf', 3) + r(62, 26, 52, 18, 'sf', 3) + r(6, 48, 108, 18, 'sf', 3)); }
+    },
+    tabs: {
+      top: function () { return svg(r(8, 9, 18, 4, 'pr') + r(32, 9, 18, 4, 'ln') + r(56, 9, 18, 4, 'ln') + r(6, 18, 108, 1, 'ln', 0) + r(8, 17, 18, 2.5, 'pr', 1) + r(6, 25, 108, 41, 'sf', 3) + lines(12, 32, 4, 8, 60)); },
+      side: function () { return svg(r(6, 7, 30, 59, 'sf', 3) + r(9, 11, 24, 8, 'ps', 2) + r(12, 13.5, 14, 3, 'pr', 1.5) + r(12, 25, 16, 3, 'ln', 1.5) + r(12, 33, 18, 3, 'ln', 1.5) + r(12, 41, 14, 3, 'ln', 1.5) + r(41, 7, 73, 59, 'sf', 3) + lines(47, 14, 5, 8, 50)); }
+    },
+    list: {
+      cards: function () { var s = ''; [6, 44, 82].forEach(function (x) { [7, 40].forEach(function (y) { s += r(x, y, 32, 26, 'sf', 3) + r(x + 4, y + 5, 14, 3, 'ln', 1.5) + r(x + 4, y + 11, 20, 5, 'pr', 1.5) + r(x + 4, y + 19, 24, 2.5, 'ps', 1.2); }); }); return svg(s); },
+      table: function () { var s = r(6, 7, 108, 9, 'ps', 2); for (var i = 0; i < 5; i++) { var y = 21 + i * 10; s += r(10, y, 22, 3, 'ln', 1.5) + r(40, y, 30, 3, 'ln', 1.5) + r(78, y, 16, 3, 'ln', 1.5) + r(100, y - 1, 10, 5, 'ps', 2.5) + r(6, y + 6, 108, .6, 'ln', 0); } return svg(s); }
+    },
+    details: {
+      drawer: function () { return svg(bgPage() + r(1, 1, 118, 70, 'dim', 6) + r(66, 1, 53, 70, 'sf0', 0) + r(66, 1, .8, 70, 'ln', 0) + r(72, 8, 26, 5, 'pr') + lines(72, 20, 5, 8, 40)); },
+      full: function () { return svg(r(1, 1, 118, 70, 'sf0', 5) + '<path d="M12 11 l-4 4 l4 4" class="st" style="stroke-width:1.6"/>' + r(18, 12, 30, 5, 'pr') + r(1, 24, 118, .8, 'ln', 0) + r(18, 31, 40, 14, 'ps', 3) + r(62, 31, 40, 14, 'ps', 3) + lines(18, 52, 2, 7, 84)); }
+    },
+    popup: {
+      center: function () { return svg(bgPage() + r(1, 1, 118, 70, 'dim', 6) + r(28, 16, 64, 40, 'sf0', 4) + r(34, 22, 26, 4, 'ln', 2) + lines(34, 31, 2, 6, 44) + r(70, 46, 16, 6, 'pr', 2)); },
+      bottom: function () { return svg(bgPage() + r(1, 1, 118, 70, 'dim', 6) + '<path d="M8 71 V40 a6 6 0 0 1 6 -6 H106 a6 6 0 0 1 6 6 V71 Z" class="sf0"/>' + r(52, 37, 16, 2.5, 'ln', 1.2) + r(16, 45, 30, 4, 'ln', 2) + lines(16, 53, 2, 6, 60) + r(88, 58, 18, 7, 'pr', 2)); }
+    },
+    loader: {
+      skeleton: function () { return svg(r(8, 8, 40, 5, 'ln') + r(8, 18, 24, 18, 'ln', 3) + r(36, 18, 24, 18, 'ln', 3) + r(64, 18, 24, 18, 'ln', 3) + r(92, 18, 20, 18, 'ln', 3) + r(8, 42, 66, 24, 'ln', 3) + r(78, 42, 34, 24, 'ln', 3)); },
+      logo: function () { return svg(r(51, 27, 18, 18, 'pr', 5) + '<circle cx="60" cy="36" r="15" style="fill:none;stroke:var(--primary-soft-2);stroke-width:2.5"/><path d="M60 21 a15 15 0 0 1 15 15" class="st"/>' + r(48, 57, 24, 3, 'ln', 1.5)); },
+      both: function () { return svg('<g opacity=".45">' + r(8, 8, 40, 5, 'ln') + r(8, 18, 24, 18, 'ln', 3) + r(36, 18, 24, 18, 'ln', 3) + r(64, 18, 24, 18, 'ln', 3) + r(92, 18, 20, 18, 'ln', 3) + r(8, 42, 66, 24, 'ln', 3) + r(78, 42, 34, 24, 'ln', 3) + '</g>' + r(51, 27, 18, 18, 'pr', 5) + '<path d="M60 21 a15 15 0 0 1 15 15" class="st"/>'); }
+    },
+    progress: {
+      line: function () { return svg(r(10, 18, 100, 4, 'ln', 2) + r(10, 18, 70, 4, 'pr', 2) + r(10, 34, 100, 4, 'ln', 2) + r(10, 34, 45, 4, 'pr', 2) + r(10, 50, 100, 4, 'ln', 2) + r(10, 50, 88, 4, 'pr', 2)); },
+      thick: function () { return svg(r(10, 15, 100, 10, 'ln', 5) + r(10, 15, 70, 10, 'pr', 5) + r(10, 31, 100, 10, 'ln', 5) + r(10, 31, 45, 10, 'pr', 5) + r(10, 47, 100, 10, 'ln', 5) + r(10, 47, 88, 10, 'pr', 5)); },
+      segmented: function () { var s = ''; [[18, 7], [34, 4], [50, 9]].forEach(function (row) { for (var i = 0; i < 10; i++) s += r(10 + i * 10.2, row[0], 8.4, 6, i < row[1] ? 'pr' : 'ln', 1); }); return svg(s); },
+      striped: function () { var s = ''; [[16, 70], [32, 45], [48, 88]].forEach(function (row) { s += r(10, row[0], 100, 9, 'ln', 4.5) + r(10, row[0], row[1], 9, 'pr', 4.5); for (var x = 14; x < 10 + row[1] - 4; x += 8) s += '<path d="M' + x + ' ' + (row[0] + 9) + ' l5 -9 h3 l-5 9 Z" class="wh" opacity=".3"/>'; }); return svg(s); }
+    },
+    label: {
+      soft: function () { return svg(pill(8, 14, 'var(--success)', 'soft') + pill(45, 14, 'var(--warning)', 'soft') + pill(82, 14, 'var(--danger)', 'soft') + pill(8, 40, 'var(--primary)', 'soft') + pill(45, 40, 'var(--info)', 'soft')); },
+      solid: function () { return svg(pill(8, 14, 'var(--success)', 'solid') + pill(45, 14, 'var(--warning)', 'solid') + pill(82, 14, 'var(--danger)', 'solid') + pill(8, 40, 'var(--primary)', 'solid') + pill(45, 40, 'var(--info)', 'solid')); },
+      outline: function () { return svg(pill(8, 14, 'var(--success)', 'outline') + pill(45, 14, 'var(--warning)', 'outline') + pill(82, 14, 'var(--danger)', 'outline') + pill(8, 40, 'var(--primary)', 'outline') + pill(45, 40, 'var(--info)', 'outline')); },
+      dot: function () { return svg(pill(8, 14, 'var(--success)', 'dot') + pill(45, 14, 'var(--warning)', 'dot') + pill(82, 14, 'var(--danger)', 'dot') + pill(8, 40, 'var(--primary)', 'dot') + pill(45, 40, 'var(--info)', 'dot')); }
+    },
+    count: {
+      minimal: function () { return svg(kpi(7, 'minimal') + kpi(63, 'minimal')); },
+      icon: function () { return svg(kpi(7, 'icon') + kpi(63, 'icon')); },
+      accent: function () { return svg(kpi(7, 'accent') + kpi(63, 'accent')); },
+      filled: function () { return svg(kpi(7, 'filled') + kpi(63, 'filled')); }
+    },
+    graph: {
+      bars: function () { var h = [22, 30, 26, 38, 34, 44, 40, 50], s = ''; h.forEach(function (v, i) { s += r(12 + i * 13, 62 - v, 9, v, 'pr', 1.5); }); return svg(r(8, 62, 104, .8, 'ln', 0) + s); },
+      rounded: function () { var h = [22, 30, 26, 38, 34, 44, 40, 50], s = ''; h.forEach(function (v, i) { s += r(14 + i * 13, 62 - v, 5, v, 'pr', 2.5); }); return svg(r(8, 62, 104, .8, 'ln', 0) + s); },
+      line: function () { return svg(r(8, 62, 104, .8, 'ln', 0) + '<path d="M12 46 L26 40 L40 43 L54 30 L68 34 L82 22 L96 26 L108 14" class="st"/>' + '<circle cx="82" cy="22" r="3" style="fill:var(--surface);stroke:var(--primary);stroke-width:2"/>'); },
+      area: function () { return svg(r(8, 62, 104, .8, 'ln', 0) + '<path d="M12 46 L26 40 L40 43 L54 30 L68 34 L82 22 L96 26 L108 14 L108 62 L12 62 Z" style="fill:var(--primary);opacity:.18"/><path d="M12 46 L26 40 L40 43 L54 30 L68 34 L82 22 L96 26 L108 14" class="st"/>'); }
+    },
+    radius: {
+      sharp: function () { return svg(r(14, 12, 92, 48, 'sf', 0) + r(22, 20, 40, 4, 'ln', 0) + r(22, 30, 60, 3, 'ln', 0) + r(22, 44, 30, 9, 'pr', 0)); },
+      rounded: function () { return svg(r(14, 12, 92, 48, 'sf', 6) + r(22, 20, 40, 4, 'ln', 2) + r(22, 30, 60, 3, 'ln', 1.5) + r(22, 44, 30, 9, 'pr', 3)); },
+      soft: function () { return svg(r(14, 12, 92, 48, 'sf', 14) + r(22, 20, 40, 4, 'ln', 2) + r(22, 30, 60, 3, 'ln', 1.5) + r(22, 44, 30, 9, 'pr', 4.5)); }
+    },
+    motion: {
+      simple: function () { return svg('<path d="M14 58 H106 M14 58 V12" class="ax"/><path d="M16 56 H60 V16 H104" class="st"/>'); },
+      moderate: function () { return svg('<path d="M14 58 H106 M14 58 V12" class="ax"/><path d="M16 56 C 40 56, 50 16, 104 16" class="st"/>'); },
+      high: function () { return svg('<path d="M14 58 H106 M14 58 V12" class="ax"/><path d="M16 56 C 30 56, 40 2, 62 10 S 84 20, 104 16" class="st"/>'); }
+    },
+    sidebar: {
+      neutral: function () { return svg(r(1, 1, 30, 70, 'sf0', 5) + r(31, 1, .8, 70, 'ln', 0) + r(6, 9, 14, 4, 'pr') + lines(6, 20, 5, 7, 18) + cards3(10)); },
+      brand: function () { return svg(r(1, 1, 30, 70, 'pr', 5) + r(6, 9, 14, 4, 'wh') + '<g opacity=".55">' + lines(6, 20, 5, 7, 18).replace(/class="ln"/g, 'class="wh"') + '</g>' + cards3(10)); },
+      custom: function () { var c = R().sidebarColor, light = U.onColor(c) !== '#FFFFFF'; return svg('<rect x="1" y="1" width="30" height="70" rx="5" style="fill:' + c + '"/>' + r(6, 9, 14, 4, light ? 'pr' : 'wh') + '<g opacity=".55">' + lines(6, 20, 5, 7, 18).replace(/class="ln"/g, 'style="fill:' + (light ? '#0A0F1C' : '#fff') + '"') + '</g>' + cards3(10)); }
+    },
+    density: {
+      comfortable: function () { var s = ''; for (var i = 0; i < 4; i++) s += r(12, 12 + i * 14, 96, 10, 'sf', 2) + r(17, 15.5 + i * 14, 30, 3, 'ln', 1.5); return svg(s); },
+      compact: function () { var s = ''; for (var i = 0; i < 6; i++) s += r(12, 9 + i * 9.5, 96, 7, 'sf', 1.5) + r(17, 11 + i * 9.5, 30, 3, 'ln', 1.5); return svg(s); }
+    }
+  };
+  var SUB = {
+    nav: { sidebar: 'Many modules', topbar: 'More room for content' },
+    tabs: { top: 'Compact header', side: 'Many sections' },
+    list: { cards: 'Visual, easy to scan', table: 'Dense, sortable' },
+    details: { drawer: 'List stays in view', full: 'Room for long records' },
+    popup: { center: 'Classic dialog', bottom: 'Thumb-friendly sheet' },
+    loader: { skeleton: 'Shows page shape', logo: 'Brand moment', both: 'Shape + brand' },
+    motion: { simple: 'Instant, no motion', moderate: 'Subtle transitions', high: 'Lively, springy' }
+  };
+
+  /* ================================================================ option control */
+  function tiles(key, opts) {
+    opts = opts || {};
+    var def = O[key];
+    var vals = opts.values || def.values;
+    var names = vals.map(function (v) { return def.names[def.values.indexOf(v)]; });
+    var cols = opts.cols ? ' cols-' + opts.cols : '';
+    var html = '<div class="opt" data-opt="' + key + '"><div class="opt-head"><span class="label">' + (opts.label || def.label) + '</span><span class="chg" title="Changed from template"></span><span class="now"></span></div>' +
+      '<div class="opt-tiles' + cols + '">' + vals.map(function (v, i) {
+        var ill;
+        if (key === 'font') ill = '<span class="ot-big" style="font-family:' + T.fonts[v].stack.replace(/"/g, '&quot;') + '">Aa</span>';
+        else if (key === 'weight') ill = '<span class="ot-big" style="font-weight:' + ({ light: 300, regular: 550, bold: 800 })[v] + '">Aa</span>';
+        else ill = '<span class="ot-ill" data-ill="' + key + ':' + v + '">' + ILL[key][v]() + '</span>';
+        return '<button type="button" class="opt-tile" data-key="' + key + '" data-v="' + v + '" aria-pressed="false">' + ill + '<span>' + names[i] + '</span>' +
+          (SUB[key] && SUB[key][v] ? '<span class="ot-sub">' + SUB[key][v] + '</span>' : '') + '</button>';
+      }).join('') + '</div>' + (opts.after || '') + '</div>';
+    return html;
+  }
+
+  /* ================================================================ template tier */
+  $('tplGrid').innerHTML = T.templates.map(function (t) {
+    function half(p, sb) {
+      return '<div class="tc-half" style="background:' + p.bg + '"><span class="sbx" style="background:' + (sb === 'brand' ? p.primary : p.surface) + ';border:1px solid ' + p.border + '"></span>' +
+        '<span class="mn"><span class="crd" style="background:' + p.surface + ';border-color:' + p.border + '"><i style="background:' + p.text + ';opacity:.7;width:60%"></i><i style="background:' + p.text + ';opacity:.25;width:85%"></i>' +
+        '<span class="btnx" style="background:' + p.primary + '"></span></span><span style="display:flex;gap:3px"><i style="height:6px;flex:1;border-radius:3px;background:' + p.secondary + '"></i><i style="height:6px;flex:2;border-radius:3px;background:' + p.border + '"></i></span></span></div>';
+    }
+    return '<button type="button" class="tpl-card" data-preset="' + t.key + '"><span class="tc-check">' + I('check') + '</span>' +
+      '<span class="tc-prev">' + half(t.light, t.defaults.sidebar) + half(t.dark, t.defaults.sidebar) + '</span>' +
+      '<span class="tc-meta"><b>' + t.name + '</b><span>' + t.desc + '</span></span>' +
+      '<span class="tc-chips">' + ['primary', 'secondary'].map(function (k) { return '<i style="background:' + t.light[k] + '" title="' + k + '"></i>'; }).join('') +
+      '<span class="xs muted" style="margin-left:4px">' + T.fonts[t.defaults.font].name + '</span></span></button>';
+  }).join('');
+
+  $('quickBody').innerHTML =
+    '<div class="opt" data-opt="mode"><div class="opt-head"><span class="label">Mode</span><span class="now xs muted">Your personal choice</span></div>' +
+      '<div class="segmented block" id="modeSeg"><button data-v="light">' + I('sun') + 'Light</button><button data-v="dark">' + I('moon') + 'Dark</button><button data-v="system">' + I('monitor') + 'System</button></div></div>' +
+    tiles('sidebar', { values: ['neutral', 'brand'], cols: 2 }) +
+    tiles('radius', { cols: 3 }) +
+    tiles('font', { cols: 3 });
+
+  /* ================================================================ custom tier */
+  $('basePreset').innerHTML = T.templates.map(function (t) { return '<option value="' + t.key + '">' + t.name + '</option>'; }).join('');
+
+  var CLR = {
+    primary: ['Primary', 'Buttons, links, active states'],
+    secondary: ['Secondary', 'Highlights & calls-to-action'],
+    text: ['Text', 'Headings and body copy'],
+    border: ['Border', 'Dividers and outlines'],
+    surface: ['Surface', 'Cards, panels and popups'],
+    bg: ['Background', 'Page canvas behind cards']
+  };
+  var SECTIONS = [
+    { id: 'colors', icon: 'palette', title: 'Colours', sub: 'Six theme colours and the side bar', keys: ['sidebar'], colors: true },
+    { id: 'shape', icon: 'sparkles', title: 'Shape & type', sub: 'Borders, fonts, animation, density', keys: ['radius', 'font', 'weight', 'motion', 'density'] },
+    { id: 'layout', icon: 'dashboard', title: 'Layout & navigation', sub: 'Navigation, tabs, lists, details screens', keys: ['nav', 'tabs', 'list', 'details'] },
+    { id: 'overlay', icon: 'layers', title: 'Popups & loading', sub: 'Popup style and page loader', keys: ['popup', 'loader'] },
+    { id: 'components', icon: 'grid', title: 'Component styles', sub: 'Progress bars, labels, count cards, graphs', keys: ['progress', 'label', 'count', 'graph'] }
+  ];
+  var palTab = 'light';
+
+  $('sections').innerHTML = SECTIONS.map(function (s, i) {
+    var body = '';
+    if (s.colors) {
+      body += '<div class="opt"><div class="opt-head"><span class="label">Theme colours</span><span class="chg"></span>' +
+        '<div class="segmented ml-auto" id="palTab"><button data-v="light">' + I('sun') + 'Light</button><button data-v="dark">' + I('moon') + 'Dark</button></div></div>' +
+        '<label class="switch" id="autoDarkWrap" style="font-size:12.5px"><input type="checkbox" id="autoDark"><span class="track"></span><span>Generate the dark palette from the light one</span></label>' +
+        '<div id="clrRows"></div>' +
+        '<div class="checks" id="checks"></div></div>';
+      body += tiles('sidebar', { cols: 3, after: '<div class="clr-row hidden" id="sbColorRow" style="border:0;padding-top:4px"><label class="clr" id="sbSw"><input type="color" id="sbColor"></label><div><b>Side bar colour</b><span class="d">Text colour adjusts automatically</span></div><input class="input mono" id="sbHex" maxlength="7"></div>' });
+    } else {
+      s.keys.forEach(function (k) {
+        var o = {};
+        if (k === 'radius' || k === 'weight' || k === 'motion' || k === 'loader') o.cols = 3;
+        if (k === 'font') o.cols = 3;
+        if (k === 'density' || k === 'nav' || k === 'tabs' || k === 'list' || k === 'details' || k === 'popup') o.cols = 2;
+        if (k === 'progress' || k === 'label' || k === 'count' || k === 'graph') o.cols = 2;
+        if (k === 'motion') o.after = '<span class="xs muted">People who turn on “reduce motion” on their device always get Simple.</span>';
+        if (k === 'tabs') o.after = '<span class="xs muted">On phones, tabs always sit on top.</span>';
+        body += tiles(k, o);
+      });
+    }
+    return '<details class="sec" data-sec="' + s.id + '"' + (i === 0 ? ' open' : '') + '><summary><span class="s-ico">' + I(s.icon) + '</span><span class="s-txt"><b>' + s.title + '</b><span>' + s.sub + '</span></span>' +
+      '<span class="badge hl s-count"></span><span class="s-chev">' + I('chevD') + '</span></summary>' +
+      '<div class="sec-body">' + body + '<button class="btn ghost sec-reset" data-reset="' + s.id + '">' + I('reset') + 'Reset section to template</button></div></details>';
+  }).join('');
+  UI.hydrateIcons(document.getElementById('sections'));
+
+  /* ================================================================ mutations */
+  var lastKey = null;
+  function setVal(key, v) {
+    draft.values[key] = v;
+    lastKey = key;
+    render();
+  }
+  function ensureColors() {
+    if (draft.colors && draft.colors.light) return;
+    var t = T.template(draft.preset);
+    draft.colors = { light: clone(t.light), dark: clone(t.dark), darkAuto: false };
+  }
+  function setTier(tier) {
+    draft.tier = tier;
+    if (tier === 'custom') ensureColors();
+    lastKey = 'tier';
+    render();
+  }
+  function setPreset(key, fromCustom) {
+    draft.preset = key;
+    var t = T.template(key);
+    if (fromCustom) draft.colors = { light: clone(t.light), dark: clone(t.dark), darkAuto: false };
+    else T.quickKeys.forEach(function (k) { delete draft.values[k]; });
+    lastKey = 'preset';
+    render();
+  }
+  function setColor(mode, k, v) {
+    v = U.hex6(v); if (!v) return;
+    ensureColors();
+    draft.colors[mode][k] = v;
+    if (mode === 'light' && draft.colors.darkAuto) draft.colors.dark = U.deriveDark(draft.colors.light);
+    lastKey = 'colors';
+    render();
+  }
+
+  /* ================================================================ events */
+  document.querySelectorAll('.tier-btn').forEach(function (b) { b.addEventListener('click', function () { setTier(b.getAttribute('data-tier')); }); });
+  $('goCustom').addEventListener('click', function () { setTier('custom'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  $('tplGrid').addEventListener('click', function (e) { var c = e.target.closest('[data-preset]'); if (c) setPreset(c.getAttribute('data-preset'), false); });
+  $('basePreset').addEventListener('change', function () { setPreset(this.value, true); UI.toast('Colours replaced with <b>' + T.template(this.value).name + '</b>', 'info'); });
+  $('modeSeg').addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (!b) return; draft.mode = b.getAttribute('data-v'); previewMode = null; lastKey = 'mode'; render(); });
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('.opt-tile[data-key]');
+    if (t) { setVal(t.getAttribute('data-key'), t.getAttribute('data-v')); return; }
+    var rs = e.target.closest('[data-reset]');
+    if (rs) {
+      var sec = SECTIONS.filter(function (s) { return s.id === rs.getAttribute('data-reset'); })[0];
+      sec.keys.forEach(function (k) { delete draft.values[k]; });
+      if (sec.colors) { delete draft.values.sidebarColor; var tt = T.template(draft.preset); draft.colors = { light: clone(tt.light), dark: clone(tt.dark), darkAuto: false }; }
+      lastKey = null; render();
+      UI.toast(sec.title + ' reset to template', 'success');
+    }
+  });
+  $('resetAll').addEventListener('click', function () {
+    draft.values = {}; var tt = T.template(draft.preset);
+    draft.colors = { light: clone(tt.light), dark: clone(tt.dark), darkAuto: false };
+    lastKey = null; render(); UI.toast('Everything reset to ' + tt.name, 'success');
+  });
+  $('palTab').addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (!b) return; palTab = b.getAttribute('data-v'); previewMode = palTab; render(); });
+  $('autoDark').addEventListener('change', function () {
+    ensureColors();
+    draft.colors.darkAuto = this.checked;
+    draft.colors.dark = this.checked ? U.deriveDark(draft.colors.light) : (draft.colors.dark || clone(T.template(draft.preset).dark));
+    lastKey = 'colors'; render();
+  });
+  $('clrRows').addEventListener('input', function (e) {
+    var row = e.target.closest('[data-ck]'); if (!row) return;
+    var k = row.getAttribute('data-ck');
+    if (e.target.type === 'color') setColor(palTab, k, e.target.value);
+  });
+  $('clrRows').addEventListener('change', function (e) {
+    var row = e.target.closest('[data-ck]'); if (!row || e.target.type === 'color') return;
+    var v = U.hex6(e.target.value);
+    if (v) setColor(palTab, row.getAttribute('data-ck'), v); else { e.target.value = R().palette[palTab][row.getAttribute('data-ck')]; UI.toast('Use a hex colour like #072E77', 'warning'); }
+  });
+  $('sbColor').addEventListener('input', function () { draft.values.sidebarColor = this.value.toUpperCase(); lastKey = 'sidebarColor'; render(); });
+  $('sbHex').addEventListener('change', function () { var v = U.hex6(this.value); if (v) { draft.values.sidebarColor = v; lastKey = 'sidebarColor'; render(); } });
+
+  /* Preview toolbar */
+  $('pvDevice').addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (!b) return; device = b.getAttribute('data-v'); layoutFrame(); syncToolbar(); });
+  $('pvMode').addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (!b) return; previewMode = b.getAttribute('data-v'); palTab = previewMode; render(); });
+  document.querySelectorAll('[data-demo]').forEach(function (b) { b.addEventListener('click', function () { demo(b.getAttribute('data-demo')); }); });
+
+  /* Save / discard */
+  $('save').addEventListener('click', function () {
+    T.save(draft);
+    draft = T.raw();
+    savedJSON = JSON.stringify(T.normalise(draft));
+    render(true);
+    UI.toast('<b>Appearance saved</b> — applied to the whole workspace', 'success');
+  });
+  $('discard').addEventListener('click', function () {
+    draft = JSON.parse(savedJSON); previewMode = null; lastKey = null; render();
+    UI.toast('Changes discarded', 'info');
+  });
+  window.addEventListener('beforeunload', function (e) { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+  /* ================================================================ preview frame */
+  /* The draft is applied ONLY to the preview frame — never to this page.
+     This page keeps the saved theme until "Save & apply".
+
+     Two delivery paths, both every time:
+       1. Direct: this page's own theme engine writes the draft straight onto
+          the frame's <html>. Works even if the frame loaded an old cached
+          theme.js, and doesn't depend on any handshake timing.
+       2. Message: postMessage to the frame's engine, so its own state (used
+          by charts and the loader) matches. Uses "*" because pages opened
+          from disk (file://) have the origin "null", which postMessage
+          rejects as a target; the frame checks the sender instead. */
+  var frame = $('pvFrame');
+  function effMode() { return previewMode || (draft.mode === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : draft.mode); }
+  function push(animate) {
+    var mode = effMode();
+    try {
+      var doc = frame.contentDocument;
+      if (doc && doc.documentElement && doc.documentElement.hasAttribute('data-theme-preview')) {
+        T.applyTo(doc, draft, { mode: mode, animate: animate, silent: true });
+      }
+    } catch (e) { /* direct access blocked (e.g. file://) — the message below still delivers */ }
+    try { frame.contentWindow.postMessage({ type: 'cs-theme', raw: clone(draft), mode: mode, animate: animate }, '*'); } catch (e) {}
+  }
+  function demo(what) {
+    try { frame.contentWindow.postMessage({ type: 'cs-demo', what: what }, '*'); } catch (e) {}
+  }
+  window.addEventListener('message', function (e) {
+    if (e.source !== frame.contentWindow || !e.data) return;
+    if (e.data.type === 'cs-preview-ready') push(false);
+  });
+  /* Re-apply on every (re)load of the frame, including the very first one */
+  frame.addEventListener('load', function () { push(false); });
+  var AUTO_DEMO = { popup: 'popup', details: 'details', loader: 'loader', tabs: 'tabs', list: 'list', nav: 'top', label: 'list', progress: 'top', count: 'top', graph: 'top' };
+
+  function layoutFrame() {
+    var stage = $('pvStage'), box = $('pvFrameBox'), vp = $('pvViewport');
+    var sw = stage.clientWidth, sh = stage.clientHeight;
+    stage.classList.toggle('mobile', device === 'mobile');
+    if (device === 'mobile') {
+      var W = 390, H = 800, s = Math.min(1, (sh - 28) / (H + 20), (sw - 28) / (W + 20));
+      box.style.width = (W * s + 20) + 'px'; box.style.height = (H * s + 20) + 'px';
+      frame.style.width = W + 'px'; frame.style.height = H + 'px'; frame.style.transform = 'scale(' + s + ')';
+    } else {
+      box.style.width = ''; box.style.height = '';
+      var vw = vp.clientWidth, vh = vp.clientHeight;
+      var DW = Math.max(1280, Math.round(vw)), sc = vw / DW;
+      frame.style.width = DW + 'px'; frame.style.height = Math.ceil(vh / sc) + 'px'; frame.style.transform = 'scale(' + sc + ')';
+    }
+  }
+  if (window.ResizeObserver) new ResizeObserver(layoutFrame).observe($('pvStage')); else window.addEventListener('resize', layoutFrame);
+
+  /* ================================================================ render */
+  function isDirty() { return JSON.stringify(T.normalise(draft)) !== savedJSON; }
+  function syncToolbar() {
+    $('pvDevice').querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-v') === device); });
+    $('pvMode').querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-v') === effMode()); });
+  }
+  function nameOf(key, v) { var o = O[key]; return o.names[o.values.indexOf(v)] || v; }
+
+  function render(skipDemo) {
+    var res = R(), base = baseline(), custom = draft.tier === 'custom';
+
+    /* tier */
+    document.querySelectorAll('.tier-btn').forEach(function (b) { var on = b.getAttribute('data-tier') === draft.tier; b.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
+    $('tierTemplate').classList.toggle('hidden', custom);
+    $('tierCustom').classList.toggle('hidden', !custom);
+    $('baseName').innerHTML = '<b>' + T.template(draft.preset).name + '</b>';
+    $('basePreset').value = draft.preset;
+
+    /* template cards + mode */
+    document.querySelectorAll('.tpl-card').forEach(function (c) { c.classList.toggle('active', c.getAttribute('data-preset') === draft.preset); });
+    $('modeSeg').querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-v') === draft.mode); });
+
+    /* tiles (both tiers) */
+    document.querySelectorAll('.opt[data-opt]').forEach(function (o) {
+      var key = o.getAttribute('data-opt'); if (key === 'mode') return;
+      var v = res[key];
+      o.querySelectorAll('.opt-tile').forEach(function (t) { var on = t.getAttribute('data-v') === v; t.classList.toggle('active', on); t.setAttribute('aria-pressed', on); });
+      var now = o.querySelector('.now'); if (now) now.textContent = nameOf(key, v);
+      o.classList.toggle('changed', v !== base[key]);
+    });
+
+    /* custom sidebar colour */
+    var sbCustom = res.sidebar === 'custom';
+    $('sbColorRow').classList.toggle('hidden', !sbCustom);
+    $('sbSw').style.background = res.sidebarColor; $('sbColor').value = res.sidebarColor;
+    if (document.activeElement !== $('sbHex')) $('sbHex').value = res.sidebarColor;
+    document.querySelectorAll('[data-ill="sidebar:custom"]').forEach(function (el) { el.innerHTML = ILL.sidebar.custom(); });
+
+    /* palette editor */
+    if (custom) {
+      var c = draft.colors || { light: res.palette.light, dark: res.palette.dark, darkAuto: false };
+      var auto = !!c.darkAuto;
+      $('autoDark').checked = auto;
+      $('palTab').querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-v') === palTab); });
+      var p = res.palette[palTab], locked = palTab === 'dark' && auto;
+      $('clrRows').innerHTML = T.colorKeys.map(function (k) {
+        return '<div class="clr-row' + (locked ? ' locked' : '') + '" data-ck="' + k + '"><label class="clr" style="background:' + p[k] + '"><input type="color" value="' + p[k].toLowerCase() + '"' + (locked ? ' disabled' : '') + ' aria-label="' + CLR[k][0] + ' colour"></label>' +
+          '<div><b>' + CLR[k][0] + '</b><span class="d">' + CLR[k][1] + '</span></div><input class="input mono" value="' + p[k] + '" maxlength="7"' + (locked ? ' disabled' : '') + ' aria-label="' + CLR[k][0] + ' hex"></div>';
+      }).join('') + (locked ? '<div class="xs muted" style="padding-top:6px">Dark colours are generated automatically. Turn off the switch above to edit them.</div>' : '');
+      var on = U.onColor(p.primary);
+      var CK = [
+        ['Text on background', p.text, p.bg, 4.5, 'Aa'],
+        ['Text on cards', p.text, p.surface, 4.5, 'Aa'],
+        ['Button label on primary', on, p.primary, 4.5, 'Aa'],
+        ['Links on cards', p.primary, p.surface, 4.5, 'Aa'],
+        ['Secondary on cards', p.secondary, p.surface, 3, '●']
+      ];
+      $('checks').innerHTML = '<div class="label" style="margin-top:4px;font-size:12.5px">Readability check · ' + (palTab === 'dark' ? 'dark' : 'light') + ' palette</div>' + CK.map(function (x) {
+        var ratio = U.contrast(x[1], x[2]), ok = ratio >= x[3];
+        return '<div class="check-row"><span class="sample" style="background:' + x[2] + ';color:' + x[1] + '">' + x[4] + '</span>' + x[0] +
+          '<span class="badge ' + (ok ? 'success' : 'warning') + '">' + (ok ? I('check', 'sm') : I('alert', 'sm')) + ratio.toFixed(1) + ':1</span></div>';
+      }).join('');
+      var colorsChanged = T.colorKeys.some(function (k) { return res.palette.light[k] !== base.palette.light[k] || res.palette.dark[k] !== base.palette.dark[k]; });
+      document.querySelector('#palTab').closest('.opt').classList.toggle('changed', colorsChanged);
+    }
+
+    /* section change counts */
+    SECTIONS.forEach(function (s) {
+      var n = s.keys.filter(function (k) { return res[k] !== base[k]; }).length;
+      if (s.colors) {
+        n += T.colorKeys.filter(function (k) { return res.palette.light[k] !== base.palette.light[k] || res.palette.dark[k] !== base.palette.dark[k]; }).length;
+        if (res.sidebar === 'custom' && res.sidebarColor !== base.sidebarColor) n++;
+      }
+      var el = document.querySelector('[data-sec="' + s.id + '"] .s-count');
+      el.textContent = n + ' changed'; el.classList.toggle('on', n > 0);
+    });
+
+    /* save state */
+    var dirty = isDirty();
+    $('saveState').textContent = dirty ? 'Unsaved changes' : 'All changes saved';
+    $('saveState').classList.toggle('dirty', dirty);
+    $('save').disabled = !dirty; $('discard').disabled = !dirty;
+
+    syncToolbar();
+    push(true);
+    if (!skipDemo && lastKey && AUTO_DEMO[lastKey]) demo(AUTO_DEMO[lastKey]);
+    lastKey = null;
+  }
+
+  render(true);
+  layoutFrame();
+});
+</script>
+</body>
+</html>

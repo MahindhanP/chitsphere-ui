@@ -180,7 +180,8 @@
         { id: 'mobile', label: 'Your member app', icon: 'phone', href: 'tenant/mobile-app.html' },
         { section: 'Account' },
         { id: 'subscription', label: 'Subscription', icon: 'card', href: 'tenant/subscription.html' },
-        { id: 'branding', label: 'Branding & theme', icon: 'palette', href: 'tenant/branding.html' }
+        { id: 'branding', label: 'Branding', icon: 'palette', href: 'tenant/branding.html' },
+        { id: 'appearance', label: 'Appearance', icon: 'sliders', href: 'tenant/appearance.html' }
       ]
     }
   };
@@ -196,7 +197,11 @@
 
     var shell = document.createElement('div');
     shell.className = 'shell';
-    try { if (localStorage.getItem('cs.sidebar') === 'collapsed') shell.classList.add('collapsed'); } catch (e) {}
+    /* Desktop sidebar: an icon rail that slides out over the page on hover
+       (default), or pinned open next to the content. */
+    var pinned = false;
+    try { pinned = localStorage.getItem('cs.sidebar.pin') === '1'; } catch (e) {}
+    if (!pinned) shell.classList.add('collapsed');
 
     var nav = cfg.items.map(function (it) {
       if (it.section) return '<div class="sb-section">' + it.section + '</div>';
@@ -222,7 +227,8 @@
 
     var topbar = '<header class="topbar">' +
       '<button class="icon-btn mobile-only" data-sb-open aria-label="Open menu">' + icon('menu') + '</button>' +
-      '<button class="icon-btn desktop-only" data-sb-toggle aria-label="Collapse sidebar" title="Collapse sidebar">' + icon('panel') + '</button>' +
+      '<button class="icon-btn desktop-only" data-sb-toggle aria-label="' + (pinned ? 'Unpin sidebar' : 'Pin sidebar open') + '" title="' + (pinned ? 'Unpin sidebar (open on hover)' : 'Pin sidebar open') + '">' + icon('panel') + '</button>' +
+      '<a class="tb-brand" href="' + link(portal + '/dashboard.html') + '"><span class="sb-logo">' + cfg.brand.mark + '</span><b>' + cfg.brand.name + '</b></a>' +
       tenantBadge +
       '<label class="search"><span class="sr-only">Search</span>' + icon('search', 'sm') + '<input class="input" placeholder="' + (portal === 'tenant' ? 'Search groups, schemes, subscribers…' : 'Search tenants, invoices…') + '"><kbd>/</kbd></label>' +
       '<div class="topbar-spacer"></div>' +
@@ -249,16 +255,20 @@
 
     var ws = document.createElement('div');
     ws.className = 'workspace';
-    ws.innerHTML = topbar;
+    ws.innerHTML = topbar + buildTopnav(cfg, page);
     main.parentNode.insertBefore(shell, main);
     shell.innerHTML = sidebar;
     shell.appendChild(ws);
     ws.appendChild(main);
 
     shell.querySelector('[data-sb-toggle]').addEventListener('click', function () {
-      shell.classList.toggle('collapsed');
-      try { localStorage.setItem('cs.sidebar', shell.classList.contains('collapsed') ? 'collapsed' : 'open'); } catch (e) {}
+      var nowPinned = shell.classList.toggle('collapsed') === false;
+      this.setAttribute('title', nowPinned ? 'Unpin sidebar (open on hover)' : 'Pin sidebar open');
+      this.setAttribute('aria-label', nowPinned ? 'Unpin sidebar' : 'Pin sidebar open');
+      this.classList.toggle('active', nowPinned);
+      try { localStorage.setItem('cs.sidebar.pin', nowPinned ? '1' : '0'); } catch (e) {}
     });
+    shell.querySelector('[data-sb-toggle]').classList.toggle('active', pinned);
     shell.querySelector('[data-sb-open]').addEventListener('click', function () { shell.classList.add('mobile-open'); });
     shell.querySelector('[data-sb-close]').addEventListener('click', function () { shell.classList.remove('mobile-open'); });
 
@@ -269,19 +279,100 @@
     });
   }
 
-  /* ------------------------------------------------------------ Theme panel */
+  /* Horizontal navigation, used when Appearance → Navigation = Top bar.
+     Sections with one link become a plain link; others become a dropdown. */
+  function buildTopnav(cfg, page) {
+    var groups = [], cur = null;
+    cfg.items.forEach(function (it) {
+      if (it.section) { cur = { name: it.section, items: [] }; groups.push(cur); return; }
+      if (!cur) { cur = { name: '', items: [] }; groups.push(cur); }
+      cur.items.push(it);
+    });
+    return '<nav class="topnav" aria-label="Main navigation">' + groups.map(function (g, gi) {
+      var active = g.items.some(function (it) { return it.id === page; });
+      if (g.items.length === 1) {
+        var it = g.items[0];
+        return '<a class="tn-item' + (active ? ' active' : '') + '" href="' + (it.href ? link(it.href) : '#') + '">' + icon(it.icon) + it.label + '</a>';
+      }
+      return '<div class="dropdown"><button class="tn-item' + (active ? ' active' : '') + '" data-menu="#tn' + gi + '">' + icon(g.items[0].icon) + g.name + icon('chevD', 'sm') + '</button>' +
+        '<div class="menu left" id="tn' + gi + '">' + g.items.map(function (it) {
+          return '<a class="' + (it.id === page ? 'active' : '') + '" href="' + (it.href && !it.disabled ? link(it.href) : '#') + '"' + (it.disabled ? ' style="opacity:.5;pointer-events:none"' : '') + '>' + icon(it.icon) + it.label +
+            (it.tag ? '<em class="badge outline" style="margin-left:auto;height:18px;font-size:10px">' + it.tag + '</em>' : '') + '</a>';
+        }).join('') + '</div></div>';
+    }).join('') + '</nav>';
+  }
+
+  /* ------------------------------------------------------------ Side tabs
+     Every tab group that controls panels gets a mirrored vertical nav.
+     CSS shows either the top tabs or the side nav (data-tabpos). */
+  function enhanceTabs() {
+    document.querySelectorAll('.tabs[data-tabs]').forEach(function (group) {
+      if (group.classList.contains('has-side')) return;
+      var keys = Array.prototype.map.call(group.querySelectorAll('[data-tab]'), function (b) { return b.getAttribute('data-tab'); });
+      if (!keys.length) return;
+      var panels = Array.prototype.filter.call(document.querySelectorAll('[data-tab-panel]'), function (p) {
+        return keys.indexOf(p.getAttribute('data-tab-panel')) > -1 && !p.closest('.modal, .drawer');
+      });
+      if (!panels.length) return;
+      var parent = panels[0].parentNode;
+      panels = panels.filter(function (p) { return p.parentNode === parent; });
+      var wrap = document.createElement('div'); wrap.className = 'tabs-side';
+      var side = document.createElement('nav'); side.className = 'vtabs'; side.setAttribute('aria-label', 'Sections');
+      var holder = document.createElement('div'); holder.className = 'ts-panels';
+      parent.insertBefore(wrap, panels[0]);
+      wrap.appendChild(side); wrap.appendChild(holder);
+      panels.forEach(function (p) { holder.appendChild(p); });
+      group.classList.add('has-side');
+      function sync() {
+        side.innerHTML = Array.prototype.map.call(group.querySelectorAll('[data-tab]'), function (b, i) {
+          return '<button type="button" data-vi="' + i + '" class="' + (b.classList.contains('active') ? 'active' : '') + '">' + b.innerHTML + '</button>';
+        }).join('');
+      }
+      side.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-vi]'); if (!b) return;
+        var orig = group.querySelectorAll('[data-tab]')[+b.getAttribute('data-vi')];
+        if (orig) orig.click();
+      });
+      sync();
+      new MutationObserver(sync).observe(group, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+    });
+  }
+
+  /* ------------------------------------------------------------ Page loader */
+  function pageLoader(ms) {
+    var main = document.querySelector('main.content');
+    if (!main || !window.Theme) return;
+    var old = main.querySelector('.page-loader'); if (old) old.remove();
+    var kind = Theme.get().loader;
+    var cfg = NAV[document.body.getAttribute('data-portal')];
+    var mark = cfg ? cfg.brand.mark : 'CS';
+    var el = document.createElement('div');
+    el.className = 'page-loader'; el.setAttribute('data-kind', kind); el.setAttribute('aria-busy', 'true'); el.setAttribute('aria-label', 'Loading');
+    el.innerHTML = '<div class="sk-wrap">' +
+      '<div class="sk" style="width:180px;height:14px"></div><div class="sk" style="width:280px;height:24px;margin-top:-12px"></div>' +
+      '<div class="sk-row"><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div></div>' +
+      '<div class="sk-row"><div class="sk sk-block" style="flex:2"></div><div class="sk sk-block" style="flex:1"></div></div></div>' +
+      '<div class="pl-logo"><div><div class="pl-mark">' + mark + '</div><span>Loading…</span></div></div>';
+    main.appendChild(el);
+    setTimeout(function () { el.classList.add('out'); setTimeout(function () { el.remove(); }, 300); }, ms || 650);
+  }
+
+  /* ------------------------------------------------------------ Theme panel (quick)
+     The quick panel only offers Template-mode settings. Everything else
+     lives in the Appearance studio (tenant/appearance.html). */
   function buildThemePanel() {
     if (!window.Theme) return;
     var wrap = document.createElement('div');
-    var sw = Theme.accents.map(function (a) {
-      return '<button class="swatch" data-accent="' + a.key + '" title="' + a.name + '"><span class="sw" style="background:' + a.light + ';--_hl:' + a.hl + ';--_hld:block"></span>' + a.name.split(' ')[0] + '</button>';
-    }).join('') +
-      '<label class="swatch" data-accent="custom" title="Pick any brand colour" style="position:relative"><span class="sw" id="customSw" style="background:conic-gradient(#f43f5e,#f59e0b,#22c55e,#06b6d4,#6366f1,#d946ef,#f43f5e)"></span>Custom<input type="color" id="customColor"></label>';
+    var sw = Theme.templates.map(function (t) {
+      return '<button class="swatch" data-preset="' + t.key + '" title="' + t.name + '"><span class="sw" style="background:' + t.light.primary + ';--_hl:' + t.light.secondary + ';--_hld:block"></span>' + t.name.split(' ')[0] + '</button>';
+    }).join('');
+    var fonts = Object.keys(Theme.fonts).map(function (k) { return '<option value="' + k + '">' + Theme.fonts[k].name + '</option>'; }).join('');
+    var studio = link('tenant/appearance.html');
 
     wrap.innerHTML =
       '<div class="overlay" data-close></div>' +
-      '<aside class="drawer" id="themePanel" role="dialog" aria-label="Theme settings">' +
-        '<div class="drawer-head"><div class="card-title-icon">' + icon('palette') + '</div><div><h3>Appearance</h3><div class="xs muted">Saved to this browser · applies instantly</div></div>' +
+      '<aside class="drawer drawer-fixed" id="themePanel" role="dialog" aria-label="Theme settings">' +
+        '<div class="drawer-head"><div class="card-title-icon">' + icon('palette') + '</div><div><h3>Appearance</h3><div class="xs muted">Quick settings · applies instantly</div></div>' +
         '<button class="icon-btn ml-auto" data-close aria-label="Close">' + icon('x') + '</button></div>' +
         '<div class="drawer-body">' +
           '<div class="tp-group"><div class="label">Mode</div><div class="mode-cards">' +
@@ -289,11 +380,12 @@
             '<button class="mode-card mc-dark" data-mode="dark"><span class="mc-prev"><i></i><em></em></span><span class="mc-label">' + icon('moon') + 'Dark</span></button>' +
             '<button class="mode-card mc-system" data-mode="system"><span class="mc-prev"><i></i><em></em></span><span class="mc-label">' + icon('monitor') + 'System</span></button>' +
           '</div></div>' +
-          '<div class="tp-group"><div class="label">Accent colour <span id="accentName"></span></div><div class="swatches">' + sw + '</div></div>' +
-          '<div class="tp-group"><div class="label">Sidebar</div><div class="segmented block" data-opt="sidebar"><button data-v="surface">Neutral</button><button data-v="brand">Brand colour</button></div></div>' +
-          '<div class="tp-group"><div class="label">Density</div><div class="segmented block" data-opt="density"><button data-v="comfortable">Comfortable</button><button data-v="compact">Compact</button></div></div>' +
-          '<div class="tp-group"><div class="label">Corners</div><div class="segmented block" data-opt="radius"><button data-v="sharp">Sharp</button><button data-v="rounded">Rounded</button><button data-v="soft">Soft</button></div></div>' +
-          '<div class="alert info">' + icon('info') + '<div><b>Tenant branding</b>Tenants can lock a default theme for all their staff from <i>Branding &amp; theme</i>. Personal choices here override it on this device.</div></div>' +
+          '<div class="alert warning hidden" id="tpCustom">' + icon('sliders') + '<div><b>Custom theme active</b>Picking a template below switches back to Template mode. Your custom settings are kept in the studio.</div></div>' +
+          '<div class="tp-group"><div class="label">Theme template <span id="accentName"></span></div><div class="swatches">' + sw + '</div></div>' +
+          '<div class="tp-group"><div class="label">Side bar</div><div class="segmented block" data-opt="sidebar"><button data-v="neutral">Neutral</button><button data-v="brand">Brand colour</button></div></div>' +
+          '<div class="tp-group"><div class="label">Borders</div><div class="segmented block" data-opt="radius"><button data-v="sharp">Sharp</button><button data-v="rounded">Round</button><button data-v="soft">Soft</button></div></div>' +
+          '<div class="tp-group"><div class="label">Font style</div><select class="select" id="tpFont">' + fonts + '</select></div>' +
+          '<a class="btn soft" style="width:100%" href="' + studio + '">' + icon('sliders') + 'Open Appearance studio — all options</a>' +
         '</div>' +
         '<div class="drawer-foot"><button class="btn ghost" id="themeReset">' + icon('reset') + 'Reset to default</button><button class="btn primary" data-close>Done</button></div>' +
       '</aside>';
@@ -303,19 +395,22 @@
     panel.querySelectorAll('[data-mode]').forEach(function (b) {
       b.addEventListener('click', function () { Theme.set({ mode: b.getAttribute('data-mode') }); });
     });
-    panel.querySelectorAll('.swatch[data-accent]').forEach(function (b) {
-      if (b.getAttribute('data-accent') === 'custom') return;
-      b.addEventListener('click', function () { Theme.set({ accent: b.getAttribute('data-accent') }); });
+    /* Choosing a template = Template mode with that template's own defaults */
+    panel.querySelectorAll('.swatch[data-preset]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var raw = Theme.raw();
+        raw.preset = b.getAttribute('data-preset'); raw.tier = 'template';
+        Theme.quickKeys.forEach(function (k) { delete raw.values[k]; });
+        Theme.save(raw);
+      });
     });
-    var cc = document.getElementById('customColor');
-    cc.value = Theme.get().custom || '#072E77';
-    cc.addEventListener('input', function () { Theme.set({ accent: 'custom', custom: cc.value }); });
     panel.querySelectorAll('[data-opt]').forEach(function (seg) {
       var key = seg.getAttribute('data-opt');
       seg.querySelectorAll('button').forEach(function (b) {
         b.addEventListener('click', function () { var p = {}; p[key] = b.getAttribute('data-v'); Theme.set(p); });
       });
     });
+    document.getElementById('tpFont').addEventListener('change', function () { Theme.set({ font: this.value }); });
     document.getElementById('themeReset').addEventListener('click', function () { Theme.reset(); toast('Theme reset to default', 'success'); });
 
     syncThemeUI();
@@ -329,16 +424,17 @@
     });
     var panel = document.getElementById('themePanel');
     if (!panel) return;
+    var custom = s.tier === 'custom';
     panel.querySelectorAll('[data-mode]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-mode') === s.mode); });
-    panel.querySelectorAll('.swatch[data-accent]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-accent') === s.accent); });
+    panel.querySelectorAll('.swatch[data-preset]').forEach(function (b) { b.classList.toggle('active', !custom && b.getAttribute('data-preset') === s.preset); });
     panel.querySelectorAll('[data-opt]').forEach(function (seg) {
       var key = seg.getAttribute('data-opt');
       seg.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-v') === s[key]); });
     });
-    var a = Theme.accents.find(function (x) { return x.key === s.accent; });
+    document.getElementById('tpFont').value = s.font;
+    document.getElementById('tpCustom').classList.toggle('hidden', !custom);
     var nm = document.getElementById('accentName');
-    if (nm) nm.textContent = a ? a.name : 'Custom ' + (s.custom || '').toUpperCase();
-    if (s.accent === 'custom') { var c = document.getElementById('customSw'); if (c) c.style.background = s.custom; }
+    if (nm) nm.textContent = custom ? 'Custom' : Theme.template(s.preset).name;
   }
 
   /* ------------------------------------------------------------ Layers (modal/drawer) */
@@ -517,9 +613,19 @@
   }
 
   /* ------------------------------------------------------------ Mini charts */
+  /* Charts follow Appearance → Graphs: bars | rounded (CSS) | line | area (SVG).
+     Every chart is remembered so it can be redrawn when the graph style changes. */
+  var charts = [];
   function bars(el, data, opt) {
     el = typeof el === 'string' ? document.querySelector(el) : el;
+    if (!el) return;
     opt = opt || {};
+    var known = charts.some(function (c) { return c.el === el; });
+    if (known) charts = charts.filter(function (c) { return c.el !== el; });
+    charts.push({ el: el, data: data, opt: opt });
+    var g = window.Theme ? Theme.get().graph : 'bars';
+    el.setAttribute('data-graph-drawn', g);
+    if (g === 'line' || g === 'area') return lineChart(el, data, opt, g === 'area');
     var max = Math.max.apply(null, data.map(function (d) { return (d.a || 0) + (d.b || 0); })) * 1.1 || 1;
     el.innerHTML = '<div class="bars">' + data.map(function (d) {
       var tip = opt.tip ? opt.tip(d) : d.label + ': ' + d.a;
@@ -527,6 +633,36 @@
         '<div class="bar" style="height:' + (d.a / (d.a + (d.b || 0)) * 100) + '%"></div>' +
         (d.b ? '<div class="bar b2" style="height:' + (d.b / (d.a + d.b) * 100) + '%"></div>' : '') + '</div></div>';
     }).join('') + '</div><div class="bar-labels">' + data.map(function (d) { return '<span>' + d.label + '</span>'; }).join('') + '</div>';
+  }
+  function lineChart(el, data, opt, area) {
+    var W = 600, H = 190, n = data.length;
+    var hasB = data.some(function (d) { return d.b; });
+    var max = Math.max.apply(null, data.map(function (d) { return Math.max(d.a || 0, hasB ? (d.a || 0) + (d.b || 0) : 0); })) * 1.12 || 1;
+    function x(i) { return n < 2 ? W / 2 : (i + 0.5) / n * W; }
+    function y(v) { return H - v / max * H; }
+    function path(vals) { return vals.map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' '); }
+    var a = data.map(function (d) { return d.a || 0; });
+    var t = data.map(function (d) { return (d.a || 0) + (d.b || 0); });
+    var grid = [0.25, 0.5, 0.75].map(function (f) { return '<line class="grid-l" x1="0" x2="' + W + '" y1="' + (H * f) + '" y2="' + (H * f) + '" vector-effect="non-scaling-stroke"/>'; }).join('');
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' + grid +
+      (area ? '<path class="ar" d="' + path(a) + ' L' + x(n - 1) + ' ' + H + ' L' + x(0) + ' ' + H + ' Z"/>' : '') +
+      (hasB ? '<path class="ln b" d="' + path(t) + '" vector-effect="non-scaling-stroke"/>' : '') +
+      '<path class="ln a" d="' + path(a) + '" vector-effect="non-scaling-stroke"/></svg>';
+    var dots = data.map(function (d, i) {
+      var tip = opt.tip ? opt.tip(d) : d.label + ': ' + d.a;
+      var left = (x(i) / W * 100), top = (y(a[i]) / H * 100);
+      return '<div class="pt-col" style="left:' + (i / n * 100) + '%;width:' + (100 / n) + '%"><span class="tip" style="top:calc(' + top + '% - 34px)">' + tip + '</span></div>' +
+        '<span style="position:absolute;left:calc(' + left + '% - 5px);top:calc(' + top + '% - 5px);width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--chart-1);pointer-events:none"></span>';
+    }).join('');
+    el.innerHTML = '<div class="linechart">' + svg + '<div style="position:absolute;inset:10px 0 0 0">' + dots + '</div></div>' +
+      '<div class="bar-labels">' + data.map(function (d) { return '<span>' + d.label + '</span>'; }).join('') + '</div>';
+  }
+  function redrawCharts() {
+    var g = window.Theme ? Theme.get().graph : 'bars';
+    charts.forEach(function (c) {
+      if (!document.body.contains(c.el)) return;
+      if (c.el.getAttribute('data-graph-drawn') !== g) bars(c.el, c.data, c.opt);
+    });
   }
   function spark(el, values) {
     el = typeof el === 'string' ? document.querySelector(el) : el;
@@ -541,6 +677,7 @@
     root: ROOT, link: link, icon: icon, hydrateIcons: hydrateIcons,
     inr: inr, inrShort: inrShort, num: num, date: date, initials: initials, badge: badge, esc: esc, param: param,
     toast: toast, open: openLayer, close: closeLayers, validate: validate, table: table, bars: bars, spark: spark,
+    loader: pageLoader, enhanceTabs: enhanceTabs, nav: NAV,
     activateTab: activateTab
   };
 
@@ -550,7 +687,10 @@
     hydrateIcons();
     wire();
     document.querySelectorAll('[data-tabs] [data-tab].active').forEach(activateTab);
+    if (document.body.getAttribute('data-portal')) pageLoader(document.documentElement.hasAttribute('data-theme-preview') ? 900 : 550);
+    document.addEventListener('themechange', redrawCharts);
     document.dispatchEvent(new CustomEvent('app:ready'));
+    enhanceTabs();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en" data-theme-preview>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Appearance preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <!-- data-theme-preview: theme.js ignores storage and listens to the Appearance studio -->
+  <script src="../assets/js/theme.js?v=4"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css?v=4">
+  <link rel="stylesheet" href="../assets/css/app.css?v=4">
+  <style>
+    /* The preview is display-only: links inside never navigate away */
+    body { overflow-x: hidden; }
+    .pv-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+    .pv-gcard { padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t) var(--ease); }
+    .pv-gcard:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+    :root[data-motion="high"] .pv-gcard:hover { transform: translateY(-3px); }
+    .pv-gcard .top { display: flex; align-items: center; gap: 10px; }
+    .pv-gcard .val { font-size: 20px; font-weight: var(--fw-kpi); letter-spacing: -0.02em; }
+    .pv-gcard .meta { display: grid; grid-template-columns: repeat(3, 1fr); font-size: 11.5px; color: var(--text-3); gap: 6px; }
+    .pv-gcard .meta b { display: block; color: var(--text); font-size: 13px; }
+    :root[data-list="table"] .pv-cards { display: none; }
+    :root:not([data-list="table"]) .pv-table { display: none; }
+    .pv-fixed { font-size: 10.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); display: inline-flex; gap: 4px; align-items: center; }
+    .pv-fixed svg { width: 12px; height: 12px; }
+    .legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-3); }
+    .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: -1px; }
+  </style>
+</head>
+<body data-portal="tenant" data-page="dashboard">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="#">Home</a><i data-i="chevR"></i>Dashboard</div>
+      <h1>Good morning, Ravi</h1>
+      <p>Here’s how Sri Venkata Chits is doing this month.</p>
+    </div>
+    <div class="actions">
+      <button class="btn"><i data-i="download"></i>Export</button>
+      <button class="btn primary" data-open="#pvModal"><i data-i="plus"></i>New group</button>
+    </div>
+  </div>
+
+  <div class="grid g-4">
+    <div class="card kpi"><div class="label"><span class="ico"><i data-i="grid"></i></span>Running groups</div><div class="value">84</div><div class="delta"><span class="up"><i data-i="trendUp"></i>6</span> started this quarter</div></div>
+    <div class="card kpi"><div class="label"><span class="ico hl"><i data-i="coins"></i></span>Chit value managed</div><div class="value">₹42.6 Cr</div><div class="delta"><span class="up"><i data-i="trendUp"></i>8.2%</span> vs last quarter</div></div>
+    <div class="card kpi"><div class="label"><span class="ico ok"><i data-i="wallet"></i></span>Collections</div><div class="value">₹1.84 Cr</div><div class="delta">91% of ₹2.02 Cr due</div></div>
+    <div class="card kpi"><div class="label"><span class="ico warn"><i data-i="users"></i></span>Subscribers</div><div class="value">4,210</div><div class="delta"><span class="down"><i data-i="trendDown"></i>12</span> exits this month</div></div>
+  </div>
+
+  <div class="grid g-main-side" style="margin-top:var(--gap)">
+    <div class="card">
+      <div class="card-head"><div><h3>Collections</h3><div class="sub">Last 8 months · ₹ lakhs</div></div>
+        <div class="tools legend"><span><i style="background:var(--chart-1)"></i>Collected</span><span><i style="background:var(--chart-2)"></i>Pending</span></div></div>
+      <div class="card-body"><div id="pvChart"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h3>Enrolment progress</h3><div class="sub">Groups filling up</div></div></div>
+      <div class="card-body stack-lg" id="pvProgress"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:var(--gap)">
+    <div class="card-head"><div><h3>Chit groups</h3><div class="sub">Click a group to open its details</div></div>
+      <span class="pv-fixed ml-auto"><i data-i="lock"></i>Filters are fixed</span></div>
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" placeholder="Search groups…"></div>
+      <select class="select"><option>All branches</option><option>Vijayawada</option><option>Guntur</option></select>
+      <select class="select"><option>All values</option><option>Up to ₹5 L</option><option>₹5 L – ₹25 L</option></select>
+    </div>
+    <div class="tabs" data-tabs>
+      <button class="active" data-tab="run">Running <span class="count">4</span></button>
+      <button data-tab="enr">Enrolling <span class="count">3</span></button>
+      <button data-tab="cls">Closed <span class="count">2</span></button>
+    </div>
+  </div>
+  <div class="tab-panel" data-tab-panel="run" style="margin-top:var(--gap)"></div>
+  <div class="tab-panel" data-tab-panel="enr" style="margin-top:var(--gap)"></div>
+  <div class="tab-panel" data-tab-panel="cls" style="margin-top:var(--gap)"></div>
+</main>
+
+<!-- Popup (center or bottom drawer) -->
+<div class="modal" id="pvModal" role="dialog" aria-label="Create chit group">
+  <div class="modal-head"><div class="card-title-icon"><i data-i="plusCircle"></i></div><div><h3>Create chit group</h3><p>Pick a scheme and a start date</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="modal-body stack-lg">
+    <div class="stepper">
+      <div class="step done"><span class="bubble"><i data-i="check" class="sm"></i></span><span class="step-txt"><b>Scheme</b><span>5 L · 50 months</span></span></div>
+      <div class="step active"><span class="bubble">2</span><span class="step-txt"><b>Schedule</b><span>Dates &amp; branch</span></span></div>
+      <div class="step"><span class="bubble">3</span><span class="step-txt"><b>Review</b><span>Confirm</span></span></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Start date</label><input class="input" value="05 Jan 2027"></div>
+      <div class="field"><label>Branch</label><select class="select"><option>Vijayawada</option></select></div>
+      <div class="field span-2"><label>Group name</label><input class="input" value="SV-5L-J27"><span class="hint">Shown on receipts and in the member app</span></div>
+    </div>
+    <span class="pv-fixed"><i data-i="lock"></i>Steppers are fixed</span>
+  </div>
+  <div class="modal-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" data-close>Continue<i data-i="arrowR"></i></button></div>
+</div>
+
+<!-- Details (right drawer or full screen) -->
+<div class="drawer wide" id="pvDrawer" role="dialog" aria-label="Group details">
+  <div class="drawer-head"><span class="avatar sq" style="background:var(--primary);color:var(--on-primary)"><i data-i="grid"></i></span>
+    <div><h3 id="pvDName">SV-5L-A24</h3><div class="xs muted" id="pvDMeta"></div></div>
+    <button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
+  <div class="drawer-body stack-lg">
+    <div class="kv-cards"><div class="kv-card"><span>Chit value</span><b id="pvDVal"></b></div><div class="kv-card"><span>Instalment</span><b>₹10,000</b></div><div class="kv-card"><span>Next auction</span><b>5 Dec</b></div></div>
+    <div class="meter"><div class="meter-row"><span>Instalments paid</span><b id="pvDProg"></b></div><div class="meter-bar"><div class="meter-fill" id="pvDFill"></div></div></div>
+    <div><h4 style="margin-bottom:8px">Recent subscribers</h4>
+      <div class="card flush"><div class="list">
+        <div class="list-item"><span class="avatar sm">KR</span><div style="flex:1"><b>Kavitha Reddy</b><div class="xs muted">Ticket #3</div></div><span class="badge dot primary">Prized</span></div>
+        <div class="list-item"><span class="avatar sm">SN</span><div style="flex:1"><b>Srinivas N.</b><div class="xs muted">Ticket #7</div></div><span class="badge dot success">Paid</span></div>
+        <div class="list-item"><span class="avatar sm">PL</span><div style="flex:1"><b>Padma Latha</b><div class="xs muted">Ticket #12</div></div><span class="badge dot danger">Overdue</span></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="drawer-foot"><button class="btn ghost" data-close>Close</button><button class="btn primary"><i data-i="gavel"></i>Schedule auction</button></div>
+</div>
+
+<script src="../assets/js/app.js?v=4"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  /* Nothing in the preview navigates */
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('a[href]'); if (a) e.preventDefault();
+  }, true);
+
+  UI.bars('#pvChart', [
+    { label: 'Apr', a: 142, b: 18 }, { label: 'May', a: 151, b: 14 }, { label: 'Jun', a: 148, b: 21 }, { label: 'Jul', a: 160, b: 12 },
+    { label: 'Aug', a: 171, b: 15 }, { label: 'Sep', a: 166, b: 19 }, { label: 'Oct', a: 178, b: 11 }, { label: 'Nov', a: 184, b: 18 }
+  ], { tip: function (d) { return d.label + ': ₹' + d.a + ' L'; } });
+
+  var G = {
+    run: [['SV-5L-A24', 500000, 23, 50, 'Running', 'Vijayawada'], ['SV-10L-B25', 1000000, 9, 40, 'Running', 'Guntur'], ['SV-2L-C25', 200000, 30, 30, 'Overdue', 'Vijayawada'], ['SV-25L-D24', 2500000, 14, 50, 'Running', 'Eluru']],
+    enr: [['SV-25L-D26', 2500000, 34, 50, 'Enrolling', 'Guntur'], ['SV-5L-F26', 500000, 41, 50, 'PSO Pending', 'Vijayawada'], ['SV-1L-G26', 100000, 12, 25, 'Enrolling', 'Ongole']],
+    cls: [['SV-5L-X21', 500000, 50, 50, 'Closed', 'Vijayawada'], ['SV-2L-Y21', 200000, 30, 30, 'Closed', 'Guntur']]
+  };
+  function pct(r) { return Math.round(r[2] / r[3] * 100); }
+  Object.keys(G).forEach(function (k) {
+    var rows = G[k];
+    var cards = '<div class="pv-cards pv-grid">' + rows.map(function (r, i) {
+      return '<div class="card pv-gcard" data-row="' + k + ':' + i + '"><div class="top"><b class="mono" style="flex:1">' + r[0] + '</b>' + UI.badge(r[4]) + '</div>' +
+        '<div class="val">' + UI.inrShort(r[1]) + '</div>' +
+        '<div class="meter"><div class="meter-row"><span>' + (k === 'enr' ? 'Enrolled' : 'Instalments') + '</span><b>' + r[2] + ' / ' + r[3] + '</b></div><div class="meter-bar"><div class="meter-fill" style="width:' + pct(r) + '%"></div></div></div>' +
+        '<div class="meta"><span>Branch<b>' + r[5] + '</b></span><span>Tickets<b>' + r[3] + '</b></span><span>Progress<b>' + pct(r) + '%</b></span></div></div>';
+    }).join('') + '</div>';
+    var table = '<div class="card pv-table"><div class="table-wrap"><table class="table"><thead><tr><th>Group</th><th>Branch</th><th class="num">Value</th><th style="width:28%">Progress</th><th>Status</th></tr></thead><tbody>' + rows.map(function (r, i) {
+      return '<tr class="clickable" data-row="' + k + ':' + i + '"><td><b class="mono">' + r[0] + '</b></td><td>' + r[5] + '</td><td class="num">' + UI.inr(r[1]) + '</td>' +
+        '<td><div class="meter"><div class="meter-bar"><div class="meter-fill" style="width:' + pct(r) + '%"></div></div></div></td><td>' + UI.badge(r[4]) + '</td></tr>';
+    }).join('') + '</tbody></table></div></div>';
+    document.querySelector('[data-tab-panel="' + k + '"]').innerHTML = cards + table;
+  });
+
+  document.getElementById('pvProgress').innerHTML = G.enr.concat([G.run[1]]).map(function (r) {
+    return '<div class="meter"><div class="meter-row"><span><b class="mono" style="color:var(--text)">' + r[0] + '</b> ' + UI.badge(r[4]) + '</span><b>' + pct(r) + '%</b></div><div class="meter-bar"><div class="meter-fill" style="width:' + pct(r) + '%"></div></div></div>';
+  }).join('');
+
+  function openDetails(key) {
+    var p = (key || 'run:0').split(':'), r = G[p[0]][+p[1]];
+    document.getElementById('pvDName').textContent = r[0];
+    document.getElementById('pvDMeta').innerHTML = r[5] + ' branch · ' + UI.badge(r[4]);
+    document.getElementById('pvDVal').textContent = UI.inr(r[1]);
+    document.getElementById('pvDProg').textContent = r[2] + ' / ' + r[3];
+    document.getElementById('pvDFill').style.width = pct(r) + '%';
+    UI.open('#pvDrawer');
+  }
+  document.addEventListener('click', function (e) {
+    var row = e.target.closest('[data-row]'); if (row) openDetails(row.getAttribute('data-row'));
+  });
+
+  /* Demo requests from the studio */
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent || !e.data || e.data.type !== 'cs-demo') return;
+    UI.close();
+    var w = e.data.what;
+    setTimeout(function () {
+      if (w === 'popup') UI.open('#pvModal');
+      else if (w === 'details') openDetails('run:0');
+      else if (w === 'loader') { window.scrollTo(0, 0); UI.loader(1400); }
+      else if (w === 'tabs' || w === 'list') { var el = document.querySelector('.tabs[data-tabs]'); if (el) el.closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      else if (w === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 80);
+  });
+  if (parent !== window) parent.postMessage({ type: 'cs-preview-ready' }, '*');
+});
+</script>
+</body>
+</html>

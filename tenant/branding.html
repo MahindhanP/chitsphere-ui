@@ -66,12 +66,11 @@
       </div>
 
       <div class="card">
-        <div class="card-head"><div><h3>Workspace defaults</h3><div class="sub">Applied to every staff member when they first sign in</div></div></div>
-        <div class="card-body stack-lg">
-          <div class="field"><label>Default appearance</label><div class="segmented" data-seg id="defMode"><button data-v="light" class="active"><i data-i="sun"></i>Light</button><button data-v="dark"><i data-i="moon"></i>Dark</button><button data-v="system"><i data-i="monitor"></i>Follow device</button></div></div>
-          <div class="field"><label>Sidebar</label><div class="segmented" data-seg id="defSidebar"><button data-v="surface" class="active">Neutral</button><button data-v="brand">Brand colour</button></div></div>
-          <div class="field"><label>Density</label><div class="segmented" data-seg id="defDensity"><button data-v="comfortable" class="active">Comfortable</button><button data-v="compact">Compact</button></div></div>
-          <label class="switch"><input type="checkbox" id="lockTheme"><span class="track"></span><span>Lock theme — staff can’t change colours (dark mode stays allowed)</span></label>
+        <div class="card-head"><div><h3>Workspace appearance</h3><div class="sub">Templates, light &amp; dark mode, navigation, popups, components and more</div></div></div>
+        <div class="card-body row wrap" style="gap:16px">
+          <span class="card-title-icon" style="width:44px;height:44px"><i data-i="sliders"></i></span>
+          <div style="flex:1;min-width:220px"><b>Appearance studio</b><div class="small muted">Pick a ready-made template or build a custom theme, with a live preview of the workspace.</div></div>
+          <a class="btn primary" href="appearance.html">Open Appearance<i data-i="arrowR"></i></a>
         </div>
       </div>
 
@@ -153,11 +152,6 @@ document.addEventListener('app:ready', function () {
     var preset = Theme.accents.find(function (a) { return a.light.toLowerCase() === primary.toLowerCase(); });
     Theme.set(preset ? { accent: preset.key } : { accent: 'custom', custom: primary });
     UI.toast('Applied to your screen. Open the palette icon to fine-tune.', 'success');
-  });
-  ['defMode', 'defSidebar', 'defDensity'].forEach(function (id) {
-    $(id).addEventListener('change', function (e) {
-      var key = { defMode: 'mode', defSidebar: 'sidebar', defDensity: 'density' }[id], p = {}; p[key] = e.detail; Theme.set(p);
-    });
   });
   $('saveBrand').addEventListener('click', function () { UI.toast('<b>Branding published</b> — staff and members will see it on next load', 'success'); });
 });
