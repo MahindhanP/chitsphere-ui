@@ -8,66 +8,62 @@ Static HTML/CSS/JS prototype for a multi-tenant chit fund SaaS. Mock data only, 
 python -m http.server 5173 --directory ui
 ```
 
-Open http://localhost:5173. Any credentials work everywhere.
+Open http://localhost:5173. Any credentials work; `login.html` has a switch to try the error responses.
 
-## Business model and the four front doors
+## What this prototype follows
 
-Chit fund organisations **register themselves** on our site. After verification, each one gets:
+Screens, fields, statuses and error codes follow the API contracts and backend in the `saas-platform` repository
+(`contracts/`, `docs/`, `back-end/`). Every page names the endpoints it stands for in an HTML comment at the top,
+and every dialog shows the call it would make. Mock data in `assets/js/data.js` uses the contract's field names and enum values.
 
-1. **Its own admin web console** at `https://<slug>.chitsphere.in`, branded with its logo and colours. Staff sign in here.
-2. **The member mobile app** for its subscribers. Every organisation gets **its own app** in Google Play and the App Store (its own name, icon, colours and package ID, e.g. `in.svchits.member`), built from one shared codebase. Members install their company's app and sign in with mobile + OTP, with no organisation code. ChitSphere publishes the apps under its developer accounts; Enterprise organisations can publish under their own accounts.
+There is no self-registration, member app, app-store builds, invoices or KYC review. The backend has no API for them.
+Organisations are created by ChitSphere staff (`platform/tenant-new.html`), and the organisation's admin activates their account from an email link.
 
-| Who | Entry point | Prototype file |
-|---|---|---|
-| Visitors / prospects | chitsphere.in | `index.html` (landing + pricing), `register.html` (self-registration) |
-| Organisation staff | `<slug>.chitsphere.in` | `login.html?org=svchits`, then `tenant/*` |
-| Members (subscribers) | That organisation's own Android / iOS app | `app/index.html?org=svchits` (one build per org) |
-| ChitSphere staff | admin.chitsphere.in | `platform/login.html`, then `platform/*` |
+| Who | Prototype |
+|---|---|
+| Visitors | `index.html` (products from the catalog, active plans, contact) |
+| Everyone who signs in | `login.html` (email + password, optional organisation code), `choose-tenant.html`, `forgot-password.html`, `reset-password.html` (`?token=`, `&mode=activate`), `account.html` |
+| Organisation staff | `tenant/*` and `accounting/*`. Menu items outside the plan show "Not in plan" |
+| ChitSphere staff | `platform/*` and `accounting/*?realm=platform` (ChitSphere's own books) |
 
-Registration lifecycle: **submitted** → trial workspace available immediately → **platform verifies documents** (`platform/registrations.html`) → **approved**: group creation unlocks and ChitSphere builds and submits the organisation's app to the stores (3–7 days). A suspended or unverified organisation can't be reached from the member app.
+**`screens.html`** is a review board of every screen: each card shows the live page with notes, its other states and its API.
+Open it through the server above so the theme switch and dialog previews work.
 
 ## Structure
 
 ```
 ui/
-  index.html                 Public landing page (how it works, products, pricing, FAQ)
-  register.html              Organisation self-registration (5 steps + OTP + address check)
-  login.html                 Organisation admin sign-in; branded via ?org=<slug>, or "find your organisation"
-  app/index.html             Member mobile app prototype: one org's build, chosen by `?org=` (12 screens)
-  platform/                  Super-admin console (our company)
-    login.html               Staff sign-in with 2FA step
-    registrations.html       Review queue: checks, documents, approve / request changes / reject
-    apps.html                Every org's app build: package IDs, store status, versions, rollouts
-    dashboard.html           MRR, plan mix, tenants needing attention
-    tenants.html             Tenant list, filters, suspend flow
-    tenant-new.html          6-step onboarding wizard (company, KYC, admin, plan, branding, review)
-    tenant-view.html         Tenant detail: usage vs limits, modules, invoices, KYC approval
-    plans.html               Subscription plans + editor drawer + feature matrix
-    billing.html             Invoices, reminders, manual invoice with GST
-  tenant/                    Chit fund company workspace
-    dashboard.html           KPIs, collections chart, upcoming auctions, groups in setup
-    schemes.html             Scheme cards/table + detail drawer
-    scheme-new.html          Create/edit scheme (?id=SCH-001) with live calculations
-    groups.html              Groups by lifecycle phase
-    group-new.html           8-stage group lifecycle (?id=GRP-2602 resumes, ?scheme=SCH-001 preselects)
-    group-view.html          Running group: auctions, subscribers, compliance docs
-    mobile-app.html          Your member app: store release status, store listing, member features, download links
-    branches.html, users.html, subscription.html, branding.html
+  index.html, login.html, choose-tenant.html, forgot-password.html, reset-password.html
+  account.html               Profile, password, sessions (both portals; ?realm=platform for staff)
+  platform/                  ChitSphere staff console
+    dashboard.html           Tenants by status, subscriptions ending, provisioning problems
+    tenants.html             Tenant list; suspend / reactivate / archive
+    tenant-new.html          4-step create-tenant wizard + provisioning result
+    tenant-view.html         Overview, subscription, entitlements, overrides, members, branches, provisioning, audit
+    plans.html, plan-view.html  Plans with versions, limits and modules; drafts and publishing
+    users.html               Platform staff and roles
+    support.html             Time-limited support access to a tenant (elevations)
+    audit.html               Platform audit log
+  tenant/                    Organisation workspace
+    dashboard.html, profile.html, subscription.html, audit.html, appearance.html
+    members.html, roles.html, branches.html      Access: invitations, role templates, permissions, branches
+    customers.html, schemes.html, scheme-new.html, groups.html, group-new.html, group-view.html   Chits
+    employees.html, employee.html, attendance.html, leave.html, hrms-setup.html, hrms-reports.html, my-hr.html   HRMS
+    leads.html, lead.html, follow-ups.html, pipeline.html   CRM
+    payroll-runs.html, payroll-run.html, salaries.html      Payroll
+  accounting/                Shared by both portals (data-portal="auto")
+    vouchers.html, voucher.html   Journal entries, template postings, submit/approve/reject/return/recall/reverse
+    approvals.html           Vouchers waiting at my approval level
+    ledger.html              Chart of accounts, segments, parties and party accounts
+    reports.html             Trial balance, P&L, balance sheet, day book, ledger, party statement, segments, cash position
+    setup.html               Book settings, fiscal periods, approval policies
   assets/
     css/theme.css            Design tokens + all theme variants
     css/app.css              Components (only uses tokens)
     js/theme.js              Theme engine (load in <head>)
-    js/app.js                Shell (sidebar/topbar), theme panel, table, modal, toast, validation helpers
-    js/data.js               Mock data — swap for API calls
+    js/app.js                Shell, navigation, table, dialogs, forms, toasts, validation
+    js/data.js               Contract-shaped mock data: swap for API calls
 ```
-
-## Mapping to the reference project (`chit-admin-ui`)
-
-| Reference | Prototype |
-|---|---|
-| `pages/create/scheme/new` fields: schemeName, chitValue, numberOfInstallment, subscriptionAmount, auctionType, collectionOption, minimumBid, maximumBid, companyCommission, companyTicket, enrollmentFees, minMemberForCC, penaltyNPS/PS/SF, chitIcon, createDate | `tenant/scheme-new.html`. Input ids match the reference field names. |
-| `pages/create/group/new/groupInfo` stages GIS → FDA → FDU → PSOA → PSOU → ENRC → CCA → CCU (`substatus_master`) | `tenant/group-new.html` vertical stepper; codes are shown on each stage |
-| GeneralInfo: schemeName, chitGroupBranches, auction start/end date/time, overDueType/overDueValue, minSubscriptionAmount, label, fixed bid | Stage 1 "General information" |
 
 ## Theming
 
@@ -91,3 +87,6 @@ The theme state is stored as attributes on `<html>`. `theme.js` sets them and sa
 - Icons: `<i data-i="name"></i>` becomes inline SVG. The names are listed in `app.js` → `P`.
 - Modals and drawers: `data-open="#id"` / `data-close`. Menus: `data-menu="#id"`. Tabs: `[data-tabs] [data-tab]` + `[data-tab-panel]`.
 - `UI.table({...})`, `UI.validate(el)`, `UI.toast(msg, type)`, `UI.inr()` (formats in Indian lakh/crore style).
+- `UI.dialog({ title, fields, api, done, onOpen, onOk })` builds a modal or drawer from a field list; `UI.confirm(title, text, opts)` for yes/no actions.
+- `UI.badge(ENUM_VALUE)` and `UI.human(ENUM_VALUE)` turn contract enum values into labels; `UI.options({ enum: 'LeadStatus' })` fills a select from `DB.ENUM`.
+- The tenant theme maps the API's `UiTheme` to a theme template via `DB.THEME_TEMPLATE`.

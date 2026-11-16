@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Follow-ups · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /api/crm/v1/tenants/{tenantId}/follow-ups (?status, ?overdue, ?dueOn); POST …/follow-ups/{id}/complete {outcome, outcomeNote}.
+-->
+<body data-portal="tenant" data-page="followups">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>CRM<i data-i="chevR"></i>Follow-ups</div>
+      <h1>Follow-ups</h1>
+      <p>Calls, visits and meetings planned with leads.</p>
+    </div>
+  </div>
+  <div class="grid g-3" id="kpis"></div>
+  <div class="card mt-4">
+    <div class="toolbar"><div class="segmented" data-seg id="fV"><button class="active" data-v="">All</button><button data-v="OVERDUE">Overdue</button><button data-v="PLANNED">Planned</button><button data-v="DONE">Done</button><button data-v="MISSED">Missed</button></div><select class="select" id="fCh"></select></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var rows = DB.followUps.map(function (f) { return Object.assign({ view: f.overdue ? 'OVERDUE' : f.status }, f); });
+  var today = rows.filter(function (f) { return f.status === 'PLANNED' && f.dueAt.slice(0, 10) === '2026-11-14'; }).length;
+  $('kpis').innerHTML = [['Due today', today, ''], ['Overdue', rows.filter(function (f) { return f.overdue; }).length, 'warn'], ['Planned', rows.filter(function (f) { return f.status === 'PLANNED'; }).length, 'ok']].map(function (k) { return '<div class="card kpi"><div class="label"><span class="ico ' + k[2] + '">' + UI.icon('calendar') + '</span>' + k[0] + '</div><div class="value">' + k[1] + '</div></div>'; }).join('');
+  $('fCh').innerHTML = UI.options({ enum: 'FollowUpChannel', blank: 'All channels' });
+  UI.table({ el: '#tbl', rows: rows, filters: [{ el: '#fV', key: 'view' }, { el: '#fCh', key: 'channel' }], onRow: function (f) { location.href = 'lead.html?id=' + f.leadId; },
+    columns: [
+      { key: 'dueAt', label: 'Due', sort: true, render: function (f) { return '<span' + (f.overdue ? ' style="color:var(--danger);font-weight:600"' : '') + '>' + UI.dt(f.dueAt) + '</span>'; } },
+      { key: 'leadName', label: 'Lead', render: function (f) { return '<b>' + f.leadName + '</b><div class="xs muted">' + DB.branchName(f.branchId) + '</div>'; } },
+      { key: 'channel', label: 'Channel', render: function (f) { return UI.human(f.channel); } },
+      { key: 'note', label: 'Plan', render: function (f) { return UI.esc(f.note) + (f.outcomeNote ? '<div class="xs muted">→ ' + UI.esc(f.outcomeNote) + '</div>' : ''); } },
+      { key: 'ownerName', label: 'Owner' },
+      { key: 'view', label: 'Status', render: function (f) { return UI.badge(f.view); } },
+      { key: 'x', label: '', render: function (f) { return f.status === 'PLANNED' ? '<button class="btn sm" data-act="done" data-id="' + f.id + '">Complete</button>' : ''; } }] });
+  UI.onAct(function (act) { if (act === 'done') UI.dialog({ title: 'Complete follow-up', api: 'POST …/follow-ups/{id}/complete', done: 'Follow-up completed', fields: [{ id: 'outcome', label: 'Outcome', type: 'select', req: true, options: [['DONE', 'Done'], ['MISSED', 'Missed']] }, { id: 'outcomeNote', label: 'What happened', type: 'textarea', span: 2 }] }); });
+});
+</script>
+</body>
+</html>

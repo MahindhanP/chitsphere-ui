@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vouchers · Accounting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  Tenant books: /api/accounting/v1/tenants/{tenantId}; ChitSphere's own books (?realm=platform): /api/platform/v1/admin/accounting.
+  GET /journal-entries (?status, ?voucherType, ?from, ?to, ?branchId); POST /journal-entries {voucherType, entryDate, branchId, narration,
+  lines[2..200] {accountId, side DEBIT|CREDIT, amount, partyAccountId, segmentId, memo}} → DRAFT (debits must equal credits);
+  POST /postings {template, entryDate, branchId, segmentId, partyAccountId, mode CASH|BANK, amounts{key: value}, narration, sourceRef}.
+-->
+<body data-portal="auto" data-page="acc-vouchers">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a class="home" href="#">Home</a><i data-i="chevR"></i>Accounting<i data-i="chevR"></i>Vouchers</div>
+      <h1>Vouchers</h1>
+      <p id="sub"></p>
+    </div>
+    <div class="actions"><button class="btn" id="tpl"><i data-i="list"></i>Post from template</button><button class="btn primary" id="add"><i data-i="plus"></i>New voucher</button></div>
+  </div>
+  <div class="card">
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search voucher no., narration…"></div>
+      <div class="segmented" data-seg id="fSt"><button class="active" data-v="">All</button></div>
+      <select class="select" id="fTy"></select>
+    </div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); }, A = UI.acc();
+  document.querySelectorAll('.home').forEach(function (a) { a.href = A.home; });
+  $('sub').innerHTML = 'Books of <b>' + UI.esc(A.book.name) + '</b> · FY ' + A.book.currentFiscalYear + ' · only posted vouchers change balances.';
+  $('fSt').innerHTML += DB.ENUM.EntryStatus.map(function (s) { return '<button data-v="' + s + '">' + UI.human(s) + '</button>'; }).join('');
+  $('fTy').innerHTML = UI.options({ enum: 'VoucherType', blank: 'All types' });
+  UI.table({ el: '#tbl', rows: DB.journal, search: '#q', searchKeys: ['voucherNo', 'draftRef', 'narration'], filters: [{ el: '#fSt', key: 'status' }, { el: '#fTy', key: 'voucherType' }],
+    onRow: function (j) { location.href = 'voucher.html?id=' + j.id + A.q; },
+    columns: [
+      { key: 'entryDate', label: 'Date', sort: true, render: function (j) { return UI.date(j.entryDate); } },
+      { key: 'voucherNo', label: 'Voucher', render: function (j) { return '<b class="mono">' + (j.voucherNo || j.draftRef) + '</b><div class="xs muted">' + UI.human(j.voucherType) + (j.voucherNo ? '' : ' · not numbered until posted') + '</div>'; } },
+      { key: 'narration', label: 'Narration', render: function (j) { return UI.esc(j.narration) + '<div class="xs muted">' + DB.branchName(j.branchId) + ' · ' + UI.human(j.sourceSystem) + (j.templateCode ? ' · ' + j.templateCode : '') + '</div>'; } },
+      { key: 'amount', label: 'Amount', num: true, sort: true, render: function (j) { return UI.inr(j.amount); } },
+      { key: 'status', label: 'Status', render: function (j) { return UI.badge(j.status) + (j.status === 'SUBMITTED' ? '<div class="xs muted">Level ' + j.nextLevel + ' of ' + j.requiredLevels.length + '</div>' : ''); } }] });
+
+  var accts = DB.accounts.filter(function (a) { return a.postable && a.status === 'ACTIVE'; });
+  var partyAccts = []; DB.parties.forEach(function (p) { if (p.status === 'ACTIVE') p.accounts.forEach(function (x) { partyAccts.push([x.code, x.code + ' · ' + p.displayName]); }); });
+  var segs = DB.segments.filter(function (s) { return s.status === 'ACTIVE'; }).map(function (s) { return [s.id, s.code]; });
+  function lineRow() {
+    return '<tr><td><select class="select" data-k="accountId">' + UI.options({ options: accts.map(function (a) { return [a.id, a.code + ' ' + a.name]; }), blank: 'Account' }) + '</select></td>' +
+      '<td><select class="select" data-k="side"><option>DEBIT</option><option>CREDIT</option></select></td>' +
+      '<td><input class="input num" type="number" min="0.01" step="0.01" data-k="amount" placeholder="0.00"></td>' +
+      '<td><select class="select" data-k="party">' + UI.options({ options: partyAccts, blank: '—' }) + '</select></td>' +
+      '<td><select class="select" data-k="segment">' + UI.options({ options: segs, blank: '—' }) + '</select></td>' +
+      '<td><button class="btn sm icon-only ghost" data-rm aria-label="Remove line">' + UI.icon('trash') + '</button></td></tr>';
+  }
+  $('add').addEventListener('click', function () {
+    UI.dialog({ drawer: true, wide: true, title: 'New voucher', icon: 'receipt', ok: 'Save draft', api: 'POST ' + A.base + '/journal-entries', done: 'Saved as draft. Submit it for approval from the voucher page.',
+      fields: [{ id: 'voucherType', label: 'Type', type: 'select', req: true, enum: 'VoucherType' }, { id: 'entryDate', label: 'Date', type: 'date', req: true, value: '2026-11-14' },
+        A.platform ? { id: 'ref', label: 'Book', type: 'static', value: UI.esc(A.book.code) } : { id: 'branchId', label: 'Branch', type: 'select', options: DB.branches.map(function (b) { return [b.id, b.name]; }), blank: 'None' }, { id: 'narration', label: 'Narration', req: true, maxlength: 500 },
+        { section: 'Lines', text: 'At least two lines. Some accounts need a party or a segment; the server rejects the voucher otherwise.' },
+        { span: 2, html: '<div class="table-wrap"><table class="table lines-table"><thead><tr><th>Account</th><th>Side</th><th class="num">Amount</th><th>Party account</th><th>Segment</th><th></th></tr></thead><tbody id="lines">' + lineRow() + lineRow() + '</tbody></table></div>' +
+          '<div class="row between mt-2"><button class="btn sm" type="button" id="addLine">' + UI.icon('plus') + 'Add line</button><div class="small" id="tot"></div></div>' }],
+      onOpen: function (root) {
+        var tb = root.querySelector('#lines');
+        function total() {
+          var d = 0, c = 0; tb.querySelectorAll('tr').forEach(function (tr) { var v = +tr.querySelector('[data-k=amount]').value || 0; if (tr.querySelector('[data-k=side]').value === 'DEBIT') d += v; else c += v; });
+          var ok = d > 0 && Math.abs(d - c) < 0.005;
+          root.querySelector('#tot').innerHTML = 'Debit <b>' + UI.inr(d) + '</b> · Credit <b>' + UI.inr(c) + '</b> ' + (ok ? '<span class="badge success">Balanced</span>' : '<span class="badge danger">Off by ' + UI.inr(Math.abs(d - c)) + '</span>');
+          return ok;
+        }
+        tb.querySelectorAll('tr')[1].querySelector('[data-k=side]').value = 'CREDIT';
+        root.addEventListener('input', total); root.addEventListener('change', total);
+        root.querySelector('#addLine').addEventListener('click', function () { tb.insertAdjacentHTML('beforeend', lineRow()); total(); });
+        tb.addEventListener('click', function (e) { var b = e.target.closest('[data-rm]'); if (b && tb.children.length > 2) { b.closest('tr').remove(); total(); } });
+        root._balanced = total; total();
+      },
+      onOk: function (v, root) {
+        var rows = root.querySelectorAll('#lines tr'), missing = [].some.call(rows, function (tr) { return !tr.querySelector('[data-k=accountId]').value || !(+tr.querySelector('[data-k=amount]').value); });
+        if (missing) { UI.toast('Every line needs an account and an amount', 'danger'); return false; }
+        if (!root._balanced()) { UI.toast('422 ENTRY_NOT_BALANCED: debits must equal credits', 'danger'); return false; }
+      } });
+  });
+  $('tpl').addEventListener('click', function () {
+    var labels = { installment: 'Installment', lateFee: 'Late fee', enrolmentFee: 'Enrolment fee', prizeAmount: 'Prize amount', commission: 'Commission', gst: 'GST', net: 'Net pay' };
+    UI.dialog({ title: 'Post from template', icon: 'list', ok: 'Post', api: 'POST ' + A.base + '/postings', done: 'Posting created. It follows the matching approval policy.',
+      text: 'Templates pick the accounts for you. Other modules (chits, payroll) post the same way automatically.',
+      fields: [{ id: 'template', label: 'Template', type: 'select', req: true, span: 2, options: DB.postingTemplates.map(function (t) { return [t.code, t.label + ' (' + t.code + ')']; }), blank: 'Select' },
+        { id: 'entryDate', label: 'Date', type: 'date', req: true, value: '2026-11-14' }, { id: 'mode', label: 'Paid by', type: 'select', enum: 'PaymentMode' },
+        { id: 'segmentId', label: 'Segment', type: 'select', options: segs, blank: '—' }, { id: 'partyAccountId', label: 'Party account', type: 'select', options: partyAccts, blank: '—' },
+        { span: 2, html: '<div class="grid g-2" id="amts"><p class="xs muted">Choose a template to enter its amounts.</p></div>' },
+        { id: 'narration', label: 'Narration', span: 2 }],
+      onOpen: function (root) {
+        root.querySelector('#template').addEventListener('change', function (e) {
+          var t = DB.postingTemplates.find(function (x) { return x.code === e.target.value; });
+          root.querySelector('#amts').innerHTML = t ? t.amounts.map(function (k) { return UI.field({ id: 'amt_' + k, label: (labels[k] || k) + ' (₹)', type: 'number', min: 0, req: k === t.amounts[0] }); }).join('') : '';
+        });
+      } });
+  });
+});
+</script>
+</body>
+</html>

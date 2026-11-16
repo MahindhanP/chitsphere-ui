@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leave · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  /api/hrms/v1/tenants/{tenantId}/leave-requests (PENDING|APPROVED|REJECTED|CANCELLED), POST …/{id}/approve {note},
+  POST …/{id}/reject {note}; balances, grants (yearly entitlement) and adjustments; ledger per employee.
+-->
+<body data-portal="tenant" data-page="leave">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>HRMS<i data-i="chevR"></i>Leave</div>
+      <h1>Leave</h1>
+      <p>Approve requests and keep balances right.</p>
+    </div>
+    <div class="actions"><button class="btn" id="grant"><i data-i="plus"></i>Grant yearly leave</button><button class="btn primary" id="apply"><i data-i="plus"></i>Apply on behalf</button></div>
+  </div>
+  <div class="card"><div class="tabs" data-tabs><button data-tab="rq" class="active">Requests <span class="count" id="cP"></span></button><button data-tab="bl">Balances</button></div></div>
+  <div data-tab-panel="rq" class="active mt-4"><div class="card"><div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search employee…"></div><select class="select" id="fSt"></select><select class="select" id="fT"></select></div><div id="tbl"></div></div></div>
+  <div data-tab-panel="bl" class="mt-4"><div class="card"><div id="bal"></div></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('cP').textContent = DB.leaveRequests.filter(function (r) { return r.status === 'PENDING'; }).length;
+  $('fSt').innerHTML = UI.options({ enum: 'LeaveStatus', blank: 'All statuses' });
+  $('fT').innerHTML = UI.options({ options: DB.leaveTypes.map(function (t) { return [t.code, t.name]; }), blank: 'All types' });
+  UI.table({ el: '#tbl', rows: DB.leaveRequests, search: '#q', searchKeys: ['employeeName', 'reason'], filters: [{ el: '#fSt', key: 'status' }, { el: '#fT', key: 'leaveTypeCode' }],
+    columns: [
+      { key: 'employeeName', label: 'Employee', render: function (r) { return UI.ent(r.employeeName, DB.branchName(r.branchId)); } },
+      { key: 'leaveTypeCode', label: 'Type', render: function (r) { return '<span class="badge outline">' + r.leaveTypeCode + '</span>' + (r.paid ? '' : ' <span class="xs muted">unpaid</span>'); } },
+      { key: 'fromDate', label: 'Dates', sort: true, render: function (r) { return UI.date(r.fromDate) + (r.toDate !== r.fromDate ? ' → ' + UI.date(r.toDate) : '') + (r.fromHalf ? '<div class="xs muted">' + UI.human(r.fromHalf) + ' half</div>' : ''); } },
+      { key: 'days', label: 'Days', num: true },
+      { key: 'reason', label: 'Reason', render: function (r) { return UI.esc(r.reason) + (r.decisionNote ? '<div class="xs muted">' + UI.esc(r.decidedBy) + ': ' + UI.esc(r.decisionNote) + '</div>' : ''); } },
+      { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } },
+      { key: 'x', label: '', render: function (r) { return r.status === 'PENDING' ? '<div class="row"><button class="btn sm" data-act="reject" data-id="' + r.id + '">Reject</button><button class="btn sm primary" data-act="approve" data-id="' + r.id + '">Approve</button></div>' : ''; } }] });
+  var rows = []; DB.employees.filter(function (e) { return e.status !== 'EXITED'; }).forEach(function (e) { var b = { name: e.fullName }; DB.balancesFor(e.id).forEach(function (x) { b[x.leaveTypeCode] = x.available + ' / ' + (x.granted + x.adjusted); }); rows.push(b); });
+  UI.table({ el: '#bal', rows: rows, pageSize: 12, columns: [{ key: 'name', label: 'Employee' }].concat(DB.leaveTypes.filter(function (t) { return t.tracksBalance; }).map(function (t) { return { key: t.code, label: t.code + ' available', num: true }; })) });
+  UI.onAct(function (act, id) {
+    var r = DB.leaveRequests.filter(function (x) { return x.id === id; })[0];
+    var bal = DB.balancesFor(r.employeeId).filter(function (b) { return b.leaveTypeCode === r.leaveTypeCode; })[0];
+    UI.dialog({ title: (act === 'approve' ? 'Approve' : 'Reject') + ' leave', sub: r.employeeName + ' · ' + r.days + ' day(s) ' + r.leaveTypeCode, danger: act === 'reject', ok: act === 'approve' ? 'Approve' : 'Reject', icon: act === 'approve' ? 'check' : 'x',
+      api: 'POST …/leave-requests/{id}/' + act, done: act === 'approve' ? 'Leave approved' : 'Leave rejected',
+      html: bal ? '<div class="alert info mb-4">' + UI.icon('info') + '<div><b>' + bal.available + ' ' + r.leaveTypeCode + ' available</b>After approval: ' + (bal.available - r.days) + '</div></div>' : '',
+      fields: [{ id: 'note', label: 'Note to employee', type: 'textarea', span: 2, req: act === 'reject' }] });
+  });
+  $('apply').addEventListener('click', function () {
+    UI.dialog({ title: 'Apply leave on behalf', icon: 'calendar', api: 'POST …/leave-requests', done: 'Leave request created', fields: [
+      { id: 'employeeId', label: 'Employee', type: 'select', req: true, span: 2, options: DB.employees.filter(function (e) { return e.status !== 'EXITED'; }).map(function (e) { return [e.id, e.fullName]; }), blank: 'Select' },
+      { id: 'leaveTypeId', label: 'Leave type', type: 'select', req: true, options: DB.leaveTypes.map(function (t) { return [t.id, t.name]; }) }, { id: 'halfDay', label: 'Half day', type: 'select', enum: 'HalfDay', blank: 'Full day(s)' },
+      { id: 'fromDate', label: 'From', type: 'date', req: true }, { id: 'toDate', label: 'To', type: 'date', req: true }, { id: 'reason', label: 'Reason', type: 'textarea', span: 2 }] });
+  });
+  $('grant').addEventListener('click', function () {
+    UI.confirm('Grant 2027 leave?', 'Adds each leave type’s yearly entitlement (CL 12, SL 10, EL 15) to every active employee for the leave year starting April 2027. Safe to run twice: existing grants are skipped.', { ok: 'Grant', api: 'POST …/leave/grants {year}', done: 'Granted to 10 employees' });
+  });
+});
+</script>
+</body>
+</html>

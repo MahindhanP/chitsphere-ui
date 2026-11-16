@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Approvals · Accounting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /approvals/pending: SUBMITTED vouchers waiting at a level the caller can approve (accounting.approval.level1..3).
+  POST /journal-entries/{id}/approve {comment?} | /reject {comment} | /return {comment}.
+-->
+<body data-portal="auto" data-page="acc-approvals">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a class="home" href="#">Home</a><i data-i="chevR"></i>Accounting<i data-i="chevR"></i>Approvals</div>
+      <h1>Waiting for my approval</h1>
+      <p id="sub"></p>
+    </div>
+  </div>
+  <div class="grid g-3" id="kpis"></div>
+  <div class="card mt-4"><div id="tbl"></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); }, A = UI.acc();
+  document.querySelectorAll('.home').forEach(function (a) { a.href = A.home; });
+  var rows = DB.journal.filter(function (j) { return j.status === 'SUBMITTED'; });
+  $('sub').textContent = 'You approve at levels 1 and 2 in ' + A.book.name + '. ' + (A.book.allowSelfApproval ? 'You may approve vouchers you created.' : 'Vouchers you created go to someone else.');
+  $('kpis').innerHTML = [['Waiting', rows.length], ['Total value', UI.inrShort(rows.reduce(function (s, j) { return s + j.amount; }, 0))], ['Oldest', rows.length ? UI.date(rows.map(function (j) { return j.entryDate; }).sort()[0]) : '—']].map(function (k) { return '<div class="card kpi"><div class="label">' + k[0] + '</div><div class="value">' + k[1] + '</div></div>'; }).join('');
+  UI.table({ el: '#tbl', rows: rows, empty: 'Nothing waiting for you', onRow: function (j) { location.href = 'voucher.html?id=' + j.id + A.q; }, columns: [
+    { key: 'entryDate', label: 'Date', render: function (j) { return UI.date(j.entryDate); } },
+    { key: 'draftRef', label: 'Voucher', render: function (j) { return '<b class="mono">' + j.draftRef + '</b><div class="xs muted">' + UI.human(j.voucherType) + ' · by ' + j.createdBy + '</div>'; } },
+    { key: 'narration', label: 'Narration', render: function (j) { return UI.esc(j.narration); } },
+    { key: 'amount', label: 'Amount', num: true, render: function (j) { return '<b>' + UI.inr(j.amount) + '</b>'; } },
+    { key: 'nextLevel', label: 'Level', render: function (j) { return 'Level ' + j.nextLevel + ' of ' + j.requiredLevels.length + '<div class="xs muted">' + UI.esc(j.policyName) + '</div>'; } },
+    { key: 'x', label: '', render: function (j) { return '<div class="row" style="gap:6px;justify-content:flex-end"><button class="btn sm danger-ghost" data-act="reject" data-id="' + j.id + '">Reject</button><button class="btn sm primary" data-act="approve" data-id="' + j.id + '">Approve</button></div>'; } }] });
+  UI.onAct(function (act, id) {
+    var j = DB.entry(id), B = A.base + '/journal-entries/{entryId}';
+    if (act === 'approve') UI.dialog({ title: 'Approve ' + j.draftRef, icon: 'check', ok: 'Approve', api: 'POST ' + B + '/approve', done: j.nextLevel === j.requiredLevels.length ? 'Approved and posted' : 'Approved. Sent to level ' + (j.nextLevel + 1), text: UI.esc(j.narration) + ' · ' + UI.inr(j.amount), fields: [{ id: 'comment', label: 'Comment', type: 'textarea', span: 2 }] });
+    if (act === 'reject') UI.dialog({ title: 'Reject ' + j.draftRef, danger: true, ok: 'Reject', api: 'POST ' + B + '/reject', done: 'Voucher rejected', fields: [{ id: 'comment', label: 'Reason', type: 'textarea', req: true, span: 2 }] });
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HR setup · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  /api/hrms/v1/tenants/{tenantId}/departments, /designations (code, name, archive), /leave-types, /holidays (FIXED|OPTIONAL,
+  optional branch), /weekly-offs, /settings {leaveYearStartMonth}.
+-->
+<body data-portal="tenant" data-page="hrms-setup">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>HRMS<i data-i="chevR"></i>Setup</div>
+      <h1>HR setup</h1>
+      <p>Organisation structure, leave rules and the working calendar.</p>
+    </div>
+  </div>
+  <div class="card"><div class="tabs" data-tabs>
+    <button data-tab="dep" class="active">Departments</button><button data-tab="des">Designations</button><button data-tab="lt">Leave types</button><button data-tab="hol">Holidays</button><button data-tab="wo">Weekly offs</button><button data-tab="set">Settings</button>
+  </div></div>
+  <div data-tab-panel="dep" class="active mt-4"><div class="card"><div class="card-head"><h3>Departments</h3><div class="tools"><button class="btn sm primary" data-add="dep"><i data-i="plus"></i>Add</button></div></div><div id="depT"></div></div></div>
+  <div data-tab-panel="des" class="mt-4"><div class="card"><div class="card-head"><h3>Designations</h3><div class="tools"><button class="btn sm primary" data-add="des"><i data-i="plus"></i>Add</button></div></div><div id="desT"></div></div></div>
+  <div data-tab-panel="lt" class="mt-4"><div class="card"><div class="card-head"><h3>Leave types</h3><div class="tools"><button class="btn sm primary" data-add="lt"><i data-i="plus"></i>Add</button></div></div><div id="ltT"></div></div></div>
+  <div data-tab-panel="hol" class="mt-4"><div class="card"><div class="card-head"><h3>Holidays · 2026</h3><div class="tools"><button class="btn sm primary" data-add="hol"><i data-i="plus"></i>Add</button></div></div><div id="holT"></div></div></div>
+  <div data-tab-panel="wo" class="mt-4"><div class="card"><div class="card-head"><h3>Weekly offs</h3><div class="sub">Organisation default, with branch overrides</div><div class="tools"><button class="btn sm primary" data-add="wo"><i data-i="plus"></i>Branch override</button></div></div><div id="woT"></div></div></div>
+  <div data-tab-panel="set" class="mt-4"><div class="card" style="max-width:520px"><div class="card-body"><div id="setF"></div><button class="btn primary mt-4" id="saveSet">Save</button></div></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var arch = function (x) { return x.status === 'ACTIVE' ? UI.rowMenu('rm_' + x.id, [['edit', 'Edit', false, 'edit'], ['archive', 'Archive', true, 'trash']]) : ''; };
+  var org = function (el, rows) { UI.table({ el: el, rows: rows, columns: [{ key: 'code', label: 'Code', render: function (d) { return '<span class="mono">' + d.code + '</span>'; } }, { key: 'name', label: 'Name' }, { key: 'employees', label: 'Employees', num: true }, { key: 'status', label: 'Status', render: function (d) { return UI.badge(d.status); } }, { key: 'x', label: '', cls: 'actions-cell', render: arch }] }); };
+  org('#depT', DB.departments); org('#desT', DB.designations);
+  var yn = function (b) { return b ? UI.icon('check', 'sm') : '<span class="muted">—</span>'; };
+  UI.table({ el: '#ltT', rows: DB.leaveTypes, columns: [{ key: 'code', label: 'Code', render: function (t) { return '<span class="mono">' + t.code + '</span>'; } }, { key: 'name', label: 'Name' }, { key: 'paid', label: 'Paid', render: function (t) { return yn(t.paid); } }, { key: 'yearlyEntitlement', label: 'Days / year', num: true },
+    { key: 'allowHalfDay', label: 'Half day', render: function (t) { return yn(t.allowHalfDay); } }, { key: 'allowNegative', label: 'Negative balance', render: function (t) { return yn(t.allowNegative); } }, { key: 'tracksBalance', label: 'Tracks balance', render: function (t) { return yn(t.tracksBalance); } },
+    { key: 'maxDaysPerRequest', label: 'Max per request', num: true, render: function (t) { return t.maxDaysPerRequest || '—'; } }, { key: 'x', label: '', cls: 'actions-cell', render: arch }] });
+  UI.table({ el: '#holT', rows: DB.holidays, pageSize: 12, columns: [{ key: 'date', label: 'Date', sort: true, render: function (h) { return UI.date(h.date); } }, { key: 'name', label: 'Holiday' }, { key: 'kind', label: 'Kind', render: function (h) { return '<span class="badge ' + (h.kind === 'FIXED' ? 'primary' : 'outline') + '">' + UI.human(h.kind) + '</span>'; } }, { key: 'branchId', label: 'Applies to', render: function (h) { return h.branchId ? DB.branchName(h.branchId) : 'All branches'; } }, { key: 'x', label: '', render: function () { return '<button class="icon-btn sm" aria-label="Delete">' + UI.icon('trash') + '</button>'; } }] });
+  var dn = { SUNDAY: 'Every Sunday', SATURDAY_2: '2nd Saturday', SATURDAY_4: '4th Saturday' };
+  UI.table({ el: '#woT', rows: DB.weeklyOffs, columns: [{ key: 'branchId', label: 'Applies to', render: function (w) { return w.branchId ? DB.branchName(w.branchId) : '<b>Organisation default</b>'; } }, { key: 'days', label: 'Weekly offs', render: function (w) { return w.days.map(function (d) { return '<span class="badge outline">' + dn[d] + '</span>'; }).join(' '); } }] });
+  $('setF').innerHTML = UI.form([{ id: 'leaveYearStartMonth', label: 'Leave year starts in', type: 'select', span: 2, options: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(function (m, i) { return [i + 1, m]; }), value: 4, hint: 'Yearly leave is granted from this month.' }], 1);
+  $('saveSet').addEventListener('click', function () { UI.toast('HR settings saved', 'success'); });
+  var forms = {
+    dep: { title: 'Department', api: 'POST …/departments', fields: [{ id: 'code', label: 'Code', req: true, mono: true }, { id: 'name', label: 'Name', req: true }] },
+    des: { title: 'Designation', api: 'POST …/designations', fields: [{ id: 'code', label: 'Code', req: true, mono: true }, { id: 'name', label: 'Name', req: true }] },
+    lt: { title: 'Leave type', api: 'POST …/leave-types', fields: [{ id: 'code', label: 'Code', req: true, mono: true }, { id: 'name', label: 'Name', req: true }, { id: 'yearlyEntitlement', label: 'Days per year', type: 'number', min: 0, step: 0.5 }, { id: 'maxDaysPerRequest', label: 'Max days per request', type: 'number', min: 0.5, step: 0.5 },
+      { id: 'paid', label: 'Paid leave', type: 'switch', value: true }, { id: 'tracksBalance', label: 'Tracks a balance', type: 'switch', value: true }, { id: 'allowHalfDay', label: 'Allow half days', type: 'switch' }, { id: 'allowNegative', label: 'Allow negative balance', type: 'switch' }] },
+    hol: { title: 'Holiday', api: 'POST …/holidays', fields: [{ id: 'date', label: 'Date', type: 'date', req: true }, { id: 'name', label: 'Name', req: true }, { id: 'kind', label: 'Kind', type: 'select', enum: 'HolidayKind' }, { id: 'branchId', label: 'Branch', type: 'select', options: DB.branches.map(function (b) { return [b.id, b.name]; }), blank: 'All branches' }] },
+    wo: { title: 'Weekly offs for a branch', api: 'PUT …/weekly-offs', fields: [{ id: 'branchId', label: 'Branch', type: 'select', req: true, span: 2, options: DB.branches.map(function (b) { return [b.id, b.name]; }), blank: 'Select' }, { id: 'days', label: 'Weekly offs', type: 'checks', span: 2, options: [['SUNDAY', 'Every Sunday'], ['SATURDAY_ALL', 'Every Saturday'], ['SATURDAY_2', '2nd Saturday'], ['SATURDAY_4', '4th Saturday']] }] }
+  };
+  document.addEventListener('click', function (e) { var b = e.target.closest('[data-add]'); if (!b) return; var f = forms[b.getAttribute('data-add')]; UI.dialog({ title: 'Add ' + f.title.toLowerCase(), api: f.api, fields: f.fields, done: f.title + ' saved' }); });
+  UI.onAct(function (act) { if (act === 'archive') UI.confirm('Archive?', 'It can’t be picked for new records. Existing records keep it.', { danger: true, ok: 'Archive', done: 'Archived' }); else UI.toast('Editing uses the same form as Add (PUT)', 'info'); });
+});
+</script>
+</body>
+</html>

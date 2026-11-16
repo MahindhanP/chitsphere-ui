@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pipeline · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /api/crm/v1/tenants/{tenantId}/reports/pipeline (?branchId, ?from, ?to): totalLeads, byStatus, bySource, conversionRate,
+  wonValue, openValue, followUpsDueToday, followUpsOverdue.
+-->
+<body data-portal="tenant" data-page="pipeline">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>CRM<i data-i="chevR"></i>Pipeline</div>
+      <h1>Pipeline report</h1>
+      <p>How leads are moving, and where they come from.</p>
+    </div>
+    <div class="actions"><select class="select" id="br" style="width:auto"></select><input class="input" type="date" value="2026-10-01" style="width:auto"><input class="input" type="date" value="2026-11-14" style="width:auto"></div>
+  </div>
+  <div class="grid g-4" id="kpis"></div>
+  <div class="grid g-2 mt-4">
+    <div class="card"><div class="card-head"><h3>By status</h3></div><div class="card-body"><div id="bySt" style="height:200px"></div></div></div>
+    <div class="card"><div class="card-head"><h3>By source</h3></div><div class="card-body stack" id="bySrc"></div></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('br').innerHTML = UI.options({ options: DB.branches.map(function (b) { return [b.id, b.name]; }), blank: 'All branches' });
+  var L = DB.leads, won = L.filter(function (l) { return l.status === 'WON'; }), open = L.filter(function (l) { return !/WON|LOST/.test(l.status); }), closed = L.filter(function (l) { return /WON|LOST/.test(l.status); });
+  var sum = function (a) { return a.reduce(function (s, l) { return s + (l.expectedValue || 0); }, 0); };
+  $('kpis').innerHTML = [['Total leads', L.length], ['Conversion rate', Math.round(won.length / (closed.length || 1) * 100) + '%'], ['Won value', UI.inrShort(sum(won))], ['Open value', UI.inrShort(sum(open))]].map(function (k) { return '<div class="card kpi"><div class="label">' + k[0] + '</div><div class="value">' + k[1] + '</div></div>'; }).join('');
+  UI.bars('#bySt', DB.ENUM.LeadStatus.map(function (s) { return { label: UI.human(s), a: L.filter(function (l) { return l.status === s; }).length }; }));
+  $('bySrc').innerHTML = DB.ENUM.LeadSource.map(function (s) { var n = L.filter(function (l) { return l.source === s; }).length; return UI.meter(UI.human(s), n, L.length); }).join('') +
+    '<div class="row between small mt-2"><span>Follow-ups due today</span><b>1</b></div><div class="row between small"><span>Follow-ups overdue</span><b style="color:var(--danger)">3</b></div>';
+});
+</script>
+</body>
+</html>

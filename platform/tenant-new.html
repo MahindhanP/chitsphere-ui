@@ -3,249 +3,182 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Onboard tenant · ChitSphere Platform</title>
+  <title>New tenant · ChitSphere Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
   <script src="../assets/js/theme.js"></script>
   <link rel="stylesheet" href="../assets/css/theme.css">
   <link rel="stylesheet" href="../assets/css/app.css">
-  <style>
-    .wstep { display: none; }
-    .wstep.active { display: block; }
-    .tb-preview { display: grid; grid-template-columns: 64px 1fr; height: 150px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
-    .tb-preview .side { background: var(--tb-c, #072E77); display: flex; flex-direction: column; gap: 8px; padding: 10px; align-items: center; }
-    .tb-preview .side i { display: block; width: 26px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.35); }
-    .tb-preview .side i:first-child { width: 28px; height: 28px; border-radius: 6px; background: #fff; margin-bottom: 6px; }
-    .tb-preview .main { background: var(--surface-2); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
-    .tb-preview .main i { display: block; height: 8px; border-radius: 4px; background: var(--border-strong); }
-    .tb-preview .main b { display: inline-block; height: 24px; width: 90px; border-radius: 6px; background: var(--tb-c, #072E77); margin-top: auto; }
-  </style>
 </head>
+<!--
+  POST /api/platform/v1/admin/tenants (CreateTenantRequest): code, profile, planId?, planEndsOn?, trial, members[].
+  At least one member must be TENANT_OWNER; each member gets an activation email (30-minute link).
+  This is the only way an organisation is created; there is no public self-registration.
+-->
 <body data-portal="platform" data-page="tenant-new">
 <main class="content" style="max-width:1100px">
   <div class="page-head">
     <div class="titles">
-      <div class="crumbs"><a href="tenants.html">Tenants</a><i data-i="chevR"></i>Onboard tenant</div>
-      <h1>Onboard a new tenant</h1>
-      <p>Set up a chit fund company’s workspace, admin user and subscription.</p>
+      <div class="crumbs"><a href="tenants.html">Tenants</a><i data-i="chevR"></i>New tenant</div>
+      <h1>New tenant</h1>
+      <p>Create an organisation, pick its plan and add the people who will run it.</p>
     </div>
-    <div class="actions"><button class="btn ghost" id="saveDraft"><i data-i="save"></i>Save draft</button></div>
   </div>
 
-  <div class="card">
-    <div class="card-body" style="overflow-x:auto">
-      <div class="stepper" id="stepper"></div>
-    </div>
-  </div>
+  <div class="card"><div class="card-body" style="overflow-x:auto"><div class="stepper" id="stepper"></div></div></div>
 
   <form id="wizard" novalidate class="mt-6">
-    <!-- 1 Company -->
     <section class="wstep card" data-step="0">
       <div class="form-section">
-        <div class="form-section-head"><h3><i data-i="building"></i>Company details</h3><p>Legal identity of the chit fund company as registered with the Registrar of Chits.</p></div>
+        <div class="form-section-head"><h3><i data-i="building"></i>Organisation</h3><p>The code is permanent: members type it to sign in to this organisation.</p></div>
         <div class="form-grid">
-          <div class="field span-2"><label>Legal company name <span class="req">*</span></label><input class="input" name="name" required placeholder="e.g. Sri Venkata Chits Pvt. Ltd."><span class="err">Company name is required</span></div>
-          <div class="field"><label>Display / brand name</label><input class="input" name="brand" placeholder="Shown in the app header"></div>
-          <div class="field"><label>Tenant code <span class="req">*</span></label><input class="input mono" name="code" required placeholder="SVCPL" maxlength="8" style="text-transform:uppercase"><span class="hint">Short unique code used in group names & receipts</span><span class="err">Tenant code is required</span></div>
-          <div class="field"><label>Company type <span class="req">*</span></label><select class="select" name="type" required><option value="">Select</option><option>Private Limited</option><option>Public Limited</option><option>Partnership firm</option><option>Proprietorship</option></select><span class="err">Select company type</span></div>
-          <div class="field"><label>Date of incorporation</label><input class="input" type="date" name="incorp"></div>
+          <div class="field"><label for="code">Organisation code <span class="req">*</span></label><input class="input mono" id="code" name="code" required pattern="[A-Za-z0-9-]{3,40}" placeholder="e.g. svchits"><span class="hint" id="codeHint">3–40 letters, numbers or hyphens. Stored in lower case.</span><span class="err" id="codeErr">3–40 letters, numbers or hyphens</span></div>
+          <div class="field"><label for="name">Display name <span class="req">*</span></label><input class="input" id="name" name="name" required maxlength="150" placeholder="Sri Venkata Chits"><span class="err">Required</span></div>
+          <div class="field"><label for="legalName">Legal name</label><input class="input" id="legalName" name="legalName" maxlength="200" placeholder="Sri Venkata Chits Pvt. Ltd."></div>
+          <div class="field"><label for="taxId">Tax ID (GSTIN)</label><input class="input mono" id="taxId" name="taxId" maxlength="40"></div>
+          <div class="field"><label for="contactEmail">Contact email <span class="req">*</span></label><input class="input" type="email" id="contactEmail" name="contactEmail" required><span class="err">Required</span></div>
+          <div class="field"><label for="contactPhone">Contact phone</label><input class="input" type="tel" id="contactPhone" name="contactPhone" maxlength="30"></div>
         </div>
       </div>
       <div class="form-section">
-        <div class="form-section-head"><h3><i data-i="pin"></i>Registered office</h3></div>
+        <div class="form-section-head"><h3><i data-i="pin"></i>Address & region</h3></div>
         <div class="form-grid cols-3">
-          <div class="field span-3"><label>Address line <span class="req">*</span></label><input class="input" name="addr" required placeholder="Door no., street, area"><span class="err">Address is required</span></div>
-          <div class="field"><label>City <span class="req">*</span></label><input class="input" name="city" required><span class="err">City is required</span></div>
-          <div class="field"><label>State <span class="req">*</span></label><select class="select" name="state" required><option value="">Select state</option><option>Andhra Pradesh</option><option>Telangana</option><option>Karnataka</option><option>Tamil Nadu</option><option>Kerala</option><option>Maharashtra</option><option>Other</option></select><span class="err">Select state</span></div>
-          <div class="field"><label>PIN code <span class="req">*</span></label><input class="input" name="pin" required inputmode="numeric" maxlength="6"><span class="err">PIN code is required</span></div>
+          <div class="field" style="grid-column:span 2"><label for="line1">Address line 1</label><input class="input" id="line1" name="line1"></div>
+          <div class="field"><label for="line2">Address line 2</label><input class="input" id="line2" name="line2"></div>
+          <div class="field"><label for="city">City</label><input class="input" id="city" name="city"></div>
+          <div class="field"><label for="state">State</label><input class="input" id="state" name="state"></div>
+          <div class="field"><label for="postalCode">Postal code</label><input class="input mono" id="postalCode" name="postalCode"></div>
+          <div class="field"><label for="countryCode">Country</label><select class="select" id="countryCode" name="countryCode"><option value="IN">India (IN)</option></select></div>
+          <div class="field"><label for="timezone">Time zone <span class="req">*</span></label><select class="select" id="timezone" name="timezone" required><option>Asia/Kolkata</option></select></div>
+          <div class="field"><label for="locale">Locale <span class="req">*</span></label><select class="select" id="locale" name="locale" required><option value="en-IN">English (India) · en-IN</option><option value="te-IN">Telugu · te-IN</option><option value="ta-IN">Tamil · ta-IN</option><option value="kn-IN">Kannada · kn-IN</option><option value="hi-IN">Hindi · hi-IN</option></select></div>
+          <div class="field"><label for="currency">Currency <span class="req">*</span></label><select class="select" id="currency" name="currency" required><option>INR</option></select></div>
         </div>
       </div>
     </section>
 
-    <!-- 2 Compliance -->
     <section class="wstep card" data-step="1">
       <div class="form-section">
-        <div class="form-section-head"><h3><i data-i="shieldCheck"></i>Registration & tax</h3><p>Needed before the tenant can create chit groups.</p></div>
-        <div class="form-grid">
-          <div class="field"><label>Chit registration no. <span class="req">*</span></label><input class="input mono" required placeholder="Registrar of Chits reg. no."><span class="err">Registration number is required</span></div>
-          <div class="field"><label>CIN</label><input class="input mono" placeholder="U65992TG2010PTC000000"></div>
-          <div class="field"><label>PAN <span class="req">*</span></label><input class="input mono" required maxlength="10" placeholder="AAAAA0000A" style="text-transform:uppercase"><span class="err">PAN is required</span></div>
-          <div class="field"><label>GSTIN</label><input class="input mono" maxlength="15" placeholder="36AAAAA0000A1Z5" style="text-transform:uppercase"></div>
-        </div>
-      </div>
-      <div class="form-section">
-        <div class="form-section-head"><h3><i data-i="file"></i>KYC documents</h3><p>PDF or image, up to 5 MB each.</p></div>
-        <div class="grid g-2">
-          <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Certificate of registration (Chits)</b><span>Click or drop file</span></div><input type="file"></label>
-          <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>Certificate of incorporation</b><span>Click or drop file</span></div><input type="file"></label>
-          <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>PAN card</b><span>Click or drop file</span></div><input type="file"></label>
-          <label class="dropzone"><span class="dz-ico"><i data-i="upload"></i></span><div><b>GST certificate</b><span>Click or drop file</span></div><input type="file"></label>
+        <div class="form-section-head"><h3><i data-i="layers"></i>Plan</h3><p>Only published plans can be assigned. You can also create the tenant now and assign a plan later; it then stays <b>PENDING</b>.</p></div>
+        <div class="option-cards" id="planCards"></div>
+        <div class="form-grid mt-4" id="planOpts">
+          <div class="field"><label class="switch"><input type="checkbox" id="trial" name="trial" checked><span class="track"></span>Start as a trial</label><span class="hint" id="trialHint"></span></div>
+          <div class="field"><label for="planEndsOn">Plan ends on</label><input class="input" type="date" id="planEndsOn" name="planEndsOn"><span class="hint">Leave empty for an open-ended subscription.</span></div>
         </div>
       </div>
     </section>
 
-    <!-- 3 Admin -->
     <section class="wstep card" data-step="2">
       <div class="form-section">
-        <div class="form-section-head"><h3><i data-i="user"></i>Primary administrator</h3><p>This person receives the invite and can add other users.</p></div>
-        <div class="form-grid">
-          <div class="field"><label>Full name <span class="req">*</span></label><input class="input" name="admin" required><span class="err">Name is required</span></div>
-          <div class="field"><label>Designation</label><input class="input" placeholder="e.g. Managing Director"></div>
-          <div class="field"><label>Email <span class="req">*</span></label><input class="input" type="email" name="email" required><span class="err">Email is required</span></div>
-          <div class="field"><label>Mobile <span class="req">*</span></label><div class="input-group"><span class="addon">+91</span><input class="input" required inputmode="tel" maxlength="10"></div><span class="err">Mobile is required</span></div>
-        </div>
-      </div>
-      <div class="form-section">
-        <div class="form-section-head"><h3><i data-i="globe"></i>Workspace access</h3></div>
-        <div class="form-grid">
-          <div class="field"><label>Workspace URL <span class="req">*</span></label><div class="input-group"><span class="addon">https://</span><input class="input" name="sub" required placeholder="svchits"><span class="addon">.chitsphere.in</span></div><span class="hint">Lowercase letters and numbers only</span><span class="err">Workspace URL is required</span></div>
-          <div class="field"><label>Login methods</label>
-            <div class="row wrap" style="gap:16px;min-height:var(--ctl-h)">
-              <label class="check"><input type="checkbox" checked> Password</label>
-              <label class="check"><input type="checkbox" checked> Mobile OTP</label>
-              <label class="check"><input type="checkbox"> SSO (Enterprise)</label>
-            </div>
-          </div>
-          <div class="field span-2"><label class="switch"><input type="checkbox" checked><span class="track"></span>Send welcome email with invite link to the administrator</label></div>
-        </div>
+        <div class="form-section-head"><h3><i data-i="users"></i>Initial members</h3><p>At least one <b>Owner</b>. Emails must be unique. Each person gets an activation email.</p></div>
+        <div class="table-wrap"><table class="table lines-table"><thead><tr><th>Full name *</th><th>Email *</th><th>Phone</th><th>Role *</th><th></th></tr></thead><tbody id="mRows"></tbody></table></div>
+        <div class="row mt-4"><button type="button" class="btn sm" id="addM"><i data-i="plus"></i>Add member</button><span class="xs muted" id="mErr" style="color:var(--danger)"></span></div>
       </div>
     </section>
 
-    <!-- 4 Plan -->
     <section class="wstep card" data-step="3">
       <div class="form-section">
-        <div class="form-section-head row between" style="align-items:flex-end">
-          <div><h3><i data-i="layers"></i>Choose a plan</h3><p>Limits can be adjusted later from the tenant’s page.</p></div>
-          <div class="segmented" data-seg id="cycle"><button class="active" data-v="month">Monthly</button><button data-v="year">Yearly <span class="badge success" style="height:18px">-15%</span></button></div>
-        </div>
-        <div class="option-cards" id="planCards" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"></div>
-      </div>
-      <div class="form-section">
-        <div class="form-grid cols-3">
-          <div class="field"><label>Subscription start <span class="req">*</span></label><input class="input" type="date" required value="2026-11-10"><span class="err">Start date is required</span></div>
-          <div class="field"><label>Free trial</label><select class="select"><option>No trial</option><option selected>14 days</option><option>30 days</option></select></div>
-          <div class="field"><label>Discount</label><div class="input-group"><input class="input" type="number" min="0" max="100" value="0"><span class="addon">%</span></div></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 5 Branding -->
-    <section class="wstep card" data-step="4">
-      <div class="form-section">
-        <div class="form-section-head"><h3><i data-i="palette"></i>Default branding</h3><p>The tenant admin can change this later from <b>Branding &amp; theme</b>.</p></div>
-        <div class="grid g-2">
-          <div class="stack">
-            <label class="dropzone"><span class="dz-ico"><i data-i="image"></i></span><div><b>Company logo</b><span>SVG or PNG, square, min 256px</span></div><input type="file" accept="image/*"></label>
-            <div class="field"><label>Brand colour</label>
-              <div class="row wrap" id="tbSwatches"></div>
-            </div>
-            <div class="field"><label>Default appearance for staff</label>
-              <div class="segmented block" data-seg><button data-v="light" class="active">Light</button><button data-v="dark">Dark</button><button data-v="system">Follow device</button></div>
-            </div>
-          </div>
-          <div class="field"><label>Preview</label><div class="tb-preview" id="tbPreview"><div class="side"><i></i><i></i><i></i><i></i></div><div class="main"><i style="width:40%"></i><i style="width:80%"></i><i style="width:65%"></i><b></b></div></div></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 6 Review -->
-    <section class="wstep card" data-step="5">
-      <div class="form-section">
-        <div class="form-section-head"><h3><i data-i="checkCircle"></i>Review & create</h3><p>Check the details below. The administrator will be invited once you create the tenant.</p></div>
+        <div class="form-section-head"><h3><i data-i="checkCircle"></i>Review</h3><p>Creating the tenant starts provisioning: schema, default roles, head office branch, books and owner activation.</p></div>
         <div class="grid g-2" id="review"></div>
-        <div class="alert info mt-4"><i data-i="info"></i><div><b>What happens next</b>A dedicated workspace is provisioned, the admin receives an invite, and KYC goes to review. Group creation unlocks after KYC approval.</div></div>
       </div>
     </section>
 
-    <div class="sticky-foot">
-      <span class="small muted" id="stepInfo"></span>
-      <div class="ml-auto row">
-        <a class="btn ghost" href="tenants.html">Cancel</a>
-        <button type="button" class="btn" id="prev"><i data-i="arrowL"></i>Back</button>
-        <button type="button" class="btn primary" id="next">Continue<i data-i="arrowR"></i></button>
+    <section class="wstep card" data-step="4">
+      <div class="card-body">
+        <div class="alert success mb-4"><i data-i="checkCircle"></i><div><b>Tenant created</b>Provisioning is running. Activation emails go out when the mandatory steps finish.</div></div>
+        <div class="list" id="prov"></div>
+        <div class="row mt-4"><a class="btn primary" id="openT" href="tenant-view.html?id=t-sahyadri">Open tenant</a><a class="btn" href="tenant-new.html">Create another</a></div>
       </div>
+    </section>
+
+    <div class="sticky-foot row between mt-4" id="nav">
+      <button type="button" class="btn" id="back"><i data-i="arrowL"></i>Back</button>
+      <button type="button" class="btn primary" id="next">Continue<i data-i="arrowR"></i></button>
     </div>
   </form>
 </main>
+<style>.wstep { display: none; } .wstep.active { display: block; }</style>
 
 <script src="../assets/js/data.js"></script>
 <script src="../assets/js/app.js"></script>
 <script>
 document.addEventListener('app:ready', function () {
-  var STEPS = [['Company', 'Legal details'], ['Compliance', 'Registration & KYC'], ['Admin', 'Owner & access'], ['Plan', 'Subscription'], ['Branding', 'Logo & colours'], ['Review', 'Confirm']];
+  var $ = function (id) { return document.getElementById(id); };
+  var steps = [['Organisation', 'Code & profile'], ['Plan', 'Optional'], ['Members', 'Owner & admins'], ['Review', 'Create']];
   var cur = 0;
-  var stepper = document.getElementById('stepper');
-  var panels = document.querySelectorAll('.wstep');
-  var form = document.getElementById('wizard');
-
-  function draw() {
-    stepper.innerHTML = STEPS.map(function (s, i) {
+  function paint() {
+    $('stepper').innerHTML = steps.map(function (s, i) {
       return '<div class="step ' + (i < cur ? 'done' : i === cur ? 'active' : '') + '"><span class="bubble">' + (i < cur ? UI.icon('check', 'sm') : i + 1) + '</span><span class="step-txt"><b>' + s[0] + '</b><span>' + s[1] + '</span></span></div>';
     }).join('');
-    panels.forEach(function (p, i) { p.classList.toggle('active', i === cur); });
-    document.getElementById('prev').disabled = cur === 0;
-    var nx = document.getElementById('next');
-    nx.innerHTML = cur === STEPS.length - 1 ? UI.icon('check') + 'Create tenant' : 'Continue' + UI.icon('arrowR');
-    document.getElementById('stepInfo').textContent = 'Step ' + (cur + 1) + ' of ' + STEPS.length;
-    if (cur === STEPS.length - 1) review();
+    document.querySelectorAll('.wstep').forEach(function (s) { s.classList.toggle('active', +s.getAttribute('data-step') === cur); });
+    $('back').style.visibility = cur && cur < 4 ? 'visible' : 'hidden';
+    $('nav').classList.toggle('hidden', cur === 4);
+    $('next').innerHTML = cur === 3 ? UI.icon('check') + 'Create tenant' : 'Continue' + UI.icon('arrowR');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  document.getElementById('next').addEventListener('click', function () {
-    if (!UI.validate(panels[cur])) { UI.toast('Please fill the required fields', 'danger'); return; }
-    if (cur === STEPS.length - 1) {
-      UI.toast('<b>Tenant created.</b> Invite sent to the administrator.', 'success');
-      setTimeout(function () { location.href = 'tenant-view.html?id=T-1010'; }, 1200);
-      return;
-    }
-    cur++; draw();
+  var taken = DB.tenants.map(function (t) { return t.code; });
+  $('code').addEventListener('input', function () {
+    var v = this.value.toLowerCase(); this.value = v;
+    var f = this.closest('.field'), dup = taken.indexOf(v) > -1;
+    $('codeErr').textContent = dup ? 'Code already in use (409 CONFLICT)' : '3–40 letters, numbers or hyphens';
+    f.classList.toggle('invalid', dup);
   });
-  document.getElementById('prev').addEventListener('click', function () { if (cur > 0) { cur--; draw(); } });
-  document.getElementById('saveDraft').addEventListener('click', function () { UI.toast('Draft saved', 'success'); });
 
-  /* plans */
-  var cycle = 'month';
-  function drawPlans() {
-    var sel = (form.querySelector('input[name=plan]:checked') || {}).value || 'growth';
-    document.getElementById('planCards').innerHTML = DB.plans.map(function (p) {
-      var price = cycle === 'year' ? Math.round(p.price * 12 * 0.85) : p.price;
-      return '<label class="option-card"><input type="radio" name="plan" value="' + p.id + '"' + (p.id === sel ? ' checked' : '') + '><div class="oc-body">' +
-        '<div class="row between"><b>' + p.name + '</b>' + (p.featured ? '<span class="badge hl">Popular</span>' : '') + '</div>' +
-        '<div style="font-size:22px;font-weight:700;margin:6px 0 2px">' + UI.inr(price) + '<small class="muted" style="font-size:12px;font-weight:500"> /' + cycle + '</small></div>' +
-        '<span>' + p.tagline + '</span>' +
-        '<div class="kv mt-3" style="grid-template-columns:auto 1fr;font-size:12.5px;gap:4px 12px"><dt>Branches</dt><dd>' + p.limits.branches + '</dd><dt>Groups</dt><dd>' + p.limits.groups + '</dd><dt>Subscribers</dt><dd>' + UI.num(p.limits.subscribers) + '</dd><dt>Users</dt><dd>' + p.limits.users + '</dd></div>' +
-        '</div></label>';
+  var pub = DB.plans.filter(function (p) { return p.status === 'ACTIVE'; });
+  $('planCards').innerHTML = '<label class="option-card"><input type="radio" name="planId" value="" ><span class="oc-body"><b>No plan yet</b><span>Tenant stays PENDING until a plan is assigned</span></span></label>' +
+    pub.map(function (p, i) {
+      return '<label class="option-card"><input type="radio" name="planId" value="' + p.id + '"' + (p.code === 'GROWTH' ? ' checked' : '') + '><span class="oc-body"><b>' + p.name + ' · v' + p.publishedVersion + '</b><span>' + UI.inr(p.price) + ' / ' + UI.human(p.billingCycle).toLowerCase() + ' · ' + p.trialDays + '-day trial</span><span style="display:block;margin-top:4px">' + UI.esc(p.description) + '</span></span></label>';
+    }).join('');
+  function planSel() { var r = document.querySelector('input[name=planId]:checked'); return r && r.value ? DB.plan(r.value) : null; }
+  function planUi() { var p = planSel(); $('planOpts').classList.toggle('hidden', !p); if (p) $('trialHint').textContent = 'Subscription starts TRIALING for ' + p.trialDays + ' days, then needs to be activated.'; }
+  $('planCards').addEventListener('change', planUi); planUi();
+
+  var members = [{ fullName: '', email: '', phone: '', role: 'TENANT_OWNER' }];
+  function mPaint() {
+    $('mRows').innerHTML = members.map(function (m, i) {
+      return '<tr><td><input class="input" data-k="fullName" data-i="' + i + '" value="' + UI.esc(m.fullName) + '" required></td><td><input class="input" type="email" data-k="email" data-i="' + i + '" value="' + UI.esc(m.email) + '" required></td>' +
+        '<td><input class="input" data-k="phone" data-i="' + i + '" value="' + UI.esc(m.phone) + '"></td><td><select class="select" data-k="role" data-i="' + i + '">' + UI.options({ enum: 'TenantRole', value: m.role }) + '</select></td>' +
+        '<td>' + (members.length > 1 ? '<button type="button" class="icon-btn sm" data-rm="' + i + '" aria-label="Remove">' + UI.icon('trash') + '</button>' : '') + '</td></tr>';
     }).join('');
   }
-  document.getElementById('cycle').addEventListener('change', function (e) { cycle = e.detail; drawPlans(); });
-  drawPlans();
+  $('mRows').addEventListener('input', function (e) { var k = e.target.getAttribute('data-k'); if (k) members[+e.target.getAttribute('data-i')][k] = e.target.value; });
+  $('mRows').addEventListener('change', function (e) { var k = e.target.getAttribute('data-k'); if (k) members[+e.target.getAttribute('data-i')][k] = e.target.value; });
+  $('mRows').addEventListener('click', function (e) { var b = e.target.closest('[data-rm]'); if (b) { members.splice(+b.getAttribute('data-rm'), 1); mPaint(); } });
+  $('addM').addEventListener('click', function () { members.push({ fullName: '', email: '', phone: '', role: 'TENANT_ADMIN' }); mPaint(); });
+  mPaint();
 
-  /* branding preview */
-  var sw = document.getElementById('tbSwatches'), prev = document.getElementById('tbPreview');
-  sw.innerHTML = Theme.accents.map(function (a, i) {
-    return '<button type="button" class="swatch' + (i === 0 ? ' active' : '') + '" data-c="' + a.light + '" style="width:auto;padding:8px"><span class="sw" style="background:' + a.light + '"></span></button>';
-  }).join('');
-  sw.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-c]'); if (!b) return;
-    sw.querySelectorAll('.swatch').forEach(function (x) { x.classList.toggle('active', x === b); });
-    prev.style.setProperty('--tb-c', b.getAttribute('data-c'));
-  });
+  function checkMembers() {
+    var emails = members.map(function (m) { return m.email.trim().toLowerCase(); });
+    var err = !members.some(function (m) { return m.role === 'TENANT_OWNER'; }) ? 'Add at least one Owner.' :
+      members.some(function (m) { return !m.fullName.trim() || !/^\S+@\S+\.\S+$/.test(m.email); }) ? 'Every member needs a name and a valid email.' :
+      emails.some(function (e, i) { return emails.indexOf(e) !== i; }) ? 'Emails must be unique.' : '';
+    $('mErr').textContent = err; return !err;
+  }
 
   function review() {
-    var f = new FormData(form);
-    var plan = DB.plan(f.get('plan') || 'growth');
-    function card(title, rows) {
-      return '<div class="card" style="box-shadow:none"><div class="card-head"><h4>' + title + '</h4></div><div class="card-body"><dl class="kv">' +
-        rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + (UI.esc(r[1]) || '<span class="muted">—</span>') + '</dd>'; }).join('') + '</dl></div></div>';
-    }
-    document.getElementById('review').innerHTML =
-      card('Company', [['Name', f.get('name')], ['Code', (f.get('code') || '').toUpperCase()], ['Type', f.get('type')], ['City', f.get('city') + ', ' + f.get('state')]]) +
-      card('Access', [['Admin', f.get('admin')], ['Email', f.get('email')], ['Workspace', (f.get('sub') || '') + '.chitsphere.in']]) +
-      card('Subscription', [['Plan', plan.name], ['Billing', cycle === 'year' ? 'Yearly' : 'Monthly'], ['Price', UI.inr(cycle === 'year' ? Math.round(plan.price * 12 * .85) : plan.price)]]) +
-      card('Limits', [['Branches', plan.limits.branches], ['Groups', plan.limits.groups], ['Users', plan.limits.users]]);
+    var v = UI.values($('wizard')), p = planSel();
+    $('review').innerHTML =
+      '<div class="card" style="box-shadow:none"><div class="card-body">' + UI.kv([['Code', '<span class="mono">' + UI.esc(v.code) + '</span>'], ['Name', UI.esc(v.name)], ['Legal name', UI.esc(v.legalName)], ['Contact', UI.esc(v.contactEmail)], ['City', UI.esc(v.city)], ['Locale', v.locale + ' · ' + v.timezone + ' · ' + v.currency]]) + '</div></div>' +
+      '<div class="card" style="box-shadow:none"><div class="card-body">' + UI.kv([['Plan', p ? p.name + ' v' + p.publishedVersion : 'None (tenant stays PENDING)'], ['Starts as', p ? (v.trial ? 'TRIALING · ' + p.trialDays + ' days' : 'ACTIVE') : '—'], ['Ends on', v.planEndsOn ? UI.date(v.planEndsOn) : 'Open-ended'],
+        ['Members', members.map(function (m) { return UI.esc(m.fullName) + ' <span class="xs muted">' + UI.human(m.role) + '</span>'; }).join('<br>')]]) + '</div></div>';
   }
-  draw();
+
+  $('next').addEventListener('click', function () {
+    var sec = document.querySelector('.wstep.active');
+    if (cur === 0 && (!UI.validate(sec) || sec.querySelector('.field.invalid'))) return;
+    if (cur === 2 && !checkMembers()) return;
+    if (cur === 3) {
+      $('prov').innerHTML = DB.provisioning.map(function (s, i) {
+        var st = i < 3 ? 'DONE' : 'PENDING';
+        return '<div class="list-item"><span class="mono xs muted">' + s.order + '</span><div style="flex:1"><b class="small">' + UI.human(s.code) + '</b><div class="xs muted">' + (s.mandatory ? 'Mandatory' : 'Optional') + '</div></div>' + UI.badge(st) + '</div>';
+      }).join('');
+      UI.toast('POST /api/platform/v1/admin/tenants → 201', 'success');
+    }
+    cur++; if (cur === 3) review(); paint();
+  });
+  $('back').addEventListener('click', function () { if (cur) { cur--; paint(); } });
+  paint();
 });
 </script>
 </body>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My HR · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  Employee self-service (hrms.selfservice.use): GET /api/hrms/v1/tenants/{tenantId}/me/employee, /me/attendance,
+  /me/leave-requests (POST to apply, POST …/{id}/cancel), /me/balances, /me/holidays; GET /api/payroll/v1/…/me/payslips.
+-->
+<body data-portal="tenant" data-page="my-hr">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>My HR & payslips</div>
+      <h1>My HR & payslips</h1>
+      <p id="sub"></p>
+    </div>
+    <div class="actions"><button class="btn" id="checkIn"><i data-i="clock"></i>Check in</button><button class="btn primary" id="apply"><i data-i="calendar"></i>Apply for leave</button></div>
+  </div>
+  <div class="grid g-4" id="bal"></div>
+  <div class="card mt-4"><div class="tabs" data-tabs><button data-tab="lv" class="active">My leave</button><button data-tab="at">My attendance</button><button data-tab="ps">Payslips</button><button data-tab="hd">Holidays</button><button data-tab="pf">Profile</button></div></div>
+  <div data-tab-panel="lv" class="active mt-4"><div class="card"><div id="lv"></div></div></div>
+  <div data-tab-panel="at" class="mt-4"><div class="card"><div class="card-head"><h3>November 2026</h3></div><div class="card-body"><div class="row wrap" id="month" style="gap:4px"></div></div></div></div>
+  <div data-tab-panel="ps" class="mt-4"><div class="card"><div id="ps"></div></div></div>
+  <div data-tab-panel="hd" class="mt-4"><div class="card"><div id="hd"></div></div></div>
+  <div data-tab-panel="pf" class="mt-4"><div class="card"><div class="card-body" id="pf"></div></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var e = DB.employee('e-1');
+  $('sub').innerHTML = '<span class="mono">' + e.code + '</span> · ' + DB.desig(e.designationId) + ' · ' + DB.branchName(e.branchId);
+  $('bal').innerHTML = DB.balancesFor(e.id).map(function (b) { return '<div class="card kpi"><div class="label">' + b.leaveTypeName + '</div><div class="value">' + b.available + '</div><div class="delta">of ' + (b.granted + b.adjusted) + ' · ' + b.used + ' used</div></div>'; }).join('');
+  var mine = [{ id: 'my1', leaveTypeCode: 'EL', fromDate: '2026-12-24', toDate: '2026-12-26', days: 3, reason: 'Family trip', status: 'PENDING' }, { id: 'my2', leaveTypeCode: 'CL', fromDate: '2026-10-03', toDate: '2026-10-03', days: 1, reason: 'Personal', status: 'APPROVED' }];
+  UI.table({ el: '#lv', rows: mine, columns: [{ key: 'leaveTypeCode', label: 'Type' }, { key: 'fromDate', label: 'Dates', render: function (r) { return UI.date(r.fromDate) + ' → ' + UI.date(r.toDate); } }, { key: 'days', label: 'Days', num: true }, { key: 'reason', label: 'Reason' }, { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } }, { key: 'x', label: '', render: function (r) { return r.status === 'PENDING' ? '<button class="btn sm danger-ghost" data-act="cancel" data-id="' + r.id + '">Cancel</button>' : ''; } }] });
+  var codes = ['P', 'P', 'P', 'P', 'P', 'WO', 'P', 'H', 'P', 'P', 'P', 'P', 'P', 'P'];
+  $('month').innerHTML = codes.map(function (c, i) { return '<div style="text-align:center"><div class="xs muted">' + (i + 1) + '</div><span class="att ' + c + '">' + c + '</span></div>'; }).join('');
+  var slips = DB.payslipsFor(DB.run('pr-1')).filter(function (p) { return p.employeeId === e.id; });
+  UI.table({ el: '#ps', rows: slips.concat([Object.assign({}, slips[0], { period: '2026-09', id: 'old' })]), columns: [{ key: 'period', label: 'Month' }, { key: 'paidDays', label: 'Paid days', num: true }, { key: 'gross', label: 'Gross', num: true, render: function (p) { return UI.inr(p.gross); } }, { key: 'totalDeductions', label: 'Deductions', num: true, render: function (p) { return UI.inr(p.totalDeductions); } }, { key: 'net', label: 'Net pay', num: true, render: function (p) { return '<b>' + UI.inr(p.net) + '</b>'; } }, { key: 'x', label: '', render: function () { return '<button class="btn sm" data-act="slip">View</button>'; } }] });
+  UI.table({ el: '#hd', rows: DB.holidays.filter(function (h) { return !h.branchId || h.branchId === e.branchId; }), columns: [{ key: 'date', label: 'Date', render: function (h) { return UI.date(h.date); } }, { key: 'name', label: 'Holiday' }, { key: 'kind', label: 'Kind', render: function (h) { return UI.human(h.kind); } }] });
+  $('pf').innerHTML = UI.kv([['Name', e.fullName], ['Email', e.email], ['Phone', e.phone], ['Department', DB.dept(e.departmentId)], ['Joined', UI.date(e.joinedOn)], ['Blood group', e.bloodGroup]]) + '<p class="xs muted mt-4">To change these details, contact HR.</p>';
+  $('apply').addEventListener('click', function () {
+    UI.dialog({ title: 'Apply for leave', icon: 'calendar', api: 'POST …/me/leave-requests', done: 'Request sent to your manager', fields: [
+      { id: 'leaveTypeId', label: 'Leave type', type: 'select', req: true, options: DB.leaveTypes.map(function (t) { return [t.id, t.name]; }) }, { id: 'halfDay', label: 'Half day', type: 'select', enum: 'HalfDay', blank: 'Full day(s)' },
+      { id: 'fromDate', label: 'From', type: 'date', req: true }, { id: 'toDate', label: 'To', type: 'date', req: true }, { id: 'reason', label: 'Reason', type: 'textarea', span: 2 }] });
+  });
+  $('checkIn').addEventListener('click', function () { this.innerHTML = UI.icon('clock') + 'Checked in 10:02'; this.disabled = true; UI.toast('Checked in at 10:02', 'success'); });
+  UI.onAct(function (act) {
+    if (act === 'cancel') UI.confirm('Cancel this request?', 'Your manager will see it as cancelled.', { ok: 'Cancel request', danger: true, done: 'Request cancelled' });
+    if (act === 'slip') { var p = slips[0]; UI.dialog({ title: 'Payslip · ' + p.period, icon: 'file', ok: false, html: UI.kv([['Paid days', p.paidDays + ' of ' + p.daysInPeriod], ['Basic', UI.inr(p.basic)], ['HRA', UI.inr(p.hra)], ['Allowances', UI.inr(p.allowances)], ['Gross', '<b>' + UI.inr(p.gross) + '</b>'], ['Provident fund', '− ' + UI.inr(p.providentFund)], ['Other deductions', '− ' + UI.inr(p.fixedDeductions)], ['Net pay', '<b>' + UI.inr(p.net) + '</b>']]) }); }
+  });
+});
+</script>
+</body>
+</html>

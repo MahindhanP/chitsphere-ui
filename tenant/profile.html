@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Organisation profile · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET/PUT /api/platform/v1/tenants/{tenantId}/profile (tenant-profile, with version for optimistic locking)
+  and PUT …/appearance {theme: CLASSIC|ROYAL|HERITAGE|OCEAN|SAFFRON}: the organisation's default theme.
+-->
+<body data-portal="tenant" data-page="profile">
+<main class="content" style="max-width:1100px">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Settings<i data-i="chevR"></i>Organisation profile</div>
+      <h1>Organisation profile</h1>
+      <p>Organisation code <span class="mono">svchits</span> · set by ChitSphere when the organisation was created and can’t be changed.</p>
+    </div>
+  </div>
+  <form id="f" novalidate class="card">
+    <div class="form-section"><div class="form-section-head"><h3><i data-i="building"></i>Identity & contact</h3></div><div id="s1"></div></div>
+    <div class="form-section"><div class="form-section-head"><h3><i data-i="pin"></i>Address</h3></div><div id="s2"></div></div>
+    <div class="form-section"><div class="form-section-head"><h3><i data-i="globe"></i>Region</h3><p>Used for dates, numbers and money across the workspace.</p></div><div id="s3"></div></div>
+    <div class="form-section row" style="justify-content:flex-end"><button class="btn" type="reset">Discard</button><button class="btn primary" type="submit"><i data-i="save"></i>Save profile</button></div>
+  </form>
+  <div class="card mt-4">
+    <div class="card-head"><div class="card-title-icon"><i data-i="palette"></i></div><div><h3>Organisation theme</h3><div class="sub">Default look for everyone in Sri Venkata Chits. Each person can still choose a personal theme.</div></div></div>
+    <div class="card-body"><div class="option-cards" id="themes"></div></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var t = DB.tenant('t-svchits'), a = t.address;
+  $('s1').innerHTML = UI.form([{ id: 'name', label: 'Display name', req: true, maxlength: 150, value: t.name }, { id: 'legalName', label: 'Legal name', maxlength: 200, value: t.legalName },
+    { id: 'contactEmail', label: 'Contact email', type: 'email', req: true, value: t.contactEmail }, { id: 'contactPhone', label: 'Contact phone', maxlength: 30, value: t.contactPhone }, { id: 'taxId', label: 'Tax ID (GSTIN)', mono: true, maxlength: 40, value: t.taxId }]);
+  $('s2').innerHTML = UI.form([{ id: 'line1', label: 'Address line 1', value: a.line1 }, { id: 'line2', label: 'Address line 2', value: a.line2 }, { id: 'city', label: 'City', value: a.city }, { id: 'state', label: 'State', value: a.state },
+    { id: 'postalCode', label: 'Postal code', value: a.postalCode, mono: true }, { id: 'countryCode', label: 'Country', type: 'select', options: [['IN', 'India']], value: 'IN' }], 3);
+  $('s3').innerHTML = UI.form([{ id: 'timezone', label: 'Time zone', type: 'select', req: true, options: ['Asia/Kolkata'], value: t.timezone }, { id: 'locale', label: 'Locale', type: 'select', req: true, options: [['en-IN', 'English (India)'], ['te-IN', 'Telugu'], ['ta-IN', 'Tamil'], ['kn-IN', 'Kannada'], ['hi-IN', 'Hindi']], value: t.locale },
+    { id: 'currency', label: 'Currency', type: 'select', req: true, options: ['INR'], value: 'INR' }], 3);
+  $('f').addEventListener('submit', function (e) { e.preventDefault(); if (UI.validate(this)) UI.toast('Profile saved (PUT …/profile)', 'success'); });
+
+  var names = { CLASSIC: 'Teal, calm and neutral', ROYAL: 'Violet, premium', HERITAGE: 'Crimson, traditional', OCEAN: 'Navy, corporate', SAFFRON: 'Amber, warm' };
+  $('themes').innerHTML = DB.ENUM.UiTheme.map(function (k) {
+    var tpl = Theme.template(DB.THEME_TEMPLATE[k]);
+    return '<label class="option-card"><input type="radio" name="theme" value="' + k + '"' + (k === t.theme ? ' checked' : '') + '><span class="oc-body"><span style="display:flex;gap:6px;margin-bottom:8px"><i style="width:22px;height:22px;border-radius:6px;background:' + tpl.light.primary + '"></i><i style="width:22px;height:22px;border-radius:6px;background:' + tpl.light.secondary + '"></i></span><b>' + UI.human(k) + '</b><span>' + names[k] + '</span></span></label>';
+  }).join('');
+  $('themes').addEventListener('change', function (e) {
+    var raw = Theme.raw(); raw.preset = DB.THEME_TEMPLATE[e.target.value]; raw.tier = 'template';
+    Theme.quickKeys.forEach(function (k) { delete raw.values[k]; }); Theme.save(raw);
+    UI.toast('Organisation theme set to ' + UI.human(e.target.value) + ' (PUT …/appearance)', 'success');
+  });
+});
+</script>
+</body>
+</html>

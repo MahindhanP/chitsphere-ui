@@ -11,64 +11,54 @@
   <link rel="stylesheet" href="../assets/css/theme.css">
   <link rel="stylesheet" href="../assets/css/app.css">
 </head>
+<!--
+  /api/platform/v1/tenants/{tenantId}/branches: list, POST {code, name, city, parentBranchId}, PUT, POST …/archive.
+  Code: 2-20 letters, digits or hyphens, starting with a letter or digit.
+-->
 <body data-portal="tenant" data-page="branches">
 <main class="content">
   <div class="page-head">
     <div class="titles">
-      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Branches</div>
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Settings<i data-i="chevR"></i>Branches</div>
       <h1>Branches</h1>
-      <p>Offices that enrol subscribers, run auctions and collect dues. <b id="usage"></b></p>
+      <p>Offices of your organisation. Members, customers, groups, leads and payroll are tied to a branch. <b id="usage"></b></p>
     </div>
-    <div class="actions"><button class="btn primary" data-open="#bDrawer" id="addBtn"><i data-i="plus"></i>Add branch</button></div>
+    <div class="actions"><button class="btn primary" id="add"><i data-i="plus"></i>Add branch</button></div>
   </div>
   <div class="card">
-    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search branches…"></div>
-      <select class="select" id="fStatus"><option value="">All statuses</option><option>Active</option><option>Inactive</option></select></div>
+    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search branches…"></div><select class="select" id="fStatus"><option value="">All statuses</option><option value="ACTIVE">Active</option><option value="ARCHIVED">Archived</option></select></div>
     <div id="tbl"></div>
   </div>
 </main>
-
-<div class="drawer" id="bDrawer" role="dialog" aria-label="Branch">
-  <div class="drawer-head"><div class="card-title-icon"><i data-i="pin"></i></div><h3 id="bTitle">Add branch</h3><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
-  <div class="drawer-body form-grid">
-    <div class="field span-2"><label>Branch name <span class="req">*</span></label><input class="input" id="bName" required><span class="err">Required</span></div>
-    <div class="field"><label>Branch code <span class="req">*</span></label><input class="input mono" id="bCode" required maxlength="4" style="text-transform:uppercase"><span class="err">Required</span></div>
-    <div class="field"><label>City <span class="req">*</span></label><input class="input" id="bCity" required><span class="err">Required</span></div>
-    <div class="field span-2"><label>Address</label><textarea class="textarea"></textarea></div>
-    <div class="field"><label>Branch manager</label><select class="select" id="bMgr"></select></div>
-    <div class="field"><label>Phone</label><input class="input" id="bPhone"></div>
-    <div class="field span-2"><label>Chit registration office</label><select class="select"><option>Registrar of Chits, Hyderabad</option><option>Asst. Registrar of Chits, Warangal</option><option>Asst. Registrar of Chits, Karimnagar</option></select></div>
-    <div class="field span-2"><label class="switch"><input type="checkbox" checked><span class="track"></span>Branch is active</label></div>
-  </div>
-  <div class="drawer-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" id="bSave">Save branch</button></div>
-</div>
 
 <script src="../assets/js/data.js"></script>
 <script src="../assets/js/app.js"></script>
 <script>
 document.addEventListener('app:ready', function () {
   var $ = function (id) { return document.getElementById(id); };
-  $('usage').textContent = DB.branches.length + ' of 10 branches used on your plan.';
-  $('bMgr').innerHTML = '<option value="">Unassigned</option>' + DB.users.map(function (u) { return '<option>' + u.name + '</option>'; }).join('');
-  UI.table({
-    el: '#tbl', rows: DB.branches, search: '#q', searchKeys: ['name', 'code', 'city', 'manager'], filters: [{ el: '#fStatus', key: 'status' }],
-    onRow: function (b) { edit(b); },
+  var lim = DB.entitlement.limits.filter(function (l) { return l.id === 'platform.branch.max'; })[0];
+  $('usage').textContent = lim.used + ' of ' + lim.limit + ' branches used on your plan.';
+  var count = function (b, list) { return list.filter(function (x) { return x.branchId === b.id; }).length; };
+  UI.table({ el: '#tbl', rows: DB.branches, search: '#q', searchKeys: ['name', 'code', 'city'], filters: [{ el: '#fStatus', key: 'status' }], onRow: function (b) { if (b.status === 'ACTIVE') form(b); },
     columns: [
-      { key: 'name', label: 'Branch', sort: true, render: function (b) { return '<div class="ent"><span class="avatar sq sm">' + b.code + '</span><div class="ent-txt"><b>' + b.name + '</b><span>' + b.id + '</span></div></div>'; } },
+      { key: 'name', label: 'Branch', sort: true, render: function (b) { return UI.ent(b.name, b.parentBranchId ? 'Under ' + DB.branchName(b.parentBranchId) : 'Top level', b.code); } },
       { key: 'city', label: 'City', sort: true },
-      { key: 'manager', label: 'Manager', render: function (b) { return b.manager + '<div class="xs muted">' + b.phone + '</div>'; } },
-      { key: 'groups', label: 'Groups', num: true, sort: true },
-      { key: 'subscribers', label: 'Subscribers', num: true, sort: true, render: function (b) { return UI.num(b.subscribers); } },
+      { key: 'g', label: 'Groups', num: true, render: function (b) { return count(b, DB.groups); } },
+      { key: 'c', label: 'Customers', num: true, render: function (b) { return count(b, DB.customers); } },
+      { key: 'm', label: 'Members', num: true, render: function (b) { return DB.memberships.filter(function (m) { return m.branchScope === 'TENANT' || m.branchIds.indexOf(b.id) > -1; }).length; } },
       { key: 'status', label: 'Status', render: function (b) { return UI.badge(b.status); } },
-      { key: 'x', label: '', cls: 'actions-cell', render: function () { return '<button class="icon-btn sm" aria-label="Edit">' + UI.icon('edit') + '</button>'; } }
-    ]
-  });
-  function edit(b) {
-    $('bTitle').textContent = 'Edit ' + b.name; $('bName').value = b.name; $('bCode').value = b.code; $('bCity').value = b.city; $('bMgr').value = b.manager; $('bPhone').value = b.phone;
-    UI.open('#bDrawer');
+      { key: 'x', label: '', cls: 'actions-cell', render: function (b) { return b.status === 'ACTIVE' ? UI.rowMenu('rm_' + b.id, [['edit', 'Edit', false, 'edit'], b.code === 'AMP' ? null : ['archive', 'Archive', true, 'trash']]) : ''; } }] });
+  function form(b) {
+    UI.dialog({ drawer: true, title: b ? 'Edit ' + b.name : 'Add branch', icon: 'pin', api: b ? 'PUT …/branches/{branchId}' : 'POST /api/platform/v1/tenants/{tenantId}/branches', done: 'Branch saved', record: b,
+      fields: [{ id: 'name', label: 'Branch name', req: true, span: 2 }, { id: 'code', label: 'Code', req: true, mono: true, pattern: '[A-Za-z0-9][A-Za-z0-9-]{1,19}', err: '2–20 letters, digits or hyphens', hint: 'Unique in your organisation' },
+        { id: 'city', label: 'City', req: true }, { id: 'parentBranchId', label: 'Parent branch', type: 'select', span: 2, options: DB.branches.filter(function (x) { return x.status === 'ACTIVE' && (!b || x.id !== b.id); }).map(function (x) { return [x.id, x.name]; }), blank: 'None (top level)' }] });
   }
-  $('addBtn').addEventListener('click', function () { $('bTitle').textContent = 'Add branch'; ['bName', 'bCode', 'bCity', 'bPhone'].forEach(function (i) { $(i).value = ''; }); $('bMgr').value = ''; });
-  $('bSave').addEventListener('click', function () { if (!UI.validate($('bDrawer'))) return; UI.close(); UI.toast('Branch saved', 'success'); });
+  $('add').addEventListener('click', function () { if (lim.used >= lim.limit) return UI.toast('Branch limit reached (PLAN_LIMIT_EXCEEDED)', 'danger'); form(null); });
+  UI.onAct(function (act, id) {
+    var b = DB.branch(id);
+    if (act === 'edit') form(b);
+    if (act === 'archive') UI.confirm('Archive ' + b.name + '?', 'It disappears from pickers. Records stay. A branch with active groups or employees can’t be archived.', { danger: true, ok: 'Archive', api: 'POST …/branches/{branchId}/archive', done: 'Branch archived' });
+  });
 });
 </script>
 </body>

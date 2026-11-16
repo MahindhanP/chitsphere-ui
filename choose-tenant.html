@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Choose organisation · ChitSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="assets/js/theme.js"></script>
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+</head>
+<!--
+  Shown after sign-in when the user belongs to several organisations.
+  GET /api/platform/v1/me/tenants, then POST /api/auth/v1/tenant-session {tenantId} for the one picked.
+-->
+<body class="simple">
+<div class="row" style="justify-content:space-between;padding:16px 20px">
+  <a class="row small muted" href="login.html" style="gap:6px"><i data-i="arrowL" class="sm"></i>Back to sign in</a>
+  <div class="row"><button class="icon-btn" data-theme-toggle aria-label="Toggle dark mode"></button></div>
+</div>
+<main class="simple-main" style="align-items:flex-start;padding-top:24px">
+  <div class="simple-card">
+    <div class="org-brand">
+      <div class="logo" style="background:var(--primary)"><i data-i="building" class="lg"></i></div>
+      <div><h1 style="font-size:24px">Choose an organisation</h1><p class="muted mt-1">Signed in as <b>ravi@svchits.in</b>. Your role can differ in each one.</p></div>
+    </div>
+    <div class="card"><div class="list" id="list"></div></div>
+    <p class="small muted center mt-4">Not you? <a href="login.html?signedOut=1">Sign out</a></p>
+    <div class="powered"><span class="sb-logo" style="width:20px;height:20px;font-size:9px;border-radius:5px">CS</span>Powered by ChitSphere</div>
+  </div>
+</main>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var list = document.getElementById('list');
+  list.innerHTML = DB.myTenants.map(function (m) {
+    var t = DB.tenant(m.tenantId), off = m.status !== 'ACTIVE';
+    return '<a class="list-item" style="color:inherit;text-decoration:none;' + (off ? 'opacity:.6;cursor:not-allowed' : '') + '" href="' + (off ? '#' : 'tenant/dashboard.html') + '" data-off="' + off + '" data-name="' + UI.esc(m.name) + '">' +
+      '<span class="avatar sq" style="background:' + t.color + ';color:#fff">' + UI.initials(m.name) + '</span>' +
+      '<div style="flex:1;min-width:0"><b>' + UI.esc(m.name) + '</b><div class="xs muted"><span class="mono">' + m.code + '</span> · ' + UI.human(m.role) + (m.current ? ' · last used' : '') + '</div></div>' +
+      (off ? UI.badge(m.status) : UI.icon('chevR')) + '</a>';
+  }).join('');
+  list.addEventListener('click', function (e) {
+    var a = e.target.closest('a'); if (!a) return;
+    e.preventDefault();
+    if (a.getAttribute('data-off') === 'true') { UI.toast('This organisation is suspended. Sign-in is paused.', 'warning'); return; }
+    UI.toast('Opening ' + a.getAttribute('data-name') + '…', 'info');
+    setTimeout(function () { location.href = a.getAttribute('href'); }, 500);
+  });
+});
+</script>
+</body>
+</html>

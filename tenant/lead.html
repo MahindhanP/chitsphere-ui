@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lead · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET …/leads/{id}, PUT, PATCH …/status, PATCH …/assignee; follow-ups: POST …/leads/{id}/follow-ups {dueAt, channel, note},
+  POST …/follow-ups/{id}/complete {outcome DONE|MISSED, outcomeNote}.
+-->
+<body data-portal="tenant" data-page="leads">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="leads.html">Leads</a><i data-i="chevR"></i><span id="crumb"></span></div>
+      <h1 id="lName"></h1>
+      <p id="lSub"></p>
+    </div>
+    <div class="actions" id="acts"></div>
+  </div>
+  <div class="card"><div class="card-body"><div class="stepper" id="stage"></div></div></div>
+  <div class="grid g-main-side mt-4">
+    <div class="card"><div class="card-head"><div class="card-title-icon"><i data-i="calendar"></i></div><div><h3>Follow-ups</h3></div><div class="tools"><button class="btn sm primary" id="addF"><i data-i="plus"></i>Plan follow-up</button></div></div><div class="list" id="fu"></div></div>
+    <div class="card"><div class="card-head"><h3>Details</h3><div class="tools"><button class="btn sm" id="edit"><i data-i="edit"></i>Edit</button></div></div><div class="card-body" id="det"></div></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var l = DB.lead(UI.param('id') || 'l-2') || DB.leads[1], open = !/WON|LOST/.test(l.status);
+  document.title = l.name + ' · Leads';
+  $('crumb').textContent = l.name; $('lName').textContent = l.name;
+  $('lSub').innerHTML = UI.badge(l.status) + ' · ' + UI.human(l.source) + ' · ' + DB.branchName(l.branchId) + ' · created ' + UI.date(l.createdAt);
+  var order = ['NEW', 'CONTACTED', 'QUALIFIED', 'WON'], idx = order.indexOf(l.status);
+  $('stage').innerHTML = order.map(function (s, i) { return '<div class="step ' + (l.status === 'LOST' ? '' : i < idx ? 'done' : i === idx ? 'active' : '') + '"><span class="bubble">' + (i < idx ? UI.icon('check', 'sm') : i + 1) + '</span><span class="step-txt"><b>' + UI.human(s) + '</b></span></div>'; }).join('');
+  var next = order[idx + 1];
+  $('acts').innerHTML = open ? '<button class="btn" id="assign">' + UI.icon('user') + 'Reassign</button><button class="btn danger-ghost" id="lost">' + UI.icon('x') + 'Mark lost</button>' + (next ? '<button class="btn primary" id="adv">' + UI.icon('arrowR') + 'Move to ' + UI.human(next) + '</button>' : '') : '';
+  if (l.status === 'LOST') $('stage').insertAdjacentHTML('afterend', '<div class="alert danger mt-4">' + UI.icon('x') + '<div><b>Lost</b>' + UI.esc(l.lostReason) + '</div></div>');
+  $('det').innerHTML = UI.kv([['Phone', UI.esc(l.phone)], ['Email', UI.esc(l.email)], ['Company', UI.esc(l.company)], ['Interest', UI.esc(l.interest)], ['Expected value', l.expectedValue ? UI.inr(l.expectedValue) : null], ['Owner', l.assigneeName || 'Unassigned'], ['Notes', UI.esc(l.notes)]]) +
+    (l.status === 'WON' ? '<a class="btn soft sm mt-4" href="customers.html?new=1">' + UI.icon('idCard') + 'Create customer</a>' : '');
+  var fus = DB.followUps.filter(function (f) { return f.leadId === l.id; });
+  $('fu').innerHTML = fus.length ? fus.map(function (f) {
+    return '<div class="list-item">' + UI.icon(f.channel === 'CALL' ? 'phone' : f.channel === 'EMAIL' ? 'mail' : f.channel === 'VISIT' ? 'pin' : 'users') + '<div style="flex:1"><b class="small">' + UI.human(f.channel) + ' · ' + UI.dt(f.dueAt) + '</b><div class="xs muted">' + UI.esc(f.note) + (f.outcomeNote ? ' → ' + UI.esc(f.outcomeNote) : '') + ' · ' + f.ownerName + '</div></div>' +
+      UI.badge(f.overdue ? 'OVERDUE' : f.status) + (f.status === 'PLANNED' ? '<button class="btn sm" data-act="done" data-id="' + f.id + '">Complete</button>' : '') + '</div>';
+  }).join('') : '<div class="empty">No follow-ups yet.</div>';
+  var members = DB.memberships.filter(function (m) { return m.status === 'ACTIVE'; }).map(function (m) { return [m.id, m.fullName]; });
+  $('addF').addEventListener('click', function () { UI.dialog({ title: 'Plan follow-up', icon: 'calendar', api: 'POST …/leads/{leadId}/follow-ups', done: 'Follow-up planned', fields: [{ id: 'dueAt', label: 'Due', type: 'datetime-local', req: true }, { id: 'channel', label: 'Channel', type: 'select', req: true, enum: 'FollowUpChannel' }, { id: 'note', label: 'What to do', type: 'textarea', span: 2 }] }); });
+  $('edit').addEventListener('click', function () { UI.dialog({ drawer: true, title: 'Edit lead', record: l, api: 'PUT …/leads/{leadId}', done: 'Lead saved', fields: [{ id: 'name', label: 'Name', req: true, span: 2 }, { id: 'phone', label: 'Phone', req: true }, { id: 'email', label: 'Email', type: 'email' }, { id: 'company', label: 'Company' }, { id: 'expectedValue', label: 'Expected value', type: 'number' }, { id: 'interest', label: 'Interest', span: 2 }, { id: 'notes', label: 'Notes', type: 'textarea', span: 2 }] }); });
+  if (open) {
+    $('assign').addEventListener('click', function () { UI.dialog({ title: 'Reassign lead', api: 'PATCH …/leads/{leadId}/assignee', done: 'Lead reassigned', fields: [{ id: 'assignedTo', label: 'Owner', type: 'select', span: 2, options: members, value: l.assignedTo, blank: 'Unassigned' }] }); });
+    $('lost').addEventListener('click', function () { UI.dialog({ title: 'Mark as lost', danger: true, ok: 'Mark lost', api: 'PATCH …/leads/{leadId}/status {status: LOST, lostReason}', done: 'Lead marked lost', fields: [{ id: 'lostReason', label: 'Why was it lost?', type: 'textarea', req: true, span: 2 }] }); });
+    if (next) $('adv').addEventListener('click', function () { UI.confirm('Move to ' + UI.human(next) + '?', next === 'WON' ? 'Then enrol them: create the customer and add them to a group.' : 'The pipeline report counts this lead in the new stage.', { ok: 'Move', api: 'PATCH …/leads/{leadId}/status', done: 'Lead moved to ' + UI.human(next) }); });
+  }
+  UI.onAct(function (act) { if (act === 'done') UI.dialog({ title: 'Complete follow-up', api: 'POST …/follow-ups/{id}/complete', done: 'Follow-up completed', fields: [{ id: 'outcome', label: 'Outcome', type: 'select', req: true, options: [['DONE', 'Done'], ['MISSED', 'Missed']] }, { id: 'outcomeNote', label: 'What happened', type: 'textarea', span: 2 }] }); });
+});
+</script>
+</body>
+</html>

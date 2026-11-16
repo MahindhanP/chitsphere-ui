@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attendance · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  /api/hrms/v1/tenants/{tenantId}/attendance: daily records {employeeId, date, status PRESENT|ABSENT|HALF_DAY|ON_LEAVE|HOLIDAY,
+  checkIn/checkOut HH:mm, note}; PUT to record. Monthly sheet codes P, A, HD, L, HL, H, WO (reports/attendance-sheet).
+-->
+<body data-portal="tenant" data-page="attendance">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>HRMS<i data-i="chevR"></i>Attendance</div>
+      <h1>Attendance</h1>
+      <p>Mark the day for each employee, or review the month.</p>
+    </div>
+    <div class="actions"><select class="select" id="branch" style="width:auto"></select><input class="input" type="date" id="day" value="2026-11-14" style="width:auto"></div>
+  </div>
+  <div class="card"><div class="tabs" data-tabs><button data-tab="d" class="active">Daily register</button><button data-tab="m">Monthly sheet</button></div></div>
+  <div data-tab-panel="d" class="active mt-4">
+    <div class="card">
+      <div class="toolbar"><span class="small muted" id="sum"></span><div class="ml-auto row"><button class="btn sm" id="allP">Mark unmarked as present</button><button class="btn sm primary" id="save"><i data-i="save"></i>Save</button></div></div>
+      <div class="table-wrap"><table class="table lines-table"><thead><tr><th>Employee</th><th>Status</th><th>Check in</th><th>Check out</th><th>Note</th></tr></thead><tbody id="rows"></tbody></table></div>
+    </div>
+  </div>
+  <div data-tab-panel="m" class="mt-4">
+    <div class="card"><div class="card-head"><h3>November 2026</h3><div class="tools xs muted row wrap" id="legend"></div></div><div class="table-wrap"><table class="table" id="sheet"></table></div></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('branch').innerHTML = UI.options({ options: DB.branches.filter(function (b) { return b.status === 'ACTIVE'; }).map(function (b) { return [b.id, b.name]; }), blank: 'All branches' });
+  var emps = DB.employees.filter(function (e) { return e.status !== 'EXITED'; });
+  function rec(e) { return DB.attendanceToday.filter(function (a) { return a.employeeId === e.id; })[0] || {}; }
+  function paint() {
+    var b = $('branch').value, list = emps.filter(function (e) { return !b || e.branchId === b; });
+    $('rows').innerHTML = list.map(function (e) {
+      var r = rec(e);
+      return '<tr><td>' + UI.ent(e.fullName, DB.branchName(e.branchId)) + '</td><td><select class="select" data-e="' + e.id + '" style="min-width:140px">' + UI.options({ enum: 'AttendanceStatus', blank: 'Not marked', value: r.status || '' }) + '</select></td>' +
+        '<td><input class="input" type="time" value="' + (r.checkIn || '') + '" style="width:120px"></td><td><input class="input" type="time" value="' + (r.checkOut || '') + '" style="width:120px"></td><td><input class="input" value="' + UI.esc(r.note || '') + '"></td></tr>';
+    }).join('');
+    var c = {}; list.forEach(function (e) { var s = rec(e).status || 'Not marked'; c[s] = (c[s] || 0) + 1; });
+    $('sum').innerHTML = Object.keys(c).map(function (k) { return UI.human(k) + ' <b>' + c[k] + '</b>'; }).join(' · ');
+  }
+  $('branch').addEventListener('change', paint); paint();
+  $('allP').addEventListener('click', function () { $('rows').querySelectorAll('select').forEach(function (s) { if (!s.value) s.value = 'PRESENT'; }); });
+  $('save').addEventListener('click', function () { UI.toast('Attendance saved for ' + UI.date($('day').value) + ' (PUT …/attendance)', 'success'); });
+  var L = { P: 'Present', A: 'Absent', HD: 'Half day', L: 'Leave', HL: 'Half-day leave', H: 'Holiday', WO: 'Weekly off' };
+  $('legend').innerHTML = Object.keys(L).map(function (k) { return '<span class="att ' + k + '">' + k + '</span>' + L[k]; }).join(' ');
+  var days = 14, head = '<thead><tr><th>Employee</th>';
+  for (var d = 1; d <= days; d++) head += '<th class="num">' + d + '</th>';
+  head += '<th class="num">P</th><th class="num">A</th><th class="num">L</th></tr></thead>';
+  $('sheet').innerHTML = head + '<tbody>' + emps.map(function (e, i) {
+    var p = 0, a = 0, l = 0, cells = '';
+    for (var d = 1; d <= days; d++) {
+      var c = d % 7 === 1 ? 'WO' : d === 8 ? 'H' : (d + i) % 11 === 0 ? 'A' : (d + i) % 13 === 0 ? 'L' : (d + i) % 17 === 0 ? 'HD' : 'P';
+      if (d === 14 && e.id === 'e-8') c = '';
+      if (c === 'P') p++; if (c === 'A') a++; if (c === 'L') l++;
+      cells += '<td class="num">' + (c ? '<span class="att ' + c + '">' + c + '</span>' : '') + '</td>';
+    }
+    return '<tr><td style="white-space:nowrap">' + e.fullName + '</td>' + cells + '<td class="num"><b>' + p + '</b></td><td class="num">' + a + '</td><td class="num">' + l + '</td></tr>';
+  }).join('') + '</tbody>';
+});
+</script>
+</body>
+</html>

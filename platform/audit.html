@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audit trail · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /api/platform/v1/admin/audit-events (filters: tenant, type, outcome, from/to). Read-only.
+-->
+<body data-portal="platform" data-page="audit">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Platform</a><i data-i="chevR"></i>Audit trail</div>
+      <h1>Audit trail</h1>
+      <p>Every sign-in, configuration change and support session across tenants. Entries can’t be edited or deleted.</p>
+    </div>
+    <div class="actions"><button class="btn" id="exp"><i data-i="download"></i>Export CSV</button></div>
+  </div>
+  <div class="card">
+    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search event, actor, subject…"></div><select class="select" id="fT"></select><select class="select" id="fO"><option value="">All outcomes</option><option>SUCCESS</option><option>FAILURE</option></select><input class="input" type="date" style="width:auto" value="2026-11-01"><input class="input" type="date" style="width:auto" value="2026-11-14"></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('fT').innerHTML = UI.options({ options: DB.tenants.map(function (t) { return [t.id, t.name]; }), blank: 'All tenants' });
+  UI.table({
+    el: '#tbl', rows: DB.audit.map(function (a) { return Object.assign({ tenantName: a.tenantId ? DB.tenant(a.tenantId).name : '—' }, a); }), search: '#q', searchKeys: ['type', 'actor', 'subject', 'tenantName'], pageSize: 12,
+    filters: [{ el: '#fT', key: 'tenantId' }, { el: '#fO', key: 'outcome' }],
+    columns: [
+      { key: 'occurredAt', label: 'When', sort: true, render: function (a) { return UI.dt(a.occurredAt); } },
+      { key: 'type', label: 'Event', render: function (a) { return '<span class="mono xs">' + a.type + '</span>' + (a.attributes ? '<div class="xs muted">' + UI.esc(JSON.stringify(a.attributes)) + '</div>' : ''); } },
+      { key: 'tenantName', label: 'Tenant' },
+      { key: 'actor', label: 'Actor' },
+      { key: 'subject', label: 'Subject', render: function (a) { return UI.esc(a.subject); } },
+      { key: 'clientIp', label: 'IP', render: function (a) { return '<span class="mono xs">' + a.clientIp + '</span>'; } },
+      { key: 'outcome', label: 'Outcome', render: function (a) { return UI.badge(a.outcome); } }
+    ]
+  });
+  $('exp').addEventListener('click', function () { UI.toast('Export uses the same filters as the list', 'info'); });
+});
+</script>
+</body>
+</html>

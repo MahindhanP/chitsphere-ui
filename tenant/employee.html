@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Employee · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET …/employees/{id}; documents (POST …/documents, types ID_PROOF…OTHER, at most 5 MB); notice/exit;
+  leave balances and attendance for this employee.
+-->
+<body data-portal="tenant" data-page="employees">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="employees.html">Employees</a><i data-i="chevR"></i><span id="crumb"></span></div>
+      <div class="row" style="gap:12px"><span class="avatar lg" id="av"></span><div><h1 id="eName"></h1><p id="eSub"></p></div></div>
+    </div>
+    <div class="actions" id="acts"></div>
+  </div>
+  <div class="card"><div class="tabs" data-tabs><button data-tab="pr" class="active">Profile</button><button data-tab="lv">Leave</button><button data-tab="at">Attendance</button><button data-tab="dc">Documents</button><button data-tab="sal">Salary</button></div></div>
+  <div data-tab-panel="pr" class="active mt-4"><div class="grid g-2"><div class="card"><div class="card-head"><h3>Job</h3></div><div class="card-body" id="job"></div></div><div class="card"><div class="card-head"><h3>Personal</h3></div><div class="card-body" id="pers"></div></div></div></div>
+  <div data-tab-panel="lv" class="mt-4"><div class="card"><div class="card-head"><h3>Balances · 2026</h3><div class="tools"><button class="btn sm" id="adj">Adjust balance</button></div></div><div id="bal"></div></div></div>
+  <div data-tab-panel="at" class="mt-4"><div class="card"><div class="card-head"><h3>November 2026</h3></div><div class="card-body"><div class="row wrap" id="month" style="gap:4px"></div></div></div></div>
+  <div data-tab-panel="dc" class="mt-4"><div class="card"><div class="card-head"><h3>Documents</h3><div class="tools"><button class="btn sm primary" id="upl"><i data-i="upload"></i>Upload</button></div></div><div id="docs"></div></div></div>
+  <div data-tab-panel="sal" class="mt-4"><div class="card"><div class="card-body" id="sal"></div></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var e = DB.employee(UI.param('id') || 'e-6') || DB.employees[0];
+  document.title = e.fullName + ' · Employees';
+  $('crumb').textContent = e.fullName; $('eName').textContent = e.fullName; $('av').textContent = UI.initials(e.fullName); $('av').style.cssText = 'width:48px;height:48px';
+  $('eSub').innerHTML = '<span class="mono">' + e.code + '</span> · ' + DB.desig(e.designationId) + ' · ' + DB.branchName(e.branchId) + ' · ' + UI.badge(e.status);
+  $('acts').innerHTML = e.status === 'EXITED' ? '' : '<button class="btn" id="edit">' + UI.icon('edit') + 'Edit</button>' + (e.status === 'ACTIVE' ? '<button class="btn" id="notice">' + UI.icon('flag') + 'Record notice</button>' : '') + '<button class="btn danger-ghost" id="exit">' + UI.icon('logout') + 'Exit</button>';
+  var m = e.membershipId && DB.membership(e.membershipId);
+  $('job').innerHTML = UI.kv([['Branch', DB.branchName(e.branchId)], ['Department', DB.dept(e.departmentId)], ['Designation', DB.desig(e.designationId)], ['Reports to', e.managerEmployeeId ? DB.empName(e.managerEmployeeId) : null], ['Employment', UI.human(e.employmentType)], ['Joined', UI.date(e.joinedOn)], ['Last working day', e.lastWorkingDay ? UI.date(e.lastWorkingDay) : e.exitedOn ? UI.date(e.exitedOn) : null], ['Sign-in', m ? UI.esc(m.email) + ' · ' + UI.human(m.role) : 'Not linked to a member']]);
+  $('pers').innerHTML = UI.kv([['Email', UI.esc(e.email)], ['Phone', UI.esc(e.phone)], ['Date of birth', e.dateOfBirth ? UI.date(e.dateOfBirth) : null], ['Gender', e.gender ? UI.human(e.gender) : null], ['Blood group', e.bloodGroup], ['Address', null], ['Emergency contact', null]]);
+  UI.table({ el: '#bal', rows: DB.balancesFor(e.id), columns: [{ key: 'leaveTypeName', label: 'Leave type', render: function (b) { return b.leaveTypeName + ' <span class="mono xs muted">' + b.leaveTypeCode + '</span>'; } }, { key: 'granted', label: 'Granted', num: true }, { key: 'adjusted', label: 'Adjusted', num: true }, { key: 'used', label: 'Used', num: true }, { key: 'pending', label: 'Pending', num: true }, { key: 'available', label: 'Available', num: true, render: function (b) { return '<b>' + b.available + '</b>'; } }] });
+  var codes = ['P', 'P', 'P', 'P', 'P', 'WO', 'P', 'H', 'P', 'P', 'HD', 'P', 'A', 'WO'];
+  $('month').innerHTML = codes.map(function (c, i) { return '<div style="text-align:center"><div class="xs muted">' + (i + 1) + '</div><span class="att ' + c + '">' + c + '</span></div>'; }).join('');
+  var docs = [{ type: 'ID_PROOF', name: 'aadhaar.pdf', size: '412 KB', uploadedAt: '2023-04-03T09:00:00Z' }, { type: 'OFFER_LETTER', name: 'offer-letter.pdf', size: '188 KB', uploadedAt: '2023-03-28T09:00:00Z' }];
+  UI.table({ el: '#docs', rows: docs, columns: [{ key: 'type', label: 'Type', render: function (d) { return UI.human(d.type); } }, { key: 'name', label: 'File' }, { key: 'size', label: 'Size' }, { key: 'uploadedAt', label: 'Uploaded', render: function (d) { return UI.date(d.uploadedAt); } }, { key: 'x', label: '', render: function () { return '<button class="icon-btn sm" aria-label="Download">' + UI.icon('download') + '</button>'; } }] });
+  var s = DB.salaryStructures.filter(function (x) { return x.employeeId === e.id; })[0];
+  $('sal').innerHTML = s ? UI.kv([['Effective from', UI.date(s.effectiveFrom)], ['Basic', UI.inr(s.basic)], ['HRA', UI.inr(s.hra)], ['Allowances', UI.inr(s.allowances)], ['Monthly gross', '<b>' + UI.inr(s.monthlyGross) + '</b>'], ['Fixed deductions', UI.inr(s.fixedDeductions)], ['Provident fund', s.pfApplicable ? 'Applicable' : 'Not applicable']]) + '<a class="btn sm mt-4" href="salaries.html">Salary structures</a>' : '<div class="empty"><b>No salary structure</b>This employee is skipped in payroll runs.</div>';
+  $('upl').addEventListener('click', function () { UI.dialog({ title: 'Upload document', icon: 'upload', ok: 'Upload', api: 'POST …/employees/{id}/documents (multipart, max 5 MB)', done: 'Document uploaded', fields: [{ id: 'type', label: 'Type', type: 'select', req: true, enum: 'DocumentType', span: 2 }, { html: '<label class="dropzone" style="display:block"><input type="file" hidden><b>Choose a file</b><span>PDF or image, up to 5 MB</span></label>', span: 2 }] }); });
+  $('adj').addEventListener('click', function () { UI.dialog({ title: 'Adjust leave balance', api: 'POST …/leave/adjustments', done: 'Balance adjusted', fields: [{ id: 'leaveTypeId', label: 'Leave type', type: 'select', req: true, options: DB.leaveTypes.filter(function (t) { return t.tracksBalance; }).map(function (t) { return [t.id, t.name]; }) }, { id: 'days', label: 'Days (+/-)', type: 'number', req: true, step: 0.5 }, { id: 'reason', label: 'Reason', type: 'textarea', req: true, span: 2 }] }); });
+  var ed = $('edit'); if (ed) ed.addEventListener('click', function () { location.href = 'employees.html?edit=' + e.id; });
+  var nt = $('notice'); if (nt) nt.addEventListener('click', function () { UI.dialog({ title: 'Record notice', icon: 'flag', api: 'POST …/employees/{id}/notice', done: 'Notice recorded · status ON_NOTICE', fields: [{ id: 'noticeOn', label: 'Notice given on', type: 'date', req: true, value: '2026-11-14' }, { id: 'lastWorkingDay', label: 'Last working day', type: 'date', req: true }, { id: 'reason', label: 'Reason', type: 'textarea', span: 2 }] }); });
+  var ex = $('exit'); if (ex) ex.addEventListener('click', function () { UI.dialog({ title: 'Exit ' + e.fullName, danger: true, ok: 'Record exit', api: 'POST …/employees/{id}/exit', done: 'Employee exited', text: 'They are left out of future payroll runs. Their linked sign-in is not removed; disable it from Members if needed.', fields: [{ id: 'exitedOn', label: 'Exit date', type: 'date', req: true }, { id: 'reason', label: 'Reason', type: 'textarea', span: 2 }] }); });
+});
+</script>
+</body>
+</html>

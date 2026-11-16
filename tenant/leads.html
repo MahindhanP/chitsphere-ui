@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leads · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  /api/crm/v1/tenants/{tenantId}/leads: list, POST {branchId, name, phone, email, company, source, interest, expectedValue,
+  notes, assignedTo}, PUT, PATCH …/status (NEW→CONTACTED→QUALIFIED→WON; any open lead → LOST with lostReason),
+  PATCH …/assignee, GET …/export (CSV).
+-->
+<body data-portal="tenant" data-page="leads">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>CRM<i data-i="chevR"></i>Leads</div>
+      <h1>Leads</h1>
+      <p>Prospective subscribers, from first contact to enrolment.</p>
+    </div>
+    <div class="actions"><button class="btn" id="exp"><i data-i="download"></i>Export</button><button class="btn primary" id="add"><i data-i="plus"></i>New lead</button></div>
+  </div>
+  <div class="card">
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search name, phone, company…"></div>
+      <div class="segmented" data-seg id="fSt"><button class="active" data-v="">All</button></div>
+      <select class="select" id="fSrc"></select><select class="select" id="fBr"></select>
+    </div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('fSt').innerHTML += DB.ENUM.LeadStatus.map(function (s) { return '<button data-v="' + s + '">' + UI.human(s) + ' <span class="xs muted">' + DB.leads.filter(function (l) { return l.status === s; }).length + '</span></button>'; }).join('');
+  $('fSrc').innerHTML = UI.options({ enum: 'LeadSource', blank: 'All sources' });
+  var brs = DB.branches.filter(function (b) { return b.status === 'ACTIVE'; }).map(function (b) { return [b.id, b.name]; });
+  $('fBr').innerHTML = UI.options({ options: brs, blank: 'All branches' });
+  UI.table({ el: '#tbl', rows: DB.leads, search: '#q', searchKeys: ['name', 'phone', 'company', 'email', 'interest'], filters: [{ el: '#fSt', key: 'status' }, { el: '#fSrc', key: 'source' }, { el: '#fBr', key: 'branchId' }],
+    onRow: function (l) { location.href = 'lead.html?id=' + l.id; },
+    columns: [
+      { key: 'name', label: 'Lead', sort: true, render: function (l) { return UI.ent(l.name, UI.esc(l.phone) + (l.company ? ' · ' + UI.esc(l.company) : '')); } },
+      { key: 'interest', label: 'Interest', render: function (l) { return UI.esc(l.interest) + '<div class="xs muted">' + (l.expectedValue ? UI.inrShort(l.expectedValue) : 'No value yet') + '</div>'; } },
+      { key: 'source', label: 'Source', render: function (l) { return UI.human(l.source); } },
+      { key: 'assigneeName', label: 'Owner', render: function (l) { return l.assigneeName || '<span class="badge warning">Unassigned</span>'; } },
+      { key: 'nextFollowUpAt', label: 'Next follow-up', sort: true, render: function (l) { return l.nextFollowUpAt ? (l.nextFollowUpAt < DB.NOW ? '<span style="color:var(--danger)">' + UI.dt(l.nextFollowUpAt) + '</span>' : UI.dt(l.nextFollowUpAt)) : '—'; } },
+      { key: 'status', label: 'Status', render: function (l) { return UI.badge(l.status); } }] });
+  $('add').addEventListener('click', function () {
+    UI.dialog({ drawer: true, wide: true, title: 'New lead', icon: 'target', api: 'POST /api/crm/v1/tenants/{tenantId}/leads', done: 'Lead created as NEW',
+      fields: [{ id: 'name', label: 'Name', req: true }, { id: 'phone', label: 'Phone', type: 'tel', req: true }, { id: 'email', label: 'Email', type: 'email' }, { id: 'company', label: 'Company' },
+        { id: 'branchId', label: 'Branch', type: 'select', req: true, options: brs, blank: 'Select' }, { id: 'source', label: 'Source', type: 'select', req: true, enum: 'LeadSource' },
+        { id: 'interest', label: 'Interested in', span: 2, placeholder: 'e.g. Swarna 5L monthly group' }, { id: 'expectedValue', label: 'Expected value (₹)', type: 'number', min: 0 },
+        { id: 'assignedTo', label: 'Assign to', type: 'select', options: DB.memberships.filter(function (m) { return m.status === 'ACTIVE'; }).map(function (m) { return [m.id, m.fullName]; }), blank: 'Unassigned' }, { id: 'notes', label: 'Notes', type: 'textarea', span: 2 }] });
+  });
+  $('exp').addEventListener('click', function () { UI.toast('Exporting leads with current filters (GET …/leads/export)', 'info'); });
+});
+</script>
+</body>
+</html>

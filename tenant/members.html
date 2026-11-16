@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Members · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  /api/platform/v1/tenants/{tenantId}/memberships: list, invite (POST), PATCH …/status, PATCH …/role,
+  PUT …/roles {roleIds}, PUT …/branches {scope TENANT|BRANCHES, branchIds}, POST …/unlock.
+  Role = access level (Owner/Admin/User); tenant roles = what a User can do; branch scope = where.
+-->
+<body data-portal="tenant" data-page="members">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Settings<i data-i="chevR"></i>Members</div>
+      <h1>Members</h1>
+      <p>People who can sign in to Sri Venkata Chits. <b id="usage"></b></p>
+    </div>
+    <div class="actions"><a class="btn" href="roles.html"><i data-i="key"></i>Roles</a><button class="btn primary" id="invite"><i data-i="plus"></i>Invite member</button></div>
+  </div>
+  <div class="card">
+    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search name or email…"></div><select class="select" id="fRole"></select><select class="select" id="fStatus"></select><select class="select" id="fBranch"></select></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var lim = DB.entitlement.limits.filter(function (l) { return l.id === 'platform.user.max'; })[0];
+  $('usage').textContent = lim.used + ' of ' + lim.limit + ' users on your plan.';
+  $('fRole').innerHTML = UI.options({ enum: 'TenantRole', blank: 'All access levels' });
+  $('fStatus').innerHTML = UI.options({ enum: 'MembershipStatus', blank: 'All statuses' });
+  var active = DB.branches.filter(function (b) { return b.status === 'ACTIVE'; });
+  $('fBranch').innerHTML = UI.options({ options: active.map(function (b) { return [b.id, b.name]; }), blank: 'All branches' });
+  var rows = DB.memberships.map(function (m) { return Object.assign({ br: m.branchScope === 'TENANT' ? active.map(function (b) { return b.id; }).join(' ') : m.branchIds.join(' ') }, m); });
+  var t = UI.table({
+    el: '#tbl', rows: rows, search: '#q', searchKeys: ['fullName', 'email', 'phone'], pageSize: 10, filters: [{ el: '#fRole', key: 'role' }, { el: '#fStatus', key: 'status' }],
+    onRow: function (m) { edit(m); },
+    columns: [
+      { key: 'fullName', label: 'Member', sort: true, render: function (m) { return UI.ent(m.fullName, UI.esc(m.email)); } },
+      { key: 'role', label: 'Access', render: function (m) { return '<span class="badge ' + (m.role === 'TENANT_USER' ? 'outline' : 'primary') + '">' + UI.human(m.role) + '</span>'; } },
+      { key: 'roleIds', label: 'Roles', render: function (m) { return m.role !== 'TENANT_USER' ? '<span class="xs muted">Everything</span>' : m.roleIds.map(function (r) { return '<span class="badge outline">' + DB.role(r).name + '</span>'; }).join(' ') || '<span class="xs muted">None</span>'; } },
+      { key: 'branchScope', label: 'Branches', render: function (m) { return m.branchScope === 'TENANT' ? 'All branches' : m.branchIds.map(function (b) { return DB.branch(b).code; }).join(', '); } },
+      { key: 'status', label: 'Status', render: function (m) { return m.userStatus === 'PENDING_ACTIVATION' ? UI.badge('PENDING_ACTIVATION') : m.lockedUntil ? UI.badge('LOCKED') : UI.badge(m.status); } },
+      { key: 'lastLoginAt', label: 'Last sign-in', sort: true, render: function (m) { return UI.dt(m.lastLoginAt); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function (m) {
+        return m.id === 'm-ravi' ? '<span class="xs muted">You</span>' : UI.rowMenu('rm_' + m.id, [['edit', 'Roles & branches', false, 'key'], ['role', 'Change access level', false, 'userCog'], m.lockedUntil ? ['unlock', 'Unlock', false, 'unlock'] : null,
+          m.userStatus === 'PENDING_ACTIVATION' ? ['resend', 'Resend activation email', false, 'mail'] : null, ['status', m.status === 'ACTIVE' ? 'Disable' : 'Enable', m.status === 'ACTIVE', 'x']]); } }
+    ]
+  });
+  $('fBranch').addEventListener('change', function () { var v = this.value; t.state.q = ''; var rowsF = v ? rows.filter(function (r) { return r.br.indexOf(v) > -1; }) : rows; UI.toast(rowsF.length + ' members can see this branch', 'info'); });
+
+  var roleOpts = DB.roles.filter(function (r) { return r.status === 'ACTIVE'; }).map(function (r) { return [r.id, r.name + ' <span class="xs muted">' + UI.esc(r.description) + '</span>']; });
+  var brOpts = active.map(function (b) { return [b.id, b.name + ' <span class="mono xs muted">' + b.code + '</span>']; });
+  function scopeSync(el) {
+    var s = el.querySelector('#branchScope'); function f() { el.querySelector('#branchIds').closest('.field').classList.toggle('hidden', s.value !== 'BRANCHES'); }
+    s.addEventListener('change', f); f();
+  }
+  $('invite').addEventListener('click', function () {
+    UI.dialog({ drawer: true, wide: true, title: 'Invite member', icon: 'user', api: 'POST /api/platform/v1/tenants/{tenantId}/memberships', ok: 'Send invitation', done: 'Invitation sent · activation link valid for 30 minutes',
+      text: 'If the email already has a ChitSphere account (in another organisation), they are added straight away. Otherwise they get an activation email.',
+      fields: [{ id: 'fullName', label: 'Full name', req: true }, { id: 'email', label: 'Email', type: 'email', req: true }, { id: 'phone', label: 'Phone', type: 'tel' },
+        { id: 'role', label: 'Access level', type: 'select', enum: 'TenantRole', value: 'TENANT_USER', hint: 'Owner and Admin can do everything. Users get only their roles.' },
+        { id: 'roleIds', label: 'Roles', type: 'checks', span: 2, options: roleOpts },
+        { id: 'branchScope', label: 'Branch access', type: 'select', enum: 'BranchScope', value: 'BRANCHES' }, { id: 'branchIds', label: 'Branches', type: 'checks', span: 2, options: brOpts }],
+      onOpen: scopeSync });
+  });
+  function edit(m) {
+    if (m.id === 'm-ravi') return;
+    UI.dialog({ drawer: true, wide: true, title: m.fullName, sub: m.email, icon: 'key', api: 'PUT …/memberships/{id}/roles  ·  PUT …/memberships/{id}/branches', ok: 'Save', done: 'Access updated',
+      html: m.role !== 'TENANT_USER' ? '<div class="alert info mb-4">' + UI.icon('info') + '<div><b>' + UI.human(m.role) + '</b>Owners and Admins can do everything, so roles don’t apply. Branch access still limits where they work.</div></div>' : '',
+      fields: [{ id: 'roleIds', label: 'Roles', type: 'checks', span: 2, options: roleOpts, value: m.roleIds }, { id: 'branchScope', label: 'Branch access', type: 'select', enum: 'BranchScope', value: m.branchScope }, { id: 'branchIds', label: 'Branches', type: 'checks', span: 2, options: brOpts, value: m.branchIds }],
+      onOpen: scopeSync });
+  }
+  UI.onAct(function (act, id) {
+    var m = DB.membership(id);
+    if (act === 'edit') edit(m);
+    if (act === 'role') UI.dialog({ title: 'Change access level', sub: m.fullName, api: 'PATCH …/memberships/{id}/role', done: 'Access level changed', fields: [{ id: 'role', label: 'Access level', type: 'select', enum: 'TenantRole', value: m.role, span: 2, hint: 'A tenant must always keep at least one active Owner.' }] });
+    if (act === 'unlock') UI.confirm('Unlock ' + m.fullName + '?', 'Locked after 5 failed sign-ins until ' + UI.dt(m.lockedUntil) + '. Unlocking lets them try again now.', { ok: 'Unlock', api: 'POST …/memberships/{id}/unlock', done: 'Unlocked' });
+    if (act === 'resend') UI.confirm('Resend activation email?', 'Sends a new link to ' + m.email + ' (valid once, for 30 minutes).', { ok: 'Send', done: 'Activation email sent' });
+    if (act === 'status') UI.confirm((m.status === 'ACTIVE' ? 'Disable ' : 'Enable ') + m.fullName + '?', m.status === 'ACTIVE' ? 'They can’t sign in to Sri Venkata Chits any more. Other organisations they belong to are not affected.' : 'They can sign in again with their existing roles.', { danger: m.status === 'ACTIVE', api: 'PATCH …/memberships/{id}/status', done: 'Membership updated' });
+  });
+});
+</script>
+</body>
+</html>

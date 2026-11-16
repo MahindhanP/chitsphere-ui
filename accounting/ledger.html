@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accounts & parties · Accounting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET/POST /accounts {code, name, type, parentId, postable, requiresParty, requiresSegment, cash}, PUT /accounts/{id} (rename, flags, status);
+  GET/POST /segments {kind, code, name, externalRef}, POST /segments/{id}/close (WALLET is created with the book);
+  GET/POST /parties {kind, displayName, role, pan, gstin, phone, email}, PUT /parties/{id},
+  POST /parties/{id}/accounts {role, kind, code, name, segmentId, ticketNo, ticketRole, externalRef}.
+-->
+<body data-portal="auto" data-page="acc-ledger">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a class="home" href="#">Home</a><i data-i="chevR"></i>Accounting<i data-i="chevR"></i>Accounts & parties</div>
+      <h1>Accounts & parties</h1>
+      <p id="sub"></p>
+    </div>
+    <div class="actions" id="acts"></div>
+  </div>
+  <div class="card"><div class="tabs" data-tabs><button data-tab="ac" class="active">Chart of accounts</button><button data-tab="sg">Segments</button><button data-tab="pt">Parties</button></div></div>
+  <div data-tab-panel="ac" class="active mt-4"><div class="card"><div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="qa" placeholder="Search code or name…"></div><select class="select" id="fTy"></select></div><div id="ac"></div></div></div>
+  <div data-tab-panel="sg" class="mt-4"><div class="card"><div class="toolbar"><select class="select" id="fKind"></select><button class="btn primary ml-auto" id="addS"><i data-i="plus"></i>New segment</button></div><div id="sg"></div></div></div>
+  <div data-tab-panel="pt" class="mt-4"><div class="card"><div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="qp" placeholder="Search name, PAN, GSTIN…"></div><button class="btn primary ml-auto" id="addP"><i data-i="plus"></i>New party</button></div><div id="pt"></div></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); }, A = UI.acc();
+  document.querySelectorAll('.home').forEach(function (a) { a.href = A.home; });
+  $('sub').innerHTML = UI.esc(A.book.name) + ' · started from the <b>' + UI.human(A.book.template) + '</b> chart';
+  $('acts').innerHTML = '<button class="btn primary" id="addA">' + UI.icon('plus') + 'New account</button>';
+  var depth = function (a) { var d = 0, p = a; while (p && p.parentId) { d++; p = DB.accounts.find(function (x) { return x.id === p.parentId; }); } return d; };
+  var flags = function (a) { return [a.cash && 'Cash/bank', a.requiresParty && 'Needs party', a.requiresSegment && 'Needs segment', a.roleCode && 'Role ' + a.roleCode].filter(Boolean).map(function (f) { return '<span class="badge">' + f + '</span>'; }).join(' '); };
+  $('fTy').innerHTML = UI.options({ enum: 'AccountType', blank: 'All types' });
+  UI.table({ el: '#ac', rows: DB.accounts, search: '#qa', searchKeys: ['code', 'name'], filters: [{ el: '#fTy', key: 'type' }], pageSize: 50, columns: [
+    { key: 'code', label: 'Account', render: function (a) { return '<div style="padding-left:' + depth(a) * 20 + 'px">' + (a.postable ? '' : UI.icon('book', 'sm') + ' ') + '<b class="mono">' + a.code + '</b> ' + (a.postable ? UI.esc(a.name) : '<b>' + UI.esc(a.name) + '</b>') + '</div>'; } },
+    { key: 'type', label: 'Type', render: function (a) { return UI.human(a.type); } },
+    { key: 'flags', label: 'Rules', render: flags },
+    { key: 'balance', label: 'Balance', num: true, render: function (a) { return a.postable ? UI.inr(a.balance) : ''; } },
+    { key: 'status', label: 'Status', render: function (a) { return UI.badge(a.status); } },
+    { key: 'x', label: '', render: function (a) { return UI.rowMenu('rm_' + a.id, [['edit', 'Edit', false, 'edit'], [a.status === 'ACTIVE' ? 'off' : 'on', a.status === 'ACTIVE' ? 'Deactivate' : 'Activate', a.status === 'ACTIVE', a.status === 'ACTIVE' ? 'x' : 'check']]); } }] });
+  var acFields = function (isNew) { return [
+    { id: 'code', label: 'Code', req: true, mono: true, pattern: '[0-9A-Z.-]{1,20}', readonly: !isNew, hint: isNew ? 'Digits or capitals, unique in this book' : 'Codes never change' }, { id: 'name', label: 'Name', req: true },
+    { id: 'type', label: 'Type', type: 'select', req: true, enum: 'AccountType', disabled: !isNew }, { id: 'parentId', label: 'Group under', type: 'select', options: DB.accounts.filter(function (a) { return !a.postable; }).map(function (a) { return [a.id, a.code + ' ' + a.name]; }), blank: 'Top level', disabled: !isNew },
+    { id: 'postable', label: 'Vouchers can post here', type: 'switch', value: true, hint: 'Off for group headings' }, { id: 'cash', label: 'Cash or bank account', type: 'switch' },
+    { id: 'requiresParty', label: 'Every line needs a party account', type: 'switch' }, { id: 'requiresSegment', label: 'Every line needs a segment', type: 'switch' }]; };
+  $('addA').addEventListener('click', function () { UI.dialog({ title: 'New account', icon: 'book', api: 'POST ' + A.base + '/accounts', done: 'Account added', fields: acFields(true) }); });
+
+  $('fKind').innerHTML = UI.options({ enum: 'SegmentKind', blank: 'All kinds' });
+  var segRows = DB.segments.map(function (s) { return Object.assign({}, s, DB.segmentRows.find(function (r) { return r.segmentId === s.id; }) || {}); });
+  UI.table({ el: '#sg', rows: segRows, filters: [{ el: '#fKind', key: 'kind' }], columns: [
+    { key: 'code', label: 'Segment', render: function (s) { return '<b class="mono">' + s.code + '</b><div class="xs muted">' + UI.esc(s.name) + '</div>'; } },
+    { key: 'kind', label: 'Kind', render: function (s) { return UI.human(s.kind) + (s.kind === 'WALLET' ? '<div class="xs muted">System segment</div>' : ''); } },
+    { key: 'externalRef', label: 'Linked to', render: function (s) { return s.externalRef ? '<a href="../tenant/group-view.html?id=' + s.externalRef + '">Chit group</a>' : '—'; } },
+    { key: 'profit', label: 'Profit to date', num: true, render: function (s) { return s.profit != null ? UI.inr(s.profit) : '—'; } },
+    { key: 'transferable', label: 'Transferable', num: true, render: function (s) { return s.transferable != null ? UI.inr(s.transferable) : '—'; } },
+    { key: 'status', label: 'Status', render: function (s) { return UI.badge(s.status) + (s.closedAt ? '<div class="xs muted">' + UI.date(s.closedAt) + '</div>' : ''); } },
+    { key: 'x', label: '', render: function (s) { return s.status === 'ACTIVE' && s.kind !== 'WALLET' ? '<button class="btn sm" data-act="closeSeg" data-id="' + s.id + '">Close</button>' : ''; } }] });
+  $('addS').addEventListener('click', function () { UI.dialog({ title: 'New segment', icon: 'chart', api: 'POST ' + A.base + '/segments', done: 'Segment created', text: 'A segment keeps the books of one chit group, project or product line apart. Chit groups get theirs automatically when they start.', fields: [{ id: 'kind', label: 'Kind', type: 'select', req: true, options: [['PROJECT', 'Project'], ['PRODUCT_LINE', 'Product line'], ['CHIT_GROUP', 'Chit group']] }, { id: 'code', label: 'Code', req: true, mono: true }, { id: 'name', label: 'Name', req: true, span: 2 }, { id: 'externalRef', label: 'External reference', span: 2 }] }); });
+
+  var pRows = DB.parties.map(function (p) { return Object.assign({ ids: [p.pan, p.gstin].filter(Boolean).join(' ') }, p); });
+  UI.table({ el: '#pt', rows: pRows, search: '#qp', searchKeys: ['displayName', 'ids', 'phone'], columns: [
+    { key: 'displayName', label: 'Party', render: function (p) { return UI.ent(p.displayName, UI.human(p.kind) + (p.phone ? ' · ' + UI.esc(p.phone) : '')); } },
+    { key: 'ids', label: 'PAN / GSTIN', render: function (p) { return '<span class="mono small">' + (p.ids || '—') + '</span>'; } },
+    { key: 'accounts', label: 'Party accounts', render: function (p) { return p.accounts.map(function (x) { return '<div class="small"><span class="mono">' + x.code + '</span> <span class="xs muted">' + UI.human(x.kind) + (x.ticketRole ? ' · ' + UI.human(x.ticketRole) : '') + '</span></div>'; }).join(''); } },
+    { key: 'status', label: 'Status', render: function (p) { return UI.badge(p.status); } },
+    { key: 'x', label: '', render: function (p) { return '<button class="btn sm" data-act="addPa" data-id="' + p.id + '">' + UI.icon('plus', 'sm') + 'Account</button>'; } }] });
+  $('addP').addEventListener('click', function () { UI.dialog({ drawer: true, title: 'New party', icon: 'users', api: 'POST ' + A.base + '/parties', done: 'Party created', text: 'Vendors, employees and customers get their party account straight away. Chit members get one per ticket.', fields: [
+    { id: 'displayName', label: 'Name', req: true, span: 2 }, { id: 'kind', label: 'Kind', type: 'select', req: true, enum: 'PartyKind' }, { id: 'role', label: 'Role', type: 'select', req: true, enum: 'PartyRole' },
+    { id: 'pan', label: 'PAN', mono: true, pattern: '[A-Z]{5}[0-9]{4}[A-Z]', err: 'Like ABCDE1234F' }, { id: 'gstin', label: 'GSTIN', mono: true, pattern: '[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]', err: '15-character GSTIN' },
+    { id: 'phone', label: 'Phone', type: 'tel' }, { id: 'email', label: 'Email', type: 'email' }] }); });
+
+  UI.onAct(function (act, id) {
+    var ac = DB.accounts.find(function (a) { return a.id === id; });
+    if (act === 'edit') UI.dialog({ title: 'Edit ' + ac.code, record: ac, api: 'PUT ' + A.base + '/accounts/{accountId}', done: 'Account saved', fields: acFields(false) });
+    if (act === 'off') UI.confirm('Deactivate ' + ac.code + '?', 'New vouchers can no longer use it. Its balance and history stay.', { ok: 'Deactivate', danger: true, api: 'PUT ' + A.base + '/accounts/{accountId} {status: INACTIVE}', done: 'Account deactivated' });
+    if (act === 'on') UI.confirm('Activate ' + ac.code + '?', 'Vouchers can use it again.', { ok: 'Activate', api: 'PUT ' + A.base + '/accounts/{accountId} {status: ACTIVE}', done: 'Account activated' });
+    if (act === 'closeSeg') { var s = DB.segment(id); UI.confirm('Close ' + s.code + '?', 'Closing needs a zero balance on every account in this segment. Closed segments take no new postings.', { ok: 'Close segment', danger: true, api: 'POST ' + A.base + '/segments/{segmentId}/close', done: 'Segment closed' }); }
+    if (act === 'addPa') { var p = DB.parties.find(function (x) { return x.id === id; }); UI.dialog({ title: 'Add party account · ' + p.displayName, icon: 'plus', api: 'POST ' + A.base + '/parties/{partyId}/accounts', done: 'Party account added', fields: [
+      { id: 'role', label: 'Role', type: 'select', req: true, enum: 'PartyRole' }, { id: 'kind', label: 'Kind', type: 'select', req: true, enum: 'PartyAccountKind' },
+      { id: 'segmentId', label: 'Segment (tickets)', type: 'select', options: DB.segments.filter(function (s) { return s.kind === 'CHIT_GROUP' && s.status === 'ACTIVE'; }).map(function (s) { return [s.id, s.code]; }), blank: '—' },
+      { id: 'ticketNo', label: 'Ticket no.', type: 'number', min: 1, max: 1000 }, { id: 'ticketRole', label: 'Ticket role', type: 'select', enum: 'TicketRole', blank: '—' }, { id: 'code', label: 'Code', mono: true, hint: 'Left blank, the server makes one' }] }); }
+  });
+});
+</script>
+</body>
+</html>

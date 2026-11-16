@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support access · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  Support elevations: time-limited read access of a support engineer to one tenant.
+  POST /api/platform/v1/admin/support-elevations {tenantId, reason 10-500, minutes 5-240}; POST …/{id}/end.
+  Every elevation is written to the tenant's own audit trail.
+-->
+<body data-portal="platform" data-page="support">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Platform</a><i data-i="chevR"></i>Support access</div>
+      <h1>Support access</h1>
+      <p>Time-limited, audited read access to a tenant’s workspace, for platform support staff.</p>
+    </div>
+    <div class="actions"><button class="btn primary" id="start"><i data-i="shield"></i>Start session</button></div>
+  </div>
+  <div class="grid g-3" id="active"></div>
+  <div class="card mt-4">
+    <div class="card-head"><h3>All sessions</h3><div class="tools"><div class="segmented" data-seg id="fAct"><button class="active" data-v="">All</button><button data-v="true">Active</button></div></div></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var rows = DB.elevations.map(function (e) { return Object.assign({ tenantName: DB.tenant(e.tenantId).name, staff: DB.staffName(e.staffUserId), act: String(e.active) }, e); });
+  $('active').innerHTML = rows.filter(function (e) { return e.active; }).map(function (e) {
+    return '<div class="card"><div class="card-body stack"><div class="row between"><b>' + e.tenantName + '</b>' + UI.badge('ACTIVE') + '</div><div class="small">' + UI.esc(e.reason) + '</div><div class="xs muted">' + e.staff + ' · ' + UI.dt(e.startsAt) + ' → ' + UI.dt(e.expiresAt) + '</div><button class="btn sm danger-ghost" data-act="end" data-id="' + e.id + '">End now</button></div></div>';
+  }).join('') || '<div class="card"><div class="empty">No active sessions</div></div>';
+  UI.table({
+    el: '#tbl', rows: rows, filters: [{ el: '#fAct', key: 'act' }],
+    columns: [
+      { key: 'tenantName', label: 'Tenant', render: function (e) { return '<a href="tenant-view.html?id=' + e.tenantId + '">' + e.tenantName + '</a>'; } },
+      { key: 'staff', label: 'Support engineer' },
+      { key: 'reason', label: 'Reason', render: function (e) { return UI.esc(e.reason); } },
+      { key: 'startsAt', label: 'Window', render: function (e) { return UI.dt(e.startsAt) + ' → ' + UI.dt(e.expiresAt); } },
+      { key: 'endedAt', label: 'Ended', render: function (e) { return e.endedAt ? UI.dt(e.endedAt) + ' by ' + DB.staffName(e.endedBy) : e.active ? '—' : 'Expired'; } },
+      { key: 'active', label: 'State', render: function (e) { return UI.badge(e.active ? 'ACTIVE' : e.endedAt ? 'ENDED' : 'EXPIRED'); } }
+    ]
+  });
+  $('start').addEventListener('click', function () {
+    UI.dialog({ title: 'Start support session', icon: 'shield', api: 'POST /api/platform/v1/admin/support-elevations', ok: 'Start', done: 'Session started',
+      fields: [{ id: 'tenantId', label: 'Tenant', type: 'select', req: true, span: 2, options: DB.tenants.filter(function (t) { return t.status === 'ACTIVE'; }).map(function (t) { return [t.id, t.name + ' · ' + t.code]; }), blank: 'Select a tenant' },
+        { id: 'reason', label: 'Ticket or incident reference', type: 'textarea', req: true, span: 2, err: '10–500 characters', hint: 'Recorded in the tenant’s audit trail' }, { id: 'minutes', label: 'Duration (minutes)', type: 'number', req: true, min: 5, max: 240, value: 60, err: '5–240 minutes' }],
+      onOk: function (v) { if (v.reason.trim().length < 10) { document.getElementById('reason').closest('.field').classList.add('invalid'); return false; } } });
+  });
+  UI.onAct(function (act, id) { if (act === 'end') UI.confirm('End this session now?', 'Access to the tenant stops immediately.', { danger: true, ok: 'End session', api: 'POST …/support-elevations/' + id + '/end', done: 'Session ended' }); });
+});
+</script>
+</body>
+</html>

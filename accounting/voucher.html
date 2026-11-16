@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voucher · Accounting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /journal-entries/{entryId}; PUT (DRAFT only); POST …/submit, /approve {comment?}, /reject {comment}, /return {comment} (back to DRAFT),
+  /recall (creator, while SUBMITTED), /cancel, /reverse {entryDate, reason} (POSTED only; posts an opposite entry).
+  Approval levels come from the matching approval policy; without allowSelfApproval the creator cannot approve.
+-->
+<body data-portal="auto" data-page="acc-vouchers">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a class="home" href="#">Home</a><i data-i="chevR"></i><a id="back" href="vouchers.html">Vouchers</a><i data-i="chevR"></i><span id="crumb"></span></div>
+      <h1 id="title"></h1>
+      <p id="sub"></p>
+    </div>
+    <div class="actions" id="acts"></div>
+  </div>
+  <div id="alerts"></div>
+  <div class="grid g-main-side">
+    <div class="stack-lg">
+      <div class="card"><div class="card-head"><h3>Lines</h3></div><div id="lines"></div></div>
+      <div class="card"><div class="card-head"><h3>Approval trail</h3></div><div class="list" id="trail"></div></div>
+    </div>
+    <div class="card"><div class="card-head"><h3>Details</h3></div><div class="card-body" id="det"></div></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); }, A = UI.acc();
+  document.querySelectorAll('.home').forEach(function (a) { a.href = A.home; }); $('back').href = 'vouchers.html' + A.q1;
+  var j = DB.entry(UI.param('id') || 'je-2') || DB.journal[1], ref = j.voucherNo || j.draftRef;
+  document.title = ref + ' · Vouchers'; $('crumb').textContent = ref;
+  $('title').innerHTML = '<span class="mono">' + ref + '</span>';
+  $('sub').innerHTML = UI.badge(j.status) + ' · ' + UI.human(j.voucherType) + ' · ' + UI.date(j.entryDate) + ' · ' + UI.inr(j.amount);
+  var me = 'Mahesh T', mine = j.createdBy === me || j.createdBy === 'Anusha R';
+  var a = '';
+  if (j.status === 'DRAFT') a = '<button class="btn danger-ghost" data-do="cancel">' + UI.icon('x') + 'Cancel</button><button class="btn" data-do="edit">' + UI.icon('edit') + 'Edit</button><button class="btn primary" data-do="submit">' + UI.icon('arrowR') + 'Submit for approval</button>';
+  if (j.status === 'SUBMITTED') a = '<button class="btn" data-do="recall">' + UI.icon('refresh') + 'Recall</button><button class="btn" data-do="return">Return for changes</button><button class="btn danger-ghost" data-do="reject">' + UI.icon('x') + 'Reject</button><button class="btn primary" data-do="approve">' + UI.icon('check') + 'Approve level ' + j.nextLevel + '</button>';
+  if (j.status === 'POSTED') a = '<button class="btn" data-do="reverse">' + UI.icon('refresh') + 'Reverse</button>';
+  if (j.status === 'REJECTED') a = '<button class="btn danger-ghost" data-do="cancel">' + UI.icon('x') + 'Cancel</button>';
+  $('acts').innerHTML = a;
+  var al = '';
+  if (j.status === 'SUBMITTED') al = '<div class="alert info">' + UI.icon('info') + '<div><b>Waiting for level ' + j.nextLevel + ' of ' + j.requiredLevels.length + '</b>Policy: ' + UI.esc(j.policyName) + '. ' + (A.book.allowSelfApproval ? '' : 'The person who created a voucher cannot approve it.') + '</div></div>';
+  if (j.status === 'REJECTED') { var rj = (j.approvals || []).filter(function (x) { return x.action === 'REJECT'; })[0]; al = '<div class="alert danger">' + UI.icon('x') + '<div><b>Rejected by ' + rj.actor + '</b>' + UI.esc(rj.comment) + '</div></div>'; }
+  if (j.status === 'DRAFT') al = '<div class="alert info">' + UI.icon('info') + '<div><b>Draft</b>Drafts don&#39;t change balances. The voucher number is given when it posts.</div></div>';
+  if (al) $('alerts').innerHTML = al + '<div class="mt-4"></div>';
+  var dr = 0, cr = 0;
+  $('lines').innerHTML = '<div class="table-wrap"><table class="table"><thead><tr><th>Account</th><th>Party / segment</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead><tbody>' +
+    j.lines.map(function (l) { if (l.side === 'DEBIT') dr += l.amount; else cr += l.amount; return '<tr><td>' + UI.esc(l.account) + '</td><td class="small">' + [l.party, l.segment].filter(Boolean).map(function (x) { return '<span class="mono">' + x + '</span>'; }).join(' · ') + '</td><td class="num">' + (l.side === 'DEBIT' ? UI.inr(l.amount) : '') + '</td><td class="num">' + (l.side === 'CREDIT' ? UI.inr(l.amount) : '') + '</td></tr>'; }).join('') +
+    '</tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="num"><b>' + UI.inr(dr) + '</b></td><td class="num"><b>' + UI.inr(cr) + '</b></td></tr></tfoot></table></div>';
+  var trail = (j.approvals || []).slice();
+  if (j.status === 'POSTED') trail.push({ action: 'POSTED', actor: j.postedBy, comment: j.requiredLevels.length ? 'All ' + j.requiredLevels.length + ' approval levels done' : 'No approval needed' });
+  $('trail').innerHTML = trail.length ? trail.map(function (t) { return '<div class="list-item">' + UI.icon(t.action === 'REJECT' ? 'x' : t.action === 'SUBMIT' ? 'arrowR' : 'check') + '<div style="flex:1"><b class="small">' + UI.human(t.action) + (t.level ? ' · level ' + t.level : '') + ' · ' + t.actor + '</b><div class="xs muted">' + (t.actedAt ? UI.dt(t.actedAt) : '') + (t.comment ? ' · ' + UI.esc(t.comment) : '') + '</div></div></div>'; }).join('') : '<div class="empty">Not submitted yet.</div>';
+  $('det').innerHTML = UI.kv([['Voucher no.', j.voucherNo ? '<span class="mono">' + j.voucherNo + '</span>' : 'Given on posting'], ['Draft ref', '<span class="mono">' + j.draftRef + '</span>'], ['Narration', UI.esc(j.narration)], ['Branch', A.platform ? null : DB.branchName(j.branchId)], ['Source', UI.human(j.sourceSystem)], ['Template', j.templateCode], ['Approval levels', j.requiredLevels.length ? j.requiredLevels.join(' → ') : 'None'], ['Created by', j.createdBy], ['Posted by', j.postedBy]]);
+  var B = A.base + '/journal-entries/{entryId}';
+  $('acts').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-do]'); if (!b) return; var d = b.getAttribute('data-do');
+    if (d === 'submit') UI.confirm('Submit for approval?', j.requiredLevels.length ? 'It needs ' + j.requiredLevels.length + ' approval level(s).' : 'No approval policy matches, so it posts straight away.', { ok: 'Submit', api: 'POST ' + B + '/submit', done: 'Voucher submitted' });
+    if (d === 'approve') { if (!A.book.allowSelfApproval && j.createdBy === me) { UI.toast('403 SELF_APPROVAL_NOT_ALLOWED', 'danger'); return; } UI.dialog({ title: 'Approve level ' + j.nextLevel, icon: 'check', ok: 'Approve', api: 'POST ' + B + '/approve', done: j.nextLevel === j.requiredLevels.length ? 'Approved and posted' : 'Approved. Sent to the next level.', fields: [{ id: 'comment', label: 'Comment', type: 'textarea', span: 2 }] }); }
+    if (d === 'reject') UI.dialog({ title: 'Reject voucher', danger: true, ok: 'Reject', api: 'POST ' + B + '/reject', done: 'Voucher rejected', fields: [{ id: 'comment', label: 'Reason', type: 'textarea', req: true, span: 2 }] });
+    if (d === 'return') UI.dialog({ title: 'Return for changes', icon: 'refresh', ok: 'Return', api: 'POST ' + B + '/return', done: 'Returned to draft', text: 'It goes back to the creator as a draft.', fields: [{ id: 'comment', label: 'What needs to change', type: 'textarea', req: true, span: 2 }] });
+    if (d === 'recall') UI.confirm('Recall this voucher?', 'It goes back to draft so you can change it. Approvals given so far are cleared.', { ok: 'Recall', api: 'POST ' + B + '/recall', done: 'Voucher recalled' });
+    if (d === 'cancel') UI.confirm('Cancel this voucher?', 'It stays in the list as cancelled and never posts.', { ok: 'Cancel voucher', danger: true, api: 'POST ' + B + '/cancel', done: 'Voucher cancelled' });
+    if (d === 'edit') UI.dialog({ title: 'Edit draft', record: j, api: 'PUT ' + B, done: 'Draft saved', fields: [{ id: 'entryDate', label: 'Date', type: 'date', req: true }, { id: 'voucherType', label: 'Type', type: 'select', enum: 'VoucherType' }, { id: 'narration', label: 'Narration', req: true, span: 2 }] });
+    if (d === 'reverse') UI.dialog({ title: 'Reverse voucher', icon: 'refresh', ok: 'Reverse', api: 'POST ' + B + '/reverse', done: 'Reversing entry created', text: 'A new entry swaps every debit and credit. The original stays posted.', fields: [{ id: 'entryDate', label: 'Reversal date', type: 'date', req: true, value: '2026-11-14', hint: 'Must be in an open period' }, { id: 'reason', label: 'Reason', type: 'textarea', req: true, span: 2 }] });
+  });
+});
+</script>
+</body>
+</html>

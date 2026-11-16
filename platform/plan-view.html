@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plan · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /api/platform/v1/admin/plans/{planId} (plan-detail: current, draft, versions).
+  Draft: PUT …/draft, POST …/draft (start one from the current version), POST …/draft/publish.
+  POST …/migrate-subscribers moves subscribers onto the published version. POST …/archive stops new sales.
+-->
+<body data-portal="platform" data-page="plans">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="plans.html">Plans</a><i data-i="chevR"></i><span id="crumb"></span></div>
+      <h1 id="pName"></h1>
+      <p id="pSub"></p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="renameBtn"><i data-i="edit"></i>Rename</button>
+      <button class="btn" id="migrateBtn"><i data-i="users"></i>Migrate subscribers</button>
+      <button class="btn danger-ghost" id="archiveBtn"><i data-i="trash"></i>Archive</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="tabs" data-tabs>
+      <button data-tab="cur" class="active">Published version</button>
+      <button data-tab="draft">Draft <span class="count" id="cDraft"></span></button>
+      <button data-tab="ver">Version history</button>
+      <button data-tab="subs">Subscribers</button>
+    </div>
+  </div>
+  <div data-tab-panel="cur" class="active mt-4" id="curPanel"></div>
+  <div data-tab-panel="draft" class="mt-4">
+    <div id="noDraft" class="card hidden"><div class="empty"><div class="e-ico"><i data-i="edit"></i></div><b>No draft</b>Start a draft from the published version to change modules, limits or price.<div class="mt-4"><button class="btn primary" id="startDraft">Start draft</button></div></div></div>
+    <div id="draftForm" class="hidden">
+      <div class="alert warning mb-4"><i data-i="info"></i><div><b>Editing draft version <span id="dNum"></span></b>Publishing makes it the version new subscriptions get. Existing subscribers stay on their version until migrated.</div></div>
+      <div class="grid g-main-side">
+        <div class="card"><div class="card-head"><h3>Modules</h3><div class="sub">From GET …/plans/reference</div></div><div class="card-body" id="dMods"></div></div>
+        <div class="stack-lg">
+          <div class="card"><div class="card-head"><h3>Terms</h3></div><div class="card-body" id="dTerms"></div></div>
+          <div class="card"><div class="card-head"><h3>Limits</h3><div class="sub">-1 = unlimited · empty = 0 (deny)</div></div><div class="card-body" id="dLims"></div></div>
+        </div>
+      </div>
+      <div class="sticky-foot row mt-4" style="justify-content:flex-end"><button class="btn" id="saveDraft"><i data-i="save"></i>Save draft</button><button class="btn primary" id="publish"><i data-i="send"></i>Publish</button></div>
+    </div>
+  </div>
+  <div data-tab-panel="ver" class="mt-4"><div class="card"><div id="verTbl"></div></div></div>
+  <div data-tab-panel="subs" class="mt-4"><div class="card"><div id="subTbl"></div></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var p = DB.plan(UI.param('id') || 'pl-growth') || DB.plans[1];
+  var mods = DB.planModules(p);
+  document.title = p.name + ' · Plans';
+  $('crumb').textContent = p.name; $('pName').textContent = p.name;
+  $('pSub').innerHTML = '<span class="mono">' + p.code + '</span> · ' + UI.badge(p.status) + ' · ' + (p.publishedVersion ? 'v' + p.publishedVersion + ' published' : 'never published') + ' · ' + UI.esc(p.description);
+  if (p.status === 'ARCHIVED') { $('archiveBtn').disabled = true; $('migrateBtn').disabled = true; }
+
+  function modsView(list) {
+    return DB.catalog.filter(function (c) { return !c.always && c.status !== 'DISABLED'; }).map(function (c) {
+      return '<div class="perm-group"><h4>' + c.label + '</h4>' + c.modules.map(function (m) { var on = list.indexOf(m.id) > -1; return '<div class="row between small" style="padding:3px 0"><span>' + m.label + '</span>' + (on ? UI.badge('ACTIVE') : '<span class="badge outline">Off</span>') + '</div>'; }).join('') + '</div>';
+    }).join('');
+  }
+  function limitsView(lim) { return DB.limitDefs().map(function (l) { var v = lim[l.id]; return '<div class="row between small" style="padding:4px 0"><span>' + l.label + ' <span class="mono xs muted">' + l.id + '</span></span><b>' + (v === -1 ? 'Unlimited' : v == null ? '0' : UI.num(v)) + '</b></div>'; }).join(''); }
+
+  if (p.publishedVersion) {
+    $('curPanel').innerHTML = '<div class="grid g-main-side"><div class="card"><div class="card-head"><h3>Modules · v' + p.publishedVersion + '</h3></div><div class="card-body">' + modsView(mods) + '</div></div>' +
+      '<div class="stack-lg"><div class="card"><div class="card-head"><h3>Terms</h3></div><div class="card-body">' + UI.kv([['Price', UI.inr(p.price)], ['Currency', p.currency], ['Billing cycle', UI.human(p.billingCycle)], ['Trial', p.trialDays + ' days'], ['Published', UI.date(p.versions.filter(function (v) { return v.number === p.publishedVersion; })[0].publishedAt)]]) + '</div></div>' +
+      '<div class="card"><div class="card-head"><h3>Limits</h3></div><div class="card-body">' + limitsView(p.limits) + '</div></div></div></div>';
+  } else $('curPanel').innerHTML = '<div class="card"><div class="empty"><b>Not published yet</b>Edit the draft and publish it to sell this plan.</div></div>';
+
+  var hasDraft = p.hasDraft;
+  function showDraft() {
+    $('noDraft').classList.toggle('hidden', hasDraft); $('draftForm').classList.toggle('hidden', !hasDraft);
+    $('cDraft').textContent = hasDraft ? 'v' + (p.draft ? p.draft.number : 1) : '';
+    if (!hasDraft) return;
+    $('dNum').textContent = p.draft ? p.draft.number : 1;
+    var dm = mods.concat(p.code === 'GROWTH' ? ['payroll.structure', 'payroll.run', 'payroll.disbursement', 'payroll.payslip'] : []);
+    $('dMods').innerHTML = DB.catalog.filter(function (c) { return !c.always && c.status !== 'DISABLED'; }).map(function (c) {
+      return '<div class="perm-group"><h4>' + c.label + '</h4><div class="checks">' + c.modules.map(function (m) { return '<label><input type="checkbox" value="' + m.id + '"' + (dm.indexOf(m.id) > -1 ? ' checked' : '') + '><span>' + m.label + '</span></label>'; }).join('') + '</div></div>';
+    }).join('');
+    $('dTerms').innerHTML = UI.form([{ id: 'price', label: 'Price', type: 'number', req: true, min: 0, value: p.draft ? p.draft.price : p.price }, { id: 'billingCycle', label: 'Billing cycle', type: 'select', enum: 'BillingCycle', value: p.billingCycle }, { id: 'trialDays', label: 'Trial days', type: 'number', min: 0, value: p.trialDays }, { id: 'currency', label: 'Currency', value: 'INR', readonly: true }]);
+    $('dLims').innerHTML = DB.limitDefs().map(function (l) { return '<div class="row between" style="padding:4px 0"><span class="small">' + l.label + '</span><input class="input" type="number" min="-1" style="width:110px" value="' + (p.limits[l.id] != null ? p.limits[l.id] : '') + '"></div>'; }).join('');
+  }
+  showDraft();
+  $('startDraft').addEventListener('click', function () { hasDraft = true; showDraft(); UI.toast('Draft started from v' + p.publishedVersion + ' (POST …/draft)', 'success'); });
+  $('saveDraft').addEventListener('click', function () { if (UI.validate($('dTerms'))) UI.toast('Draft saved (PUT …/draft)', 'success'); });
+  $('publish').addEventListener('click', function () {
+    UI.confirm('Publish draft v' + $('dNum').textContent + '?', 'New subscriptions get this version straight away. ' + p.subscribers + ' current subscribers stay on v' + (p.publishedVersion || '—') + ' until you migrate them.', { ok: 'Publish', icon: 'send', api: 'POST /api/platform/v1/admin/plans/' + p.code + '/draft/publish', done: 'Published' });
+  });
+  $('migrateBtn').addEventListener('click', function () {
+    UI.confirm('Migrate subscribers?', 'Moves every subscriber of ' + p.name + ' onto the published version v' + p.publishedVersion + '. Their modules and limits change immediately.', { ok: 'Migrate', icon: 'users', api: 'POST …/plans/{planId}/migrate-subscribers', done: 'Migrated 2 subscribers' });
+  });
+  $('archiveBtn').addEventListener('click', function () {
+    UI.confirm('Archive ' + p.name + '?', 'The plan can no longer be assigned. Existing subscriptions keep running.', { danger: true, ok: 'Archive', api: 'POST …/plans/{planId}/archive', done: 'Plan archived' });
+  });
+  $('renameBtn').addEventListener('click', function () {
+    UI.dialog({ title: 'Rename plan', api: 'PUT /api/platform/v1/admin/plans/{planId}', fields: [{ id: 'name', label: 'Name', req: true, value: p.name, span: 2 }, { id: 'description', label: 'Description', type: 'textarea', value: p.description, span: 2 }], done: 'Plan renamed' });
+  });
+
+  UI.table({ el: '#verTbl', rows: p.versions, columns: [{ key: 'number', label: 'Version', render: function (v) { return '<b>v' + v.number + '</b>'; } }, { key: 'status', label: 'Status', render: function (v) { return UI.badge(v.status); } }, { key: 'publishedAt', label: 'Published', render: function (v) { return UI.dt(v.publishedAt); } }, { key: 'x', label: '', render: function (v) { return '<span class="api">GET …/versions/' + v.number + '</span>'; } }] });
+  UI.table({ el: '#subTbl', rows: DB.tenants.filter(function (t) { return t.planCode === p.code; }), onRow: function (t) { location.href = 'tenant-view.html?id=' + t.id; },
+    columns: [{ key: 'name', label: 'Tenant', render: function (t) { return UI.ent(t.name, '<span class="mono">' + t.code + '</span>', null, t.color); } }, { key: 'v', label: 'On version', render: function (t) { var old = t.sub.planVersion < p.publishedVersion; return 'v' + t.sub.planVersion + (old ? ' <span class="badge warning">Older</span>' : ''); } }, { key: 's', label: 'Subscription', render: function (t) { return UI.badge(t.sub.status); } }] });
+});
+</script>
+</body>
+</html>

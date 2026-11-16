@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tenant details · ChitSphere Platform</title>
+  <title>Tenant · ChitSphere Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
@@ -11,174 +11,203 @@
   <link rel="stylesheet" href="../assets/css/theme.css">
   <link rel="stylesheet" href="../assets/css/app.css">
 </head>
+<!--
+  GET /api/platform/v1/admin/tenants/{id} (tenant overview: tenant, currentSubscription, entitlements,
+  memberCount, subscriptionHistory) plus /overrides, /memberships, /branches, /provisioning.
+  Any tenant status other than ACTIVE revokes every session of the tenant.
+-->
 <body data-portal="platform" data-page="tenants">
 <main class="content">
-  <div class="crumbs"><a href="tenants.html">Tenants</a><i data-i="chevR"></i><span id="crumbName"></span></div>
-
-  <div class="card mb-4">
-    <div class="card-body row wrap" style="gap:18px;align-items:center">
-      <span class="avatar xl" id="tAvatar"></span>
-      <div style="flex:1;min-width:240px">
-        <div class="row wrap"><h1 id="tName"></h1><span id="tStatus"></span></div>
-        <div class="row wrap small muted mt-1" style="gap:14px">
-          <span class="row" style="gap:5px"><i data-i="ticket" class="sm"></i><span id="tId"></span></span>
-          <span class="row" style="gap:5px"><i data-i="pin" class="sm"></i><span id="tCity"></span></span>
-          <span class="row" style="gap:5px"><i data-i="globe" class="sm"></i><span id="tUrl"></span></span>
-          <span class="row" style="gap:5px"><i data-i="calendar" class="sm"></i>Customer since <span id="tSince"></span></span>
-        </div>
-      </div>
-      <div class="row wrap">
-        <a class="btn" href="../tenant/dashboard.html"><i data-i="external"></i>Open workspace</a>
-        <button class="btn" data-open="#mPlan"><i data-i="layers"></i>Change plan</button>
-        <div class="dropdown"><button class="icon-btn bordered" data-menu="#mMore" aria-label="More"><i data-i="moreV"></i></button>
-          <div class="menu" id="mMore"><button><i data-i="mail"></i>Resend admin invite</button><button><i data-i="key"></i>Reset admin password</button><button><i data-i="download"></i>Export tenant data</button><div class="sep"></div><button class="danger"><i data-i="pause"></i>Suspend tenant</button></div>
-        </div>
-      </div>
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="tenants.html">Tenants</a><i data-i="chevR"></i><span id="crumb"></span></div>
+      <div class="row" style="gap:12px"><span class="avatar sq lg" id="av"></span><div><h1 id="tName"></h1><p id="tSub"></p></div></div>
     </div>
-    <div class="tabs" data-tabs style="padding:0 12px">
-      <button class="active" data-tab="overview"><i data-i="dashboard" class="sm"></i>Overview</button>
-      <button data-tab="modules"><i data-i="sliders" class="sm"></i>Modules & limits</button>
-      <button data-tab="billing"><i data-i="receipt" class="sm"></i>Billing</button>
-      <button data-tab="kyc"><i data-i="shieldCheck" class="sm"></i>KYC</button>
+    <div class="actions">
+      <button class="btn" id="supportBtn"><i data-i="shield"></i>Support access</button>
+      <button class="btn" id="statusBtn"><i data-i="refresh"></i>Change status</button>
+      <button class="btn primary" id="planBtn"><i data-i="layers"></i>Assign plan</button>
+    </div>
+  </div>
+  <div id="banner"></div>
+
+  <div class="card">
+    <div class="tabs" data-tabs>
+      <button data-tab="ov" class="active">Overview</button>
+      <button data-tab="sub">Subscription</button>
+      <button data-tab="ent">Entitlements</button>
+      <button data-tab="ovr">Overrides <span class="count" id="cOvr"></span></button>
+      <button data-tab="mem">Members <span class="count" id="cMem"></span></button>
+      <button data-tab="br">Branches</button>
+      <button data-tab="prov">Provisioning</button>
+      <button data-tab="aud">Audit</button>
     </div>
   </div>
 
-  <!-- Overview -->
-  <div class="tab-panel" data-tab-panel="overview">
+  <div data-tab-panel="ov" class="active mt-4">
     <div class="grid g-main-side">
+      <div class="card"><div class="card-head"><div class="card-title-icon"><i data-i="building"></i></div><div><h3>Profile</h3><div class="sub">PUT /api/platform/v1/admin/tenants/{id}</div></div><div class="tools"><button class="btn sm" id="editProfile"><i data-i="edit"></i>Edit</button></div></div><div class="card-body" id="profile"></div></div>
       <div class="stack-lg">
-        <div class="card">
-          <div class="card-head"><div><h3>Plan usage</h3><div class="sub" id="planSub"></div></div><div class="tools"><span class="badge primary" id="planBadge"></span></div></div>
-          <div class="card-body grid g-2" id="usage"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h3>Company details</h3><div class="tools"><button class="btn sm ghost"><i data-i="edit"></i>Edit</button></div></div>
-          <div class="card-body"><dl class="kv" id="details"></dl></div>
-        </div>
-      </div>
-      <div class="stack-lg">
-        <div class="card">
-          <div class="card-head"><h3>Subscription</h3></div>
-          <div class="card-body">
-            <div class="kv-cards">
-              <div class="kv-card"><span>MRR</span><b id="sMrr"></b></div>
-              <div class="kv-card"><span>Next renewal</span><b id="sRenew"></b></div>
-            </div>
-            <div class="mt-4 stack small">
-              <div class="row between"><span class="muted">Billing cycle</span><b>Monthly</b></div>
-              <div class="row between"><span class="muted">Payment method</span><b>NACH · HDFC ••4421</b></div>
-              <div class="row between"><span class="muted">Outstanding</span><b id="sOut"></b></div>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h3>Administrator</h3></div>
-          <div class="card-body"><div class="ent"><span class="avatar" id="aAv"></span><div class="ent-txt"><b id="aName"></b><span id="aEmail"></span></div></div>
-            <div class="row mt-4"><button class="btn sm"><i data-i="mail"></i>Email</button><button class="btn sm"><i data-i="phone"></i>Call</button></div></div>
-        </div>
+        <div class="card"><div class="card-body" id="ovSide"></div></div>
+        <div class="card"><div class="card-head"><div class="card-title-icon"><i data-i="palette"></i></div><div><h3>Organisation theme</h3><div class="sub">PUT …/tenants/{id}/appearance</div></div></div><div class="card-body"><select class="select" id="theme"></select><p class="xs muted mt-2">Default look for everyone in this organisation. Members can still pick a personal theme.</p></div></div>
       </div>
     </div>
   </div>
-
-  <!-- Modules -->
-  <div class="tab-panel" data-tab-panel="modules">
+  <div data-tab-panel="sub" class="mt-4">
+    <div class="grid g-main-side">
+      <div class="card"><div class="card-head"><div class="card-title-icon"><i data-i="card"></i></div><div><h3>Current subscription</h3></div><div class="tools"><button class="btn sm" id="subStatusBtn">Change status</button></div></div><div class="card-body" id="subCur"></div></div>
+      <div class="card"><div class="card-head"><h3>Allowed transitions</h3></div><div class="card-body xs muted" id="trans"></div></div>
+    </div>
+    <div class="card mt-4"><div class="card-head"><h3>History</h3><div class="sub">GET …/subscriptions</div></div><div id="subHist"></div></div>
+  </div>
+  <div data-tab-panel="ent" class="mt-4">
     <div class="grid g-2">
-      <div class="card">
-        <div class="card-head"><div><h3>Enabled modules</h3><div class="sub">Turn product areas on or off for this tenant</div></div></div>
-        <div class="list" id="modules"></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div><h3>Limit overrides</h3><div class="sub">Leave blank to use the plan default</div></div></div>
-        <div class="card-body form-grid">
-          <div class="field"><label>Max branches</label><input class="input" type="number" placeholder="Plan default"></div>
-          <div class="field"><label>Max chit groups</label><input class="input" type="number" placeholder="Plan default"></div>
-          <div class="field"><label>Max subscribers</label><input class="input" type="number" placeholder="Plan default"></div>
-          <div class="field"><label>Max staff users</label><input class="input" type="number" placeholder="Plan default"></div>
-          <div class="field span-2"><label>Max chit value per group</label><div class="input-group"><span class="addon">₹</span><input class="input" type="number" placeholder="No limit"></div></div>
-        </div>
-        <div class="card-foot"><span class="xs muted">Changes are logged in the audit trail</span><button class="btn primary ml-auto" onclick="UI.toast('Limits updated','success')">Save limits</button></div>
-      </div>
+      <div class="card"><div class="card-head"><h3>Modules</h3><div class="sub">Plan modules plus overrides in effect</div></div><div class="card-body" id="mods"></div></div>
+      <div class="card"><div class="card-head"><h3>Limits & usage</h3><div class="sub">GET …/entitlements</div></div><div class="card-body stack" id="lims"></div></div>
     </div>
   </div>
-
-  <!-- Billing -->
-  <div class="tab-panel" data-tab-panel="billing">
-    <div class="card"><div class="card-head"><h3>Invoices</h3><div class="tools"><button class="btn sm"><i data-i="plus"></i>Manual invoice</button></div></div><div id="invTbl"></div></div>
+  <div data-tab-panel="ovr" class="mt-4">
+    <div class="card"><div class="card-head"><div><h3>Overrides</h3><div class="sub">Approved, time-limited exceptions to the plan (at most 366 days)</div></div><div class="tools"><button class="btn primary sm" id="addOvr"><i data-i="plus"></i>Add override</button></div></div><div id="ovrTbl"></div></div>
   </div>
-
-  <!-- KYC -->
-  <div class="tab-panel" data-tab-panel="kyc">
-    <div class="card">
-      <div class="card-head"><div><h3>KYC documents</h3><div class="sub">Approve to unlock group creation for this tenant</div></div><div class="tools"><button class="btn danger-ghost">Reject</button><button class="btn primary" onclick="UI.toast('KYC approved — tenant activated','success')"><i data-i="check"></i>Approve KYC</button></div></div>
-      <div class="list" id="kycList"></div>
-    </div>
+  <div data-tab-panel="mem" class="mt-4">
+    <div class="card"><div class="card-head"><div><h3>Members</h3><div class="sub">Admin view of …/memberships</div></div><div class="tools"><button class="btn primary sm" id="addMem"><i data-i="plus"></i>Add member</button></div></div><div id="memTbl"></div></div>
   </div>
+  <div data-tab-panel="br" class="mt-4"><div class="card"><div id="brTbl"></div></div></div>
+  <div data-tab-panel="prov" class="mt-4">
+    <div class="card"><div class="card-head"><div><h3>Provisioning steps</h3><div class="sub">GET …/provisioning · runs after creation and on restore</div></div></div><div class="list" id="prov"></div></div>
+  </div>
+  <div data-tab-panel="aud" class="mt-4"><div class="card"><div id="audTbl"></div></div></div>
 </main>
-
-<div class="modal" id="mPlan" role="dialog" aria-label="Change plan">
-  <div class="modal-head"><div><h3>Change plan</h3><p>The new price applies from the next billing cycle.</p></div><button class="icon-btn ml-auto" data-close aria-label="Close"><i data-i="x"></i></button></div>
-  <div class="modal-body"><div class="option-cards" id="planOpts" style="grid-template-columns:1fr"></div></div>
-  <div class="modal-foot"><button class="btn" data-close>Cancel</button><button class="btn primary" onclick="UI.close();UI.toast('Plan change scheduled','success')">Confirm change</button></div>
-</div>
 
 <script src="../assets/js/data.js"></script>
 <script src="../assets/js/app.js"></script>
 <script>
 document.addEventListener('app:ready', function () {
-  var t = DB.tenant(UI.param('id')) || DB.tenants[0];
-  var plan = DB.plan(t.plan);
-  document.title = t.name + ' · ChitSphere Platform';
   var $ = function (id) { return document.getElementById(id); };
-  $('crumbName').textContent = t.name;
-  $('tAvatar').textContent = UI.initials(t.name);
-  $('tAvatar').style.cssText = 'background:' + t.color + ';color:#fff';
-  $('tName').textContent = t.name;
-  $('tStatus').innerHTML = UI.badge(t.status);
-  $('tId').textContent = t.id + ' · ' + t.code;
-  $('tCity').textContent = t.city + ', ' + t.state;
-  $('tUrl').textContent = t.code.toLowerCase() + '.chitsphere.in';
-  $('tSince').textContent = UI.date(t.since);
-  $('planBadge').textContent = plan.name;
-  $('planSub').textContent = UI.inr(plan.price) + ' / month';
-  $('sMrr').textContent = t.mrr ? UI.inr(t.mrr) : '—';
-  $('sRenew').textContent = UI.date(t.renew);
-  $('sOut').innerHTML = t.status === 'Past due' ? '<span style="color:var(--danger)">' + UI.inr(t.mrr) + '</span>' : UI.inr(0);
-  $('aAv').textContent = UI.initials(t.admin); $('aName').textContent = t.admin; $('aEmail').textContent = t.email;
+  var t = DB.tenant(UI.param('id') || 't-svchits') || DB.tenants[0];
+  var plan = t.planCode && DB.plan(t.planCode);
+  document.title = t.name + ' · ChitSphere Platform';
+  $('crumb').textContent = t.name; $('tName').textContent = t.name;
+  $('av').textContent = UI.initials(t.name); $('av').style.cssText = 'background:' + t.color + ';color:#fff;width:48px;height:48px';
+  $('tSub').innerHTML = '<span class="mono">' + t.code + '</span> · ' + UI.badge(t.status) + ' · ' + (plan ? plan.name + ' v' + t.sub.planVersion : 'No plan') + ' · ' + t.members + ' members';
+  $('planBtn').innerHTML = UI.icon('layers') + (t.sub ? 'Change plan' : 'Assign plan');
 
-  var lim = plan.limits;
-  $('usage').innerHTML = [['Branches', t.branches, lim.branches], ['Chit groups', t.groups, lim.groups], ['Subscribers', t.subscribers, lim.subscribers], ['Staff users', t.users, lim.users]].map(function (u) {
-    var pct = typeof u[2] === 'number' ? Math.min(100, u[1] / u[2] * 100) : 8;
-    var cls = pct > 90 ? 'danger' : pct > 75 ? 'warn' : '';
-    return '<div class="meter"><div class="meter-row"><span>' + u[0] + '</span><b>' + UI.num(u[1]) + ' <span class="muted" style="font-weight:400">/ ' + UI.num(u[2]) + '</span></b></div><div class="meter-bar"><div class="meter-fill ' + cls + '" style="width:' + pct + '%"></div></div></div>';
-  }).join('');
+  var banners = {
+    PENDING: ['warning', 'Waiting for a plan', 'Assign a published plan to start provisioning.'],
+    PROVISIONING: ['danger', 'Provisioning needs attention', 'Step OPEN_BOOKS failed twice. Fix the cause, then retry from the Provisioning tab.'],
+    SUSPENDED: ['danger', 'Suspended', 'Nobody can sign in to this tenant. Sessions were revoked when it was suspended.'],
+    ARCHIVED: ['info', 'Archived', 'Read-only. Restore to bring it back (status RESTORING, then ACTIVE).']
+  };
+  var b = banners[t.status];
+  if (b) $('banner').innerHTML = '<div class="alert ' + b[0] + ' mb-4">' + UI.icon('alert') + '<div><b>' + b[1] + '</b>' + b[2] + '</div></div>';
 
-  $('details').innerHTML = [['Legal name', t.name], ['Tenant code', t.code], ['Company type', 'Private Limited'], ['Chit reg. no.', 'RC/' + t.code + '/2019/0142'], ['PAN', 'AAJCS' + t.id.slice(-4) + 'K'], ['GSTIN', '36AAJCS' + t.id.slice(-4) + 'K1Z5'], ['Registered office', t.city + ', ' + t.state]]
-    .map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
-
-  var mods = [['gavel', 'Auctions', 'Live & offline auction management', true], ['wallet', 'Collections', 'Receipts, dues and penalties', true], ['phone', 'Own member app', (DB.app(t.id) || {}).appName + ' · ' + (DB.app(t.id) || {}).pkg, true], ['card', 'Online payments', 'UPI / card via payment gateway', true], ['gavel', 'Online bidding in app', 'Members bid from the app', t.plan !== 'starter'], ['send', 'WhatsApp notifications', 'Auction & due reminders', false], ['key', 'API access', 'REST API & webhooks', t.plan === 'enterprise']];
-  $('modules').innerHTML = mods.map(function (m) {
-    return '<div class="list-item"><span class="card-title-icon">' + UI.icon(m[0]) + '</span><div style="flex:1"><b>' + m[1] + '</b><div class="xs muted">' + m[2] + '</div></div><label class="switch"><input type="checkbox"' + (m[3] ? ' checked' : '') + '><span class="track"></span></label></div>';
-  }).join('');
-
-  UI.table({
-    el: '#invTbl', rows: DB.invoices.filter(function (i) { return i.tenant === t.id; }).concat([{ no: 'INV-2026-0988', tenant: t.id, date: '2026-09-14', due: '2026-09-24', amount: plan.price, status: 'Paid' }]),
-    columns: [
-      { key: 'no', label: 'Invoice', render: function (r) { return '<b class="mono">' + r.no + '</b>'; } },
-      { key: 'date', label: 'Issued', render: function (r) { return UI.date(r.date); } },
-      { key: 'due', label: 'Due', render: function (r) { return UI.date(r.due); } },
-      { key: 'amount', label: 'Amount', num: true, render: function (r) { return UI.inr(r.amount); } },
-      { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } },
-      { key: 'x', label: '', cls: 'actions-cell', render: function () { return '<button class="icon-btn sm" aria-label="Download">' + UI.icon('download') + '</button>'; } }
-    ]
+  /* Overview */
+  var a = t.address || {};
+  $('profile').innerHTML = UI.kv([['Display name', UI.esc(t.name)], ['Legal name', UI.esc(t.legalName)], ['Contact email', UI.esc(t.contactEmail)], ['Contact phone', UI.esc(t.contactPhone)], ['Tax ID', t.taxId ? '<span class="mono">' + t.taxId + '</span>' : null],
+    ['Address', [a.line1, a.line2, a.city, a.state, a.postalCode, a.countryCode].filter(Boolean).map(UI.esc).join(', ')], ['Time zone', t.timezone], ['Locale', t.locale], ['Currency', t.currency], ['Created', UI.date(t.createdAt)]]);
+  $('ovSide').innerHTML = '<div class="kv-cards"><div class="kv-card"><span>Status</span><b>' + UI.badge(t.status) + '</b></div><div class="kv-card"><span>Subscription</span><b>' + (t.sub ? UI.badge(t.sub.status) : '—') + '</b></div><div class="kv-card"><span>Members</span><b>' + t.members + '</b></div><div class="kv-card"><span>Plan</span><b>' + (plan ? plan.name : '—') + '</b></div></div>';
+  $('theme').innerHTML = UI.options({ enum: 'UiTheme', value: t.theme });
+  $('theme').addEventListener('change', function () { UI.toast('Organisation theme set to ' + UI.human(this.value) + ' (THEME_CHANGED audited)', 'success'); });
+  $('editProfile').addEventListener('click', function () {
+    UI.dialog({ drawer: true, wide: true, title: 'Edit profile', icon: 'building', api: 'PUT /api/platform/v1/admin/tenants/' + t.code + ' (with version)', done: 'Profile saved',
+      fields: [{ id: 'name', label: 'Display name', req: true, value: t.name }, { id: 'legalName', label: 'Legal name', value: t.legalName }, { id: 'contactEmail', label: 'Contact email', type: 'email', req: true, value: t.contactEmail },
+        { id: 'contactPhone', label: 'Contact phone', value: t.contactPhone }, { id: 'taxId', label: 'Tax ID', value: t.taxId, mono: true }, { id: 'city', label: 'City', value: a.city }, { id: 'state', label: 'State', value: a.state },
+        { id: 'postalCode', label: 'Postal code', value: a.postalCode }, { id: 'timezone', label: 'Time zone', req: true, value: t.timezone }, { id: 'locale', label: 'Locale', req: true, value: t.locale, pattern: '[a-z]{2}(-[A-Z]{2})?', err: 'Like en-IN' }, { id: 'currency', label: 'Currency', req: true, value: t.currency }] });
   });
 
-  $('kycList').innerHTML = [['Certificate of registration (Chits)', 'Verified'], ['Certificate of incorporation', 'Verified'], ['PAN card', t.status === 'Pending KYC' ? 'Pending' : 'Verified'], ['GST certificate', t.status === 'Pending KYC' ? 'Pending' : 'Verified']].map(function (d) {
-    return '<div class="list-item"><span class="card-title-icon">' + UI.icon('file') + '</span><div style="flex:1"><b>' + d[0] + '</b><div class="xs muted">PDF · uploaded ' + UI.date(t.since) + '</div></div>' + UI.badge(d[1]) + '<button class="btn sm ghost">' + UI.icon('eye') + 'View</button></div>';
-  }).join('');
+  /* Subscription */
+  var flows = { TRIALING: ['ACTIVE', 'TRIAL_EXPIRED', 'CANCELED'], TRIAL_EXPIRED: ['ACTIVE', 'ENDED'], ACTIVE: ['PAST_DUE', 'CANCELED', 'ENDED'], PAST_DUE: ['ACTIVE', 'GRACE', 'SUSPENDED'], GRACE: ['ACTIVE', 'SUSPENDED'], SUSPENDED: ['ACTIVE', 'ENDED'], CANCELED: ['ENDED'], ENDED: [] };
+  if (t.sub) {
+    $('subCur').innerHTML = UI.kv([['Plan', plan.name + ' · version ' + t.sub.planVersion], ['Status', UI.badge(t.sub.status)], ['Starts on', UI.date(t.sub.startsOn)], ['Ends on', t.sub.endsOn ? UI.date(t.sub.endsOn) : 'Open-ended'], ['Trial ends', t.sub.trialEndsOn ? UI.date(t.sub.trialEndsOn) : null], ['Grace ends', t.sub.graceEndsOn ? UI.date(t.sub.graceEndsOn) : null], ['Price', UI.inr(plan.price) + ' / ' + UI.human(plan.billingCycle).toLowerCase()]]);
+    $('trans').innerHTML = '<p>From <b>' + UI.human(t.sub.status) + '</b> the API allows:</p><div class="row wrap mt-2">' + ((flows[t.sub.status] || []).map(function (s) { return UI.badge(s); }).join('') || 'nothing (final)') + '</div><p class="mt-4">PAST_DUE, GRACE and SUSPENDED make the workspace read-only (SUBSCRIPTION_READ_ONLY) or closed.</p>';
+  } else { $('subCur').innerHTML = '<div class="empty"><b>No subscription</b>Assign a plan to start one.</div>'; $('subStatusBtn').disabled = true; }
+  var hist = t.sub ? [{ plan: t.planName, v: t.sub.planVersion, status: t.sub.status, startsOn: t.sub.startsOn, endsOn: t.sub.endsOn, notes: 'Current' }, { plan: 'Starter', v: 1, status: 'ENDED', startsOn: '2024-01-14', endsOn: '2025-01-13', notes: 'Upgraded to Growth' }] : [];
+  UI.table({ el: '#subHist', rows: hist, columns: [{ key: 'plan', label: 'Plan', render: function (h) { return h.plan + ' <span class="xs muted">v' + h.v + '</span>'; } }, { key: 'status', label: 'Status', render: function (h) { return UI.badge(h.status); } }, { key: 'startsOn', label: 'Starts', render: function (h) { return UI.date(h.startsOn); } }, { key: 'endsOn', label: 'Ends', render: function (h) { return UI.date(h.endsOn); } }, { key: 'notes', label: 'Notes' }] });
+  $('subStatusBtn').addEventListener('click', function () {
+    UI.dialog({ title: 'Change subscription status', icon: 'card', api: 'PATCH …/tenants/{id}/subscription/status', done: 'Subscription status changed',
+      fields: [{ id: 'status', label: 'New status', type: 'select', req: true, options: flows[t.sub.status] || [], blank: 'Select' }, { id: 'graceDays', label: 'Grace days (GRACE only)', type: 'number', min: 1, max: 90, value: 7 }, { id: 'reason', label: 'Reason', type: 'textarea', span: 2, maxlength: 500 }] });
+  });
+  $('planBtn').addEventListener('click', function () {
+    var pub = DB.plans.filter(function (p) { return p.status === 'ACTIVE'; });
+    UI.dialog({ title: t.sub ? 'Change plan' : 'Assign plan', icon: 'layers', sub: 'Uses the plan’s published version', api: 'POST …/tenants/{id}/subscription', done: 'Plan assigned', ok: 'Assign',
+      fields: [{ id: 'planId', label: 'Plan', type: 'select', req: true, span: 2, options: pub.map(function (p) { return [p.id, p.name + ' · v' + p.publishedVersion + ' · ' + UI.inr(p.price)]; }), blank: 'Select a plan' },
+        { id: 'startsOn', label: 'Starts on', type: 'date', req: true, value: '2026-11-14' }, { id: 'endsOn', label: 'Ends on', type: 'date' }, { id: 'trial', label: 'Start as trial', type: 'switch', span: 2 }, { id: 'notes', label: 'Notes', type: 'textarea', span: 2 }] });
+  });
+  $('statusBtn').addEventListener('click', function () {
+    UI.dialog({ title: 'Change tenant status', icon: 'refresh', danger: true, ok: 'Change status', api: 'PATCH /api/platform/v1/admin/tenants/{id}/status', done: 'Tenant status changed',
+      text: 'Any status other than <b>Active</b> immediately signs everyone in this tenant out.',
+      fields: [{ id: 'status', label: 'New status', type: 'select', req: true, enum: 'TenantStatus', value: t.status }, { id: 'reason', label: 'Reason', type: 'textarea', span: 2, maxlength: 500 }] });
+  });
+  $('supportBtn').addEventListener('click', function () {
+    UI.dialog({ title: 'Start support access', icon: 'shield', sub: t.name, api: 'POST /api/platform/v1/admin/support-elevations', done: 'Support access started (recorded in the tenant’s audit trail)', ok: 'Start',
+      text: 'Gives you time-limited read access to this tenant. Platform support only.',
+      fields: [{ id: 'reason', label: 'Ticket or incident reference', type: 'textarea', req: true, span: 2, err: '10–500 characters', placeholder: 'e.g. INC-5521: collections report mismatch' }, { id: 'minutes', label: 'Minutes', type: 'number', req: true, min: 5, max: 240, value: 60 }],
+      onOk: function (v) { if (v.reason.trim().length < 10) { document.getElementById('reason').closest('.field').classList.add('invalid'); return false; } } });
+  });
 
-  $('planOpts').innerHTML = DB.plans.map(function (p) {
-    return '<label class="option-card"><input type="radio" name="np"' + (p.id === t.plan ? ' checked' : '') + '><div class="oc-body row between"><div><b>' + p.name + (p.id === t.plan ? ' <span class="badge outline">Current</span>' : '') + '</b><span>' + p.tagline + '</span></div><b>' + UI.inr(p.price) + '<span class="muted" style="font-weight:400">/mo</span></b></div></label>';
+  /* Entitlements */
+  var mods = plan ? DB.planModules(plan) : [];
+  var ovr = DB.overrides.filter(function (o) { return o.tenantId === t.id; });
+  var granted = ovr.filter(function (o) { return o.inEffect && o.kind === 'GRANT_MODULE'; }).map(function (o) { return o.moduleId; });
+  $('mods').innerHTML = DB.catalog.filter(function (p) { return p.status !== 'DISABLED'; }).map(function (p) {
+    return '<div class="perm-group"><h4>' + p.label + (p.always ? ' <span class="badge outline">Always on</span>' : '') + '</h4>' + p.modules.map(function (m) {
+      var on = p.always || mods.indexOf(m.id) > -1 || granted.indexOf(m.id) > -1;
+      return '<div class="row between small" style="padding:3px 0"><span>' + m.label + ' <span class="mono xs muted">' + m.id + '</span></span>' + (granted.indexOf(m.id) > -1 ? '<span class="badge hl">Override</span>' : on ? UI.badge('ACTIVE') : '<span class="badge outline">Off</span>') + '</div>';
+    }).join('') + '</div>';
   }).join('');
+  var lims = t.id === 't-svchits' ? DB.entitlement.limits : DB.limitDefs().map(function (l) { return { id: l.id, label: l.label, limit: plan && plan.limits[l.id] != null ? plan.limits[l.id] : 0, used: null }; });
+  $('lims').innerHTML = lims.map(function (l) { return l.used == null ? '<div class="row between small"><span>' + l.label + '</span><b>' + (l.limit === -1 ? 'Unlimited' : UI.num(l.limit)) + '</b></div>' : UI.meter(l.label + (l.override ? ' (override)' : ''), l.used, l.limit); }).join('');
+
+  /* Overrides */
+  $('cOvr').textContent = ovr.length;
+  UI.table({ el: '#ovrTbl', rows: ovr, columns: [
+    { key: 'kind', label: 'Kind', render: function (o) { return '<span class="badge outline">' + UI.human(o.kind) + '</span>'; } },
+    { key: 'target', label: 'Target', render: function (o) { return o.kind === 'SET_LIMIT' ? DB.limitLabel(o.limitId) + ' → <b>' + o.limitValue + '</b>' : DB.moduleLabel(o.moduleId); } },
+    { key: 'reason', label: 'Reason', render: function (o) { return UI.esc(o.reason); } },
+    { key: 'window', label: 'Window', render: function (o) { return UI.date(o.startsAt) + ' → ' + UI.date(o.expiresAt); } },
+    { key: 'inEffect', label: 'State', render: function (o) { return UI.badge(o.revokedAt ? 'REVOKED' : o.inEffect ? 'IN_EFFECT' : 'EXPIRED'); } },
+    { key: 'x', label: '', render: function (o) { return o.inEffect ? '<button class="btn sm danger-ghost" data-act="revoke" data-id="' + o.id + '">Revoke</button>' : ''; } }] });
+  $('addOvr').addEventListener('click', function () {
+    UI.dialog({ title: 'Add override', icon: 'zap', api: 'POST …/tenants/{id}/overrides', done: 'Override added', wide: true,
+      fields: [{ id: 'kind', label: 'Kind', type: 'select', req: true, enum: 'OverrideKind' },
+        { id: 'moduleId', label: 'Module (grant / revoke)', type: 'select', options: DB.sellableModules().map(function (m) { return [m.id, m.productLabel + ' · ' + m.label]; }), blank: '—' },
+        { id: 'limitId', label: 'Limit (set limit)', type: 'select', options: DB.limitDefs().map(function (l) { return [l.id, l.label]; }), blank: '—' }, { id: 'limitValue', label: 'Limit value (-1 = unlimited)', type: 'number', min: -1 },
+        { id: 'startsAt', label: 'Starts', type: 'date', value: '2026-11-14' }, { id: 'expiresAt', label: 'Expires', type: 'date', req: true, hint: 'At most 366 days after the start' },
+        { id: 'reason', label: 'Reason / approval reference', type: 'textarea', req: true, span: 2, maxlength: 500 }],
+      onOpen: function (el) { var k = el.querySelector('#kind'); function sync() { var lim = k.value === 'SET_LIMIT'; el.querySelector('#moduleId').closest('.field').classList.toggle('hidden', lim || !k.value); el.querySelector('#limitId').closest('.field').classList.toggle('hidden', !lim); el.querySelector('#limitValue').closest('.field').classList.toggle('hidden', !lim); } k.addEventListener('change', sync); sync(); } });
+  });
+
+  /* Members (admin endpoints) */
+  var mem = t.id === 't-svchits' ? DB.memberships : [{ id: 'm-x', fullName: t.contactEmail.split('@')[0], email: t.contactEmail, role: 'TENANT_OWNER', status: 'ACTIVE', userStatus: t.status === 'PENDING' ? 'PENDING_ACTIVATION' : 'ACTIVE', lastLoginAt: null }];
+  $('cMem').textContent = mem.length;
+  UI.table({ el: '#memTbl', rows: mem, search: null, pageSize: 8, columns: [
+    { key: 'fullName', label: 'Member', render: function (m) { return UI.ent(m.fullName, UI.esc(m.email)); } },
+    { key: 'role', label: 'Role', render: function (m) { return UI.human(m.role); } },
+    { key: 'status', label: 'Membership', render: function (m) { return UI.badge(m.lockedUntil ? 'LOCKED' : m.status); } },
+    { key: 'userStatus', label: 'Account', render: function (m) { return UI.badge(m.userStatus); } },
+    { key: 'lastLoginAt', label: 'Last sign-in', render: function (m) { return UI.dt(m.lastLoginAt); } },
+    { key: 'x', label: '', cls: 'actions-cell', render: function (m) { return UI.rowMenu('rm_' + m.id, [['role', 'Change role', false, 'userCog'], m.lockedUntil ? ['unlock', 'Unlock', false, 'unlock'] : null, ['toggle', m.status === 'ACTIVE' ? 'Disable' : 'Enable', m.status === 'ACTIVE', 'x']]); } }] });
+  $('addMem').addEventListener('click', function () {
+    UI.dialog({ title: 'Add member', icon: 'user', api: 'POST /api/platform/v1/admin/tenants/{id}/memberships', done: 'Member added · activation email sent',
+      fields: [{ id: 'fullName', label: 'Full name', req: true }, { id: 'email', label: 'Email', type: 'email', req: true }, { id: 'phone', label: 'Phone' }, { id: 'role', label: 'Role', type: 'select', enum: 'TenantRole', value: 'TENANT_ADMIN' }] });
+  });
+  UI.onAct(function (act, id) {
+    if (act === 'revoke') return UI.confirm('Revoke override?', 'The plan’s normal entitlement applies again straight away.', { danger: true, ok: 'Revoke', api: 'POST …/overrides/' + id + '/revoke', done: 'Override revoked' });
+    if (act === 'retry') return UI.toast('Retrying step ' + id + '…', 'info');
+    var m = mem.filter(function (x) { return x.id === id; })[0]; if (!m) return;
+    if (act === 'role') UI.dialog({ title: 'Change role', sub: m.fullName, api: 'PATCH …/memberships/{id}/role', done: 'Role changed', fields: [{ id: 'role', label: 'Role', type: 'select', enum: 'TenantRole', value: m.role, span: 2 }] });
+    if (act === 'unlock') UI.confirm('Unlock ' + m.fullName + '?', 'Clears the failed sign-in counter so they can try again now.', { api: 'POST …/memberships/{id}/unlock', done: 'Unlocked', ok: 'Unlock' });
+    if (act === 'toggle') UI.confirm((m.status === 'ACTIVE' ? 'Disable ' : 'Enable ') + m.fullName + '?', m.status === 'ACTIVE' ? 'They lose access to this tenant only. Their account and other memberships stay.' : 'They can sign in to this tenant again.', { danger: m.status === 'ACTIVE', api: 'PATCH …/memberships/{id}/status', done: 'Membership updated' });
+  });
+
+  /* Branches, provisioning, audit */
+  UI.table({ el: '#brTbl', rows: t.id === 't-svchits' ? DB.branches : [{ code: 'HO', name: 'Head office', city: a.city, status: 'ACTIVE' }], columns: [{ key: 'code', label: 'Code', render: function (b) { return '<span class="mono">' + b.code + '</span>'; } }, { key: 'name', label: 'Branch' }, { key: 'city', label: 'City' }, { key: 'status', label: 'Status', render: function (b) { return UI.badge(b.status); } }] });
+  var steps = DB.provisioning.map(function (s) { return t.status === 'PROVISIONING' ? s : Object.assign({}, s, { status: t.status === 'PENDING' ? 'PENDING' : 'DONE', attempts: t.status === 'PENDING' ? 0 : 1, lastError: null }); });
+  $('prov').innerHTML = steps.map(function (s) {
+    return '<div class="list-item"><span class="mono xs muted">' + s.order + '</span><div style="flex:1"><b class="small">' + UI.human(s.code) + ' <span class="mono xs muted">' + s.code + '</span></b><div class="xs muted">' + (s.mandatory ? 'Mandatory' : 'Optional') + ' · ' + s.attempts + ' attempt(s)' + (s.lastError ? ' · <span style="color:var(--danger)">' + UI.esc(s.lastError) + '</span>' : '') + '</div></div>' +
+      UI.badge(s.status) + (s.status === 'FAILED' ? '<button class="btn sm" data-act="retry" data-id="' + s.code + '">Retry</button>' : '') + '</div>';
+  }).join('');
+  UI.table({ el: '#audTbl', rows: DB.audit.filter(function (x) { return x.tenantId === t.id; }), columns: [{ key: 'occurredAt', label: 'When', render: function (x) { return UI.dt(x.occurredAt); } }, { key: 'type', label: 'Event', render: function (x) { return '<span class="mono xs">' + x.type + '</span>'; } }, { key: 'actor', label: 'Actor' }, { key: 'subject', label: 'Subject' }, { key: 'outcome', label: 'Outcome', render: function (x) { return UI.badge(x.outcome); } }] });
 });
 </script>
 </body>

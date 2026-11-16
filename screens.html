@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChitSphere screens</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!--
+  Review board for the ChitSphere UI prototype. Every screen below is the real prototype page, loaded in a scaled frame,
+  so this file must stay in the ui folder next to the pages. Serve the folder (python -m http.server) so the theme switch
+  and the dialog previews work; opened straight from disk, the frames still show but can't be driven.
+-->
+<style>
+/* =================================================================== board */
+:root { --page: #ECEAE6; --page-ink: #4A4743; --page-title: #161513; --page-line: rgba(0,0,0,.1); --page-chip: rgba(0,0,0,.06);
+  --card: #F6F5F2; --code: rgba(0,0,0,.05); --accent: #0F766E; --shadow: 0 30px 70px -24px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.18); }
+body.dark { --page: #161513; --page-ink: #C9C5BF; --page-title: #F4F2EE; --page-line: rgba(255,255,255,.1); --page-chip: rgba(255,255,255,.08);
+  --card: #1F1E1C; --code: rgba(255,255,255,.07); --accent: #5EEAD4; --shadow: 0 30px 70px -24px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.12); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body { background: var(--page); color: var(--page-ink); font-family: Inter, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; padding: 40px 16px 120px; transition: background .2s, color .2s; }
+a { color: inherit; }
+code, .mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: .92em; }
+.head { max-width: 1240px; margin: 0 auto 28px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+.head .grow { flex: 1; min-width: 280px; }
+.kicker { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .6; }
+.head h1 { font-size: 34px; font-weight: 700; color: var(--page-title); letter-spacing: -.03em; margin-top: 6px; line-height: 1.15; }
+.head p { margin-top: 10px; max-width: 780px; line-height: 1.55; font-size: 15px; }
+.head ul { margin: 10px 0 0 20px; font-size: 14px; line-height: 1.7; max-width: 780px; }
+.controls { display: flex; gap: 12px; flex-wrap: wrap; }
+.control { display: grid; gap: 6px; }
+.control label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .6; }
+.switch { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--page-chip); flex-wrap: wrap; }
+.switch button { font: inherit; border: 0; background: none; cursor: pointer; padding: 8px 12px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--page-ink); display: flex; align-items: center; gap: 6px; }
+.switch button .dot { width: 10px; height: 10px; border-radius: 50%; }
+.switch button.on { background: #fff; color: #000; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+body.dark .switch button.on { background: #3A3835; color: #fff; }
+
+/* sticky section index */
+.index { position: sticky; top: 0; z-index: 5; margin: 0 -16px 36px; padding: 10px 16px; background: color-mix(in srgb, var(--page) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--page-line); }
+.index .in { max-width: 1240px; margin: 0 auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.index a { flex: none; text-decoration: none; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 999px; background: var(--page-chip); white-space: nowrap; }
+.index a.on { background: var(--page-title); color: var(--page); }
+.index a span { opacity: .55; font-weight: 500; margin-left: 4px; }
+
+/* before / after */
+.rules-wrap { max-width: 1240px; margin: 0 auto 56px; overflow-x: auto; }
+.rules { width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.5; background: var(--card); border-radius: 14px; overflow: hidden; }
+.rules th { text-align: left; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid var(--page-line); opacity: .75; }
+.rules td { padding: 11px 16px; border-bottom: 1px solid var(--page-line); vertical-align: top; }
+.rules tr:last-child td { border-bottom: 0; }
+.rules td:first-child { width: 42%; opacity: .75; }
+.rules td:first-child s { text-decoration-color: rgba(200,40,40,.6); }
+
+/* sections */
+.sec { max-width: 1240px; margin: 0 auto 20px; padding-top: 12px; }
+.sec h2 { font-size: 24px; font-weight: 700; color: var(--page-title); letter-spacing: -.02em; }
+.sec > p { margin-top: 6px; font-size: 14.5px; line-height: 1.55; max-width: 820px; }
+.sec .who { display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--page-chip); }
+
+/* one screen */
+.shot { max-width: 1240px; margin: 28px auto 52px; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 28px; align-items: start; }
+.shot .num { font-size: 11px; font-weight: 700; letter-spacing: .14em; opacity: .5; }
+.shot h3 { font-size: 18px; font-weight: 700; color: var(--page-title); margin-top: 2px; letter-spacing: -.01em; }
+.shot .path { margin-top: 4px; font-size: 12px; opacity: .7; word-break: break-all; }
+.shot .what { margin-top: 12px; font-size: 14px; line-height: 1.55; }
+.shot ul { margin: 12px 0 0 18px; font-size: 13.5px; line-height: 1.6; }
+.shot ul li { margin-bottom: 4px; }
+.shot .api { margin-top: 14px; font-size: 12px; line-height: 1.55; padding: 10px 12px; border-radius: 10px; background: var(--code); word-break: break-word; }
+.shot .api b { display: block; font-family: Inter, sans-serif; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; opacity: .6; margin-bottom: 4px; }
+.states { margin-top: 14px; }
+.states .lbl { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-bottom: 6px; }
+.states .switch button { padding: 6px 10px; font-size: 12.5px; }
+.open { display: inline-flex; gap: 6px; align-items: center; margin-top: 16px; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.open:hover { text-decoration: underline; }
+
+/* browser window holding the live page */
+.win { border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); background: #fff; }
+.bar { height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: #DEDCD8; }
+body.dark .bar { background: #2A2927; }
+.bar .dots { display: flex; gap: 6px; }
+.bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(0,0,0,.18); }
+body.dark .bar .dots i { background: rgba(255,255,255,.2); }
+.bar .url { flex: 1; min-width: 0; height: 22px; border-radius: 6px; background: rgba(255,255,255,.65); font-size: 11.5px; display: flex; align-items: center; padding: 0 10px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "JetBrains Mono", monospace; }
+body.dark .bar .url { background: rgba(255,255,255,.08); color: #bbb; }
+.fit { position: relative; width: 100%; aspect-ratio: 1440 / 900; overflow: hidden; background: #f4f5f7; }
+.fit iframe { position: absolute; top: 0; left: 0; width: 1440px; height: 900px; border: 0; transform-origin: top left; transform: scale(var(--s, .5)); }
+.cover { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: flex-end; padding: 12px; cursor: pointer; background: transparent; border: 0; }
+.cover span { font: 600 12px Inter, sans-serif; padding: 7px 12px; border-radius: 999px; background: rgba(20,20,20,.78); color: #fff; opacity: 0; transition: opacity .15s; }
+.fit:hover .cover span, .cover:focus-visible span { opacity: 1; }
+.live .cover { display: none; }
+.live-note { font-size: 12px; opacity: .65; margin-top: 8px; min-height: 18px; }
+
+.foot { max-width: 1240px; margin: 60px auto 0; font-size: 13px; line-height: 1.6; opacity: .75; border-top: 1px solid var(--page-line); padding-top: 18px; }
+
+@media (max-width: 980px) {
+  .shot { grid-template-columns: 1fr; gap: 16px; }
+  .shot .notes { order: -1; }
+  .head h1 { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="grow">
+    <div class="kicker">ChitSphere · UI prototype · every screen, 14 Nov 2026</div>
+    <h1>Every screen in ChitSphere, and what it does</h1>
+    <p>The prototype now follows the API contracts, documentation and code in the <b>saas-platform</b> repository. Each card below shows the real prototype page, explains it in plain words, and names the calls it stands for. Field names, statuses and error codes come from the contracts.</p>
+    <ul>
+      <li><b>Two portals, one sign-in.</b> ChitSphere staff use the Platform Console; staff of a chit company use their organisation’s workspace. Accounting pages serve both: <code>?realm=platform</code> opens ChitSphere’s own books.</li>
+      <li><b>Modules follow the plan.</b> Chits, Customers, HRMS, CRM, Payroll and Accounting appear in the menu only as the plan allows; others show “Not in plan”.</li>
+      <li><b>Screens with no API were removed</b>: self-registration, the member app and its store builds, invoices, KYC review and MRR.</li>
+      <li>Use the switches to see every screen in each organisation theme, light or dark. Hover a screen and click to try it in place; the chips under each note switch to its other states.</li>
+    </ul>
+  </div>
+  <div class="controls">
+    <div class="control"><label>Organisation theme</label>
+      <div class="switch" id="swTheme">
+        <button data-v="teal"><span class="dot" style="background:#0F766E"></span>Classic</button>
+        <button data-v="violet"><span class="dot" style="background:#6D28D9"></span>Royal</button>
+        <button data-v="crimson"><span class="dot" style="background:#9F1239"></span>Heritage</button>
+        <button data-v="navy"><span class="dot" style="background:#072E77"></span>Ocean</button>
+        <button data-v="amber"><span class="dot" style="background:#B45309"></span>Saffron</button>
+      </div>
+    </div>
+    <div class="control"><label>Mode</label>
+      <div class="switch" id="swMode"><button data-v="light">Light</button><button data-v="dark">Dark</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="rules-wrap">
+  <table class="rules">
+    <thead><tr><th>Before (first prototype)</th><th>Now (follows the API)</th></tr></thead>
+    <tbody>
+      <tr><td><s>Self-registration</s> in 5 steps with OTP and document checks</td><td>ChitSphere staff create each organisation (<b>New tenant</b>). The owner gets an email and activates the account by setting a password.</td></tr>
+      <tr><td>Separate staff sign-in with a 2FA step; organisation sign-in by sub-domain</td><td>One sign-in for everyone. The organisation code is optional; people in several organisations choose one after signing in.</td></tr>
+      <tr><td><s>Member mobile app</s>, <s>app-store builds</s>, <s>Your member app</s></td><td>Removed: the backend has no member app API.</td></tr>
+      <tr><td><s>Registrations / KYC review</s>, <s>Billing and invoices</s>, <s>MRR</s></td><td>Plans with versions, subscriptions, entitlements and overrides. Tenants see their plan and usage; nothing is billed in the app.</td></tr>
+      <tr><td>Users page with a single role</td><td><b>Members</b> (access level Owner, Admin or User; branch scope) and <b>Roles</b> (built from templates; only permissions of modules in the plan).</td></tr>
+      <tr><td>Branding page (logo and colours)</td><td><b>Organisation profile</b> sets the default theme (Classic, Royal, Heritage, Ocean, Saffron); <b>Appearance</b> keeps each person’s own theme.</td></tr>
+      <tr><td>Scheme fields from the old admin app; 8-stage group set-up</td><td>Contract scheme fields. A group copies the scheme’s terms, enrols customers while <b>Forming</b>, and commences once nothing blocks it.</td></tr>
+      <tr><td>Chits only</td><td>New: Customers, HRMS, CRM, Payroll and double-entry Accounting with approvals.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<nav class="index"><div class="in" id="index"></div></nav>
+<main id="board"></main>
+
+<div class="foot">
+  <b>About this board.</b> The screens are the live prototype pages (<code>index.html</code>, <code>platform/*</code>, <code>tenant/*</code>, <code>accounting/*</code>) using the mock data in <code>assets/js/data.js</code>. Changing a page changes its card here. Each page also lists its endpoints in an HTML comment at the top, and every dialog shows the call it would make.
+</div>
+
+<script>
+/* ------------------------------------------------------------------ content */
+var SECTIONS = [
+{ id: 'signin', title: 'Public site and sign-in', who: 'Everyone', intro: 'What a visitor sees, and how every user (ChitSphere staff and organisation staff) signs in, recovers a password and manages their own account.', screens: [
+  { t: 'Landing page', p: 'index.html', what: 'The public page. It explains the products and shows the active plans. There is no “Sign up”: an organisation asks ChitSphere for an account.',
+    pts: ['Products come from the capability catalog (Chits, Customers, CRM, HRMS, Payroll, Accounting).', 'Plans and their limits come from the published plan versions.', '“Talk to us” instead of self-registration; “Sign in” goes to the single sign-in page.'],
+    api: 'Catalog: contracts/catalog/products/*.json · Plans: published plan versions' },
+  { t: 'Sign in', p: 'login.html', what: 'One sign-in page for ChitSphere staff and organisation staff: email and password, plus an optional organisation code.',
+    pts: ['<code>?org=svchits</code> fills in the organisation code.', 'Without a code, someone in several organisations picks one next.', 'A prototype switch shows each error: wrong password (401), locked after 5 tries (423), too many attempts (429), disabled, not activated, organisation suspended.'],
+    api: 'POST /api/auth/v1/login {email, password, tenantCode?}',
+    states: [['Sign in', 'login.html'], ['With org code', 'login.html?org=svchits'], ['Signed out', 'login.html?signedOut=1']] },
+  { t: 'Choose an organisation', p: 'choose-tenant.html', what: 'Shown after sign-in to someone who works for several organisations. Their role can differ in each.',
+    pts: ['Each card shows the organisation, the person’s access level and the plan.', 'The same list is in the workspace switcher in the top bar.'],
+    api: 'GET /api/platform/v1/me/tenants · POST /api/auth/v1/tenant-session {tenantId}' },
+  { t: 'Forgot password', p: 'forgot-password.html', what: 'Asks for an email and sends a reset link. It shows the same message whether or not the email exists, so nobody can test which emails have accounts.',
+    pts: ['The API always answers 202.', 'The same link also lets someone who never activated their account set a password.'],
+    api: 'POST /api/auth/v1/password/forgot {email}' },
+  { t: 'Set a new password / activate account', p: 'reset-password.html?token=demo', what: 'Opened from the emailed link. The same screen activates a new account (a new tenant’s owner, invited members, new platform staff).',
+    pts: ['Password rules shown live: 12+ characters, upper and lower case, a digit, a symbol, and not the name or email.', 'Links work once and expire after 30 minutes; an expired link offers a new one.'],
+    api: 'POST /api/auth/v1/password/reset {token, newPassword}',
+    states: [['Reset', 'reset-password.html?token=demo'], ['Activate account', 'reset-password.html?token=demo&mode=activate'], ['Expired link', 'reset-password.html?token=expired']] },
+  { t: 'Account & security', p: 'account.html', what: 'The signed-in person’s own details: name, password and devices. They apply in every organisation the person belongs to.',
+    pts: ['Change password (asks for the current one).', 'Signed-in devices; sign out of this device or everywhere.', 'Opens from the user menu in either portal.'],
+    api: 'GET /api/platform/v1/me · POST /api/auth/v1/password/change · POST /api/auth/v1/logout, /logout-all',
+    states: [['Organisation staff', 'account.html'], ['ChitSphere staff', 'account.html?realm=platform']] }
+]},
+{ id: 'platform', title: 'Platform Console', who: 'ChitSphere staff', intro: 'Where ChitSphere creates and looks after organisations: tenants, plans, staff, support access and the audit trail. ChitSphere’s own books are in Accounting with the platform realm.', screens: [
+  { t: 'Platform dashboard', p: 'platform/dashboard.html', what: 'The morning view for ChitSphere staff.',
+    pts: ['Needs attention: provisioning that failed, subscriptions in grace or past due, tenants waiting for activation.', 'Tenants by status, subscriptions ending soon, open support sessions, recent activity.'],
+    api: 'GET /api/platform/v1/admin/tenants · /admin/support-elevations · /admin/audit-events' },
+  { t: 'Tenants', p: 'platform/tenants.html', what: 'Every organisation on ChitSphere with its status, plan and subscription.',
+    pts: ['Filter by status (Pending, Provisioning, Active, Suspended, Archived) and plan; search by name or code.', 'Row actions: open, suspend, reactivate, archive. Any status other than Active signs out everyone in that tenant.'],
+    api: 'GET /api/platform/v1/admin/tenants · PATCH …/tenants/{id}/status' },
+  { t: 'New tenant', p: 'platform/tenant-new.html', what: 'The only way an organisation is created. Four steps, then the provisioning result.',
+    pts: ['<b>Organisation</b>: code (fixed for ever) and profile.', '<b>Plan</b>: optional, with an end date or a trial.', '<b>Members</b>: at least one Tenant owner; each gets an activation email.', '<b>Review</b>, then provisioning shows each step (books, roles, branches) and can retry a failed one.'],
+    api: 'POST /api/platform/v1/admin/tenants (CreateTenantRequest)' },
+  { t: 'Tenant detail', p: 'platform/tenant-view.html', what: 'Everything about one organisation, in eight tabs: Overview, Subscription, Entitlements, Overrides, Members, Branches, Provisioning and Audit.',
+    pts: ['Change status, assign a plan, change subscription status (trial, active, grace, past due…).', 'Overrides add or remove a module or change a limit for this tenant only, with a reason and an end date.', 'Start support access straight from the header.'],
+    api: 'GET /api/platform/v1/admin/tenants/{id} plus /overrides, /memberships, /branches, /provisioning',
+    states: [['Active', 'platform/tenant-view.html?id=t-svchits'], ['Suspended', 'platform/tenant-view.html?id=t-tirumala'], ['Provisioning', 'platform/tenant-view.html?id=t-sahyadri']] },
+  { t: 'Plans & versions', p: 'platform/plans.html', what: 'What each plan sells: modules from the capability catalog, limits and commercial terms.',
+    pts: ['Plans are versioned. New subscriptions get the published version; edits go into a draft.', 'Shows how many tenants are on each plan and version.'],
+    api: 'GET /api/platform/v1/admin/plans · POST (new plan)', click: '#newPlan', clickLabel: 'New plan dialog' },
+  { t: 'Plan detail', p: 'platform/plan-view.html', what: 'One plan, in four tabs: Published version, Draft, Version history and Subscribers.',
+    pts: ['Start a draft from the published version, change modules and limits, then publish it as the next version.', 'Migrate subscribers to the new version, or leave them where they are.', 'Archive a plan nobody should buy any more.'],
+    api: 'GET …/plans/{id} · PUT/POST …/draft · POST …/draft/publish · POST …/migrate-subscribers · POST …/archive',
+    states: [['Growth', 'platform/plan-view.html?id=pl-growth'], ['Enterprise', 'platform/plan-view.html?id=pl-enterprise'], ['Legacy', 'platform/plan-view.html?id=pl-legacy']] },
+  { t: 'Platform staff', p: 'platform/users.html', what: 'ChitSphere employees who use the Platform Console.',
+    pts: ['Roles: Platform admin, Support, Finance, Read-only.', 'Add staff (they get an activation email), change role, disable, unlock after failed sign-ins.'],
+    api: 'GET/POST /api/platform/v1/admin/users · PATCH …/status, …/role · POST …/unlock', click: '#add', clickLabel: 'Add staff dialog' },
+  { t: 'Support access', p: 'platform/support.html', what: 'Time-limited, read-only access to one tenant’s workspace for a support engineer.',
+    pts: ['Needs a reason (10–500 characters) and a length (5–240 minutes).', 'End a session early. Every session is written to the tenant’s own audit trail.'],
+    api: 'POST /api/platform/v1/admin/support-elevations {tenantId, reason, minutes} · POST …/{id}/end', click: '#start', clickLabel: 'Start session dialog' },
+  { t: 'Platform audit trail', p: 'platform/audit.html', what: 'Every sign-in, configuration change and support session across all tenants. Entries can’t be edited or deleted.',
+    pts: ['Filter by tenant, event type, outcome and dates; export CSV.'],
+    api: 'GET /api/platform/v1/admin/audit-events' }
+]},
+{ id: 'workspace', title: 'Organisation workspace: home and access', who: 'Organisation owners and admins', intro: 'The chit company’s own workspace. The sidebar shows the plan’s usage; menu items outside the plan show “Not in plan”.', screens: [
+  { t: 'Workspace dashboard', p: 'tenant/dashboard.html', what: 'What needs attention today across chits, customers, people and books.',
+    pts: ['Groups still forming and what blocks them.', 'Waiting for you: vouchers to approve, leave requests, follow-ups due.', 'Plan & usage, and today’s attendance.'],
+    api: 'Reads from chits, HRMS, CRM and accounting · GET …/entitlements' },
+  { t: 'Members', p: 'tenant/members.html', what: 'People who can sign in to this organisation.',
+    pts: ['Invite by email (activation link).', 'Access level: Owner, Admin or User. A User’s rights come from tenant roles.', 'Branch scope: the whole organisation or chosen branches. Disable, re-enable, unlock.'],
+    api: '/api/platform/v1/tenants/{tenantId}/memberships · PATCH …/status, …/role · PUT …/roles, …/branches', click: '#invite', clickLabel: 'Invite dialog' },
+  { t: 'Roles & permissions', p: 'tenant/roles.html', what: 'Roles decide what a member with User access can do.',
+    pts: ['Tabs: Roles, Templates (11 ready-made roles such as Branch manager, Collector, Accountant) and the Permission catalog.', 'Only permissions of modules in the plan can be given.'],
+    api: '/api/platform/v1/tenants/{tenantId}/roles · GET …/role-templates · GET …/permissions', click: '#add', clickLabel: 'New role drawer' },
+  { t: 'Branches', p: 'tenant/branches.html', what: 'The organisation’s offices. Members, customers, groups, leads and payroll belong to a branch.',
+    pts: ['Code: 2–20 letters, digits or hyphens. Optional parent branch.', 'Archive a branch that has closed. The number of branches is limited by the plan.'],
+    api: '/api/platform/v1/tenants/{tenantId}/branches · POST …/archive', click: '#add', clickLabel: 'Add branch dialog' },
+  { t: 'Organisation profile', p: 'tenant/profile.html', what: 'Legal and contact details, and the organisation’s default theme.',
+    pts: ['The organisation code was set by ChitSphere and can’t change.', 'Default theme: Classic, Royal, Heritage, Ocean or Saffron. Each person can still pick their own in Appearance.', 'Saves with a version number, so two people can’t overwrite each other.'],
+    api: 'GET/PUT /api/platform/v1/tenants/{tenantId}/profile · PUT …/appearance {theme}' },
+  { t: 'Plan & usage', p: 'tenant/subscription.html', what: 'What the organisation can use and how much it is using. Read-only: ChitSphere changes plans.',
+    pts: ['Plan, subscription status and access mode (full or read-only during grace).', 'Each limit with used and allowed, warning near the limit.', 'Modules in the plan, including overrides.'],
+    api: 'GET /api/platform/v1/tenants/{tenantId}/entitlements · GET …/capabilities' },
+  { t: 'Audit trail', p: 'tenant/audit.html', what: 'Sign-ins, changes and approvals in this organisation, including every ChitSphere support session.',
+    pts: ['Filter by person, event and dates.'],
+    api: 'GET /api/platform/v1/tenants/{tenantId}/audit-events' },
+  { t: 'Appearance', p: 'tenant/appearance.html', what: 'Each person’s own theme: start from a template or build a custom one, with a live preview.',
+    pts: ['Kept from the first prototype.', 'The organisation default (from the profile) applies until a person chooses otherwise.'],
+    api: 'Personal setting, stored in the browser' }
+]},
+{ id: 'chits', title: 'Chits and customers', who: 'Branch managers, collectors and admins', intro: 'Customers, chit schemes and chit groups. A scheme is a reusable set of terms; a group copies them, enrols customers while forming and then commences.', screens: [
+  { t: 'Customers', p: 'tenant/customers.html', what: 'People who subscribe to chits. A customer can hold tickets in many groups.',
+    pts: ['Branch-scoped list with search and status filter.', 'The customer code (C000001…) is made by the server. PIN code: 6 digits, not starting with 0.', 'View, edit, make inactive.'],
+    api: '/api/customer/v1/tenants/{tenantId}/customers · PATCH …/status', click: '#add', clickLabel: 'Add customer drawer' },
+  { t: 'Chit schemes', p: 'tenant/schemes.html', what: 'Templates of chit terms. Groups are created from a scheme.',
+    pts: ['Each shows chit value, number of instalments, frequency, instalment amount, commission and how many groups use it.', 'Click a scheme to open its detail page; changing a scheme never changes running groups.'],
+    api: 'GET /api/chits/v1/tenants/{tenantId}/schemes' },
+  { t: 'Scheme detail', p: 'tenant/scheme.html?id=s-1', what: 'One scheme, opened read-only. Edit unlocks the fields the API lets you change; Save or Cancel returns to the view.',
+    pts: ['Fixed terms (value, instalments, frequency, bids, commission, company tickets) show a lock and never become fields.', 'Editable: name, enrolment fee, both late penalties and the minimum members to commence. Changes reach only groups created afterwards.', 'Groups under the scheme: count by status, members enrolled, and a list that opens each group. New group starts from this scheme.'],
+    api: 'GET/PUT …/schemes/{id} (with version) · POST …/schemes/{id}/archive · GET …/groups?schemeId=',
+    states: [['View', 'tenant/scheme.html?id=s-1'], ['Edit', 'tenant/scheme.html?id=s-1&edit=1'], ['Archived', 'tenant/scheme.html?id=s-6']] },
+  { t: 'New scheme', p: 'tenant/scheme-new.html', what: 'Defines the terms once. The instalment amount is worked out as you type.',
+    pts: ['Value, instalments, frequency, bid limits, commission and company tickets can’t be changed after creation, so the form says so.', 'Existing schemes open in Scheme detail instead.'],
+    api: 'POST /api/chits/v1/tenants/{tenantId}/schemes' },
+  { t: 'Chit groups', p: 'tenant/groups.html', what: 'Each group runs one scheme with its own members and tickets.',
+    pts: ['Filter by status: Forming, Commenced, Closed, Cancelled.', 'Forming groups show how many tickets are still vacant.'],
+    api: 'GET /api/chits/v1/tenants/{tenantId}/groups' },
+  { t: 'New chit group', p: 'tenant/group-new.html', what: 'Pick a scheme and a branch. The group copies the scheme’s terms and opens for enrolment.',
+    pts: ['A four-stage stepper shows where creating fits: Create group → Enrol customers → Commencement → Running.', 'Scheme from a dropdown of active schemes; code, name, branch, start date, advance instalments (0–12), remarks.', 'Shows the copied terms before saving.'],
+    api: 'POST /api/chits/v1/tenants/{tenantId}/groups' },
+  { t: 'Group detail', p: 'tenant/group-view.html', what: 'One group, in three tabs: Enrolments, Terms & details and Commencement.',
+    pts: ['The same stepper shows the group’s stage (tickets enrolled, blockers left, CC number, first auction); clicking a stage opens its tab.', 'Enrol a customer on a ticket, with sales type, sales executive and nominee.', 'Commencement lists what still blocks it (vacant tickets, missing documents); edit or cancel while forming.'],
+    api: 'GET …/groups/{id} · …/tickets · …/enrolments · POST …/enrolments · POST …/groups/{id}/commencement',
+    states: [['Forming', 'tenant/group-view.html?id=g-5'], ['Commenced', 'tenant/group-view.html?id=g-1'], ['Cancelled', 'tenant/group-view.html?id=g-8']], click: '#enrolBtn', clickLabel: 'Enrol customer drawer' }
+]},
+{ id: 'hrms', title: 'HRMS', who: 'HR staff, managers and every employee', intro: 'Employee records, attendance, leave and the working calendar, plus a self-service page for each employee.', screens: [
+  { t: 'Employees', p: 'tenant/employees.html', what: 'The staff register.',
+    pts: ['Search and filter by branch, department and status.', 'Add an employee or import a CSV.'],
+    api: '/api/hrms/v1/tenants/{tenantId}/employees', click: '#add', clickLabel: 'Add employee drawer' },
+  { t: 'Employee detail', p: 'tenant/employee.html', what: 'One employee, in five tabs: Profile, Leave, Attendance, Documents and Salary.',
+    pts: ['Upload documents (ID proof, certificates…, up to 5 MB).', 'Adjust a leave balance, record notice, record the exit.'],
+    api: 'GET …/employees/{id} · POST …/documents · notice and exit' },
+  { t: 'Attendance', p: 'tenant/attendance.html', what: 'Mark the day for each employee, or review the month.',
+    pts: ['Daily register: present, absent, half day, on leave, holiday, with check-in and check-out times.', 'Monthly sheet uses the codes P, A, HD, L, HL, H, WO.'],
+    api: '/api/hrms/v1/tenants/{tenantId}/attendance · reports/attendance-sheet' },
+  { t: 'Leave', p: 'tenant/leave.html', what: 'Approve requests and keep balances right.',
+    pts: ['Requests: pending, approved, rejected, cancelled; approve or reject with a note.', 'Balances per employee; grant the yearly leave; apply on someone’s behalf.'],
+    api: '/api/hrms/v1/tenants/{tenantId}/leave-requests · …/approve · …/reject · balances, grants, adjustments' },
+  { t: 'HR setup', p: 'tenant/hrms-setup.html', what: 'Organisation structure, leave rules and the working calendar.',
+    pts: ['Tabs: Departments, Designations, Leave types, Holidays (fixed or optional, all or one branch), Weekly offs, Settings (leave year start).'],
+    api: '/api/hrms/v1/tenants/{tenantId}/departments, /designations, /leave-types, /holidays, /weekly-offs, /settings' },
+  { t: 'HR reports', p: 'tenant/hrms-reports.html', what: 'Registers you can view and download as CSV.',
+    pts: ['Employee register, leave register, attendance summary.'],
+    api: 'GET /api/hrms/v1/tenants/{tenantId}/reports/employee-register, /leave-register, /attendance-sheet' },
+  { t: 'My HR & payslips', p: 'tenant/my-hr.html', what: 'Self-service for every employee who can sign in.',
+    pts: ['Check in, apply for leave, cancel a pending request.', 'Own leave balances, attendance, holidays and profile.', 'Payslips once a payroll run is paid.'],
+    api: '/api/hrms/v1/tenants/{tenantId}/me/… · GET /api/payroll/v1/…/me/payslips', click: '#apply', clickLabel: 'Apply for leave dialog' }
+]},
+{ id: 'crm', title: 'CRM', who: 'Sales staff and branch managers', intro: 'Prospective subscribers, from first contact to enrolment, and the follow-ups that move them along.', screens: [
+  { t: 'Leads', p: 'tenant/leads.html', what: 'Prospective subscribers.',
+    pts: ['Filter by status (New, Contacted, Qualified, Won, Lost), source and branch; search.', 'Overdue follow-ups show in red. Unassigned leads are flagged.', 'Create a lead; export the filtered list as CSV.'],
+    api: '/api/crm/v1/tenants/{tenantId}/leads · GET …/export', click: '#add', clickLabel: 'New lead drawer' },
+  { t: 'Lead detail', p: 'tenant/lead.html', what: 'One lead: its stage, follow-ups and details.',
+    pts: ['Move forward: New → Contacted → Qualified → Won. Any open lead can be marked Lost, with a reason.', 'Reassign; plan and complete follow-ups.', 'A won lead offers “Create customer”.'],
+    api: 'GET/PUT …/leads/{id} · PATCH …/status · PATCH …/assignee · POST …/follow-ups',
+    states: [['New', 'tenant/lead.html?id=l-1'], ['Contacted', 'tenant/lead.html?id=l-2'], ['Qualified', 'tenant/lead.html?id=l-3'], ['Won', 'tenant/lead.html?id=l-4'], ['Lost', 'tenant/lead.html?id=l-5']] },
+  { t: 'Follow-ups', p: 'tenant/follow-ups.html', what: 'Calls, visits, emails, WhatsApp messages and meetings planned with leads.',
+    pts: ['Due today, overdue and planned counts.', 'Complete one as done or missed, with what happened.'],
+    api: 'GET /api/crm/v1/tenants/{tenantId}/follow-ups · POST …/follow-ups/{id}/complete' },
+  { t: 'Pipeline report', p: 'tenant/pipeline.html', what: 'How leads are moving and where they come from.',
+    pts: ['Total leads, conversion rate, won value, open value.', 'Leads by status and by source; follow-ups due and overdue.'],
+    api: 'GET /api/crm/v1/tenants/{tenantId}/reports/pipeline' }
+]},
+{ id: 'payroll', title: 'Payroll', who: 'HR and finance', intro: 'Monthly pay per branch, worked out from salary structures and attendance, approved by a second person and then paid.', screens: [
+  { t: 'Payroll runs', p: 'tenant/payroll-runs.html', what: 'One run per branch per month.',
+    pts: ['Statuses: Draft → Calculated → Approved → Disbursed; Cancelled from Draft or Calculated.', 'Starting a second live run for the same branch and month is refused (409 PAYROLL_RUN_EXISTS).'],
+    api: '/api/payroll/v1/tenants/{tenantId}/runs', click: '#add', clickLabel: 'New run dialog' },
+  { t: 'Payroll run', p: 'tenant/payroll-run.html', what: 'One run: its stage, totals and payslips.',
+    pts: ['Calculate (or recalculate) from salary structures and the month’s attendance; unpaid days reduce pay.', 'Employees without a salary structure are skipped and flagged.', 'Approval must come from someone other than the person who calculated it; then record the bank payout reference.'],
+    api: 'GET …/runs/{id} · …/payslips · POST …/calculate · …/approve · …/disburse · …/cancel',
+    states: [['Draft', 'tenant/payroll-run.html?id=pr-4'], ['Calculated', 'tenant/payroll-run.html?id=pr-3'], ['Approved', 'tenant/payroll-run.html?id=pr-2'], ['Disbursed', 'tenant/payroll-run.html?id=pr-1'], ['Cancelled', 'tenant/payroll-run.html?id=pr-5']] },
+  { t: 'Salary structures', p: 'tenant/salaries.html', what: 'Monthly pay per employee: basic, HRA, allowances, fixed deductions, and whether provident fund applies.',
+    pts: ['A revision applies from its effective date; the earlier one stays in history.', 'Employees with no structure are flagged.'],
+    api: '/api/payroll/v1/tenants/{tenantId}/employees/{employeeId}/salary-structures' }
+]},
+{ id: 'accounting', title: 'Accounting', who: 'Accountants and approvers, in both portals', intro: 'Double-entry books with approval levels. The same screens serve the organisation’s books and, with <code>?realm=platform</code>, ChitSphere’s own books. Only posted vouchers change balances.', screens: [
+  { t: 'Vouchers', p: 'accounting/vouchers.html', what: 'All journal entries: receipts, payments, contra, journals, sales and purchases.',
+    pts: ['Filter by status (Draft, Submitted, Posted, Rejected, Cancelled) and type.', 'New voucher: two or more lines, each with account, debit or credit, amount, and party or segment where the account needs one. Debits must equal credits.', 'Post from template: the template picks the accounts; chits and payroll post the same way automatically.'],
+    api: 'GET/POST …/journal-entries · POST …/postings',
+    states: [['Organisation books', 'accounting/vouchers.html'], ['ChitSphere books', 'accounting/vouchers.html?realm=platform']], click: '#add', clickLabel: 'New voucher drawer' },
+  { t: 'Voucher detail', p: 'accounting/voucher.html', what: 'One voucher: its lines, totals and approval trail.',
+    pts: ['Draft: edit, submit, cancel. Submitted: approve the current level, reject, return for changes, or recall.', 'Posted: reverse with a date and reason (posts an opposite entry).', 'Unless the book allows it, the creator can’t approve their own voucher.'],
+    api: 'GET/PUT …/journal-entries/{id} · POST …/submit, /approve, /reject, /return, /recall, /cancel, /reverse',
+    states: [['Draft', 'accounting/voucher.html?id=je-4'], ['Submitted', 'accounting/voucher.html?id=je-2'], ['Posted', 'accounting/voucher.html?id=je-1'], ['Rejected', 'accounting/voucher.html?id=je-6']] },
+  { t: 'Approvals', p: 'accounting/approvals.html', what: 'Vouchers waiting at a level the signed-in person can approve.',
+    pts: ['Level 1 branch manager, level 2 finance manager, level 3 director.', 'Approve with a comment, or reject with a reason, without leaving the list.'],
+    api: 'GET …/approvals/pending' },
+  { t: 'Accounts & parties', p: 'accounting/ledger.html', what: 'The chart of accounts, segments and parties.',
+    pts: ['Accounts: groups and postable accounts, with rules (cash or bank, needs a party, needs a segment). Add, edit, deactivate.', 'Segments keep each chit group’s, project’s or product line’s books apart; close one at zero balance.', 'Parties (people and organisations) and their party accounts: tickets, vendor, employee, customer.'],
+    api: '…/accounts · …/segments · …/segments/{id}/close · …/parties · …/parties/{id}/accounts', click: '#addA', clickLabel: 'New account dialog' },
+  { t: 'Financial reports', p: 'accounting/reports.html', what: 'Eight reports from posted entries.',
+    pts: ['Trial balance, profit & loss (whole book or one segment), balance sheet, day book.', 'Ledger of one account and statement of one party account.', 'Segments: profit, transfers and what can be transferred now; cash position and who owns the cash.'],
+    api: 'GET …/reports/trial-balance, /profit-loss, /balance-sheet, /day-book, /ledger, /party-statement, /segments, /cash-position · …/segments/{id}/transferable-earnings',
+    states: [['Organisation books', 'accounting/reports.html'], ['ChitSphere books', 'accounting/reports.html?realm=platform']] },
+  { t: 'Books & periods', p: 'accounting/setup.html', what: 'Book settings, fiscal periods and approval policies.',
+    pts: ['Settings: name, GSTIN, what happens when a segment’s cash share would go negative (block or warn), self-approval.', 'Periods: close the month, reopen the latest closed one, open the next fiscal year.', 'Approval policies by voucher type, template and amount band; policies are never edited, only replaced.'],
+    api: 'GET/PUT …/book · …/periods/{id}/close, /reopen · …/fiscal-years/next · …/approval-policies',
+    states: [['Organisation books', 'accounting/setup.html'], ['ChitSphere books', 'accounting/setup.html?realm=platform']] }
+]}
+];
+
+/* ------------------------------------------------------------------ theme state, shared with the frames */
+var KEY = 'cs.theme';
+function readTheme() { try { return JSON.parse(localStorage.getItem(KEY) || 'null') || {}; } catch (e) { return {}; } }
+function writeTheme(patch) {
+  var t = readTheme(); t.v = 2; t.tier = 'template'; t.values = t.values || {};
+  for (var k in patch) t[k] = patch[k];
+  try { localStorage.setItem(KEY, JSON.stringify(t)); } catch (e) {}
+  // storage events reach other documents only; reload frames that can't hear it (opened from disk)
+  sync();
+}
+function sync() {
+  var t = readTheme(), preset = t.preset || 'teal', mode = t.mode === 'dark' ? 'dark' : 'light';
+  document.body.classList.toggle('dark', mode === 'dark');
+  [['swTheme', preset], ['swMode', mode]].forEach(function (s) {
+    document.querySelectorAll('#' + s[0] + ' button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === s[1]); });
+  });
+}
+document.getElementById('swTheme').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) writeTheme({ preset: b.dataset.v }); });
+document.getElementById('swMode').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) writeTheme({ mode: b.dataset.v }); });
+
+/* ------------------------------------------------------------------ render */
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+var n = 0, total = SECTIONS.reduce(function (s, x) { return s + x.screens.length; }, 0);
+document.getElementById('index').innerHTML = SECTIONS.map(function (s) { return '<a href="#' + s.id + '" data-sec="' + s.id + '">' + s.title.split(':')[0] + '<span>' + s.screens.length + '</span></a>'; }).join('');
+document.getElementById('board').innerHTML = SECTIONS.map(function (s) {
+  return '<section class="sec" id="' + s.id + '"><h2>' + s.title + '</h2><p>' + s.intro + '</p><span class="who">For: ' + s.who + '</span></section>' +
+    s.screens.map(function (x) {
+      n++;
+      var states = (x.states || []).slice();
+      if (x.click) states.push([x.clickLabel, x.p, x.click]);
+      return '<div class="shot">' +
+        '<div class="frame"><div class="win"><div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url" data-url>' + esc(x.p) + '</span></div>' +
+        '<div class="fit"><iframe loading="lazy" title="' + esc(x.t) + '" src="' + esc(x.p) + '" tabindex="-1"></iframe><button class="cover" aria-label="Try ' + esc(x.t) + ' here"><span>Click to try it here</span></button></div></div>' +
+        '<div class="live-note" data-note></div></div>' +
+        '<div class="notes"><div class="num">' + String(n).padStart(2, '0') + ' / ' + total + '</div><h3>' + x.t + '</h3><div class="path mono">' + esc(x.p) + '</div>' +
+        '<p class="what">' + x.what + '</p><ul>' + x.pts.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ul>' +
+        (states.length ? '<div class="states"><div class="lbl">States</div><div class="switch">' + (x.states ? '' : '<button class="on" data-src="' + esc(x.p) + '">Page</button>') +
+          states.map(function (st, i) { return '<button' + (x.states && i === 0 ? ' class="on"' : '') + ' data-src="' + esc(st[1]) + '"' + (st[2] ? ' data-click="' + esc(st[2]) + '"' : '') + '>' + st[0] + '</button>'; }).join('') + '</div></div>' : '') +
+        '<div class="api"><b>API</b><span class="mono">' + x.api + '</span></div>' +
+        '<a class="open" href="' + esc(x.p) + '" target="_blank" rel="noopener" data-open>Open full screen ↗</a></div></div>';
+    }).join('');
+}).join('');
+
+/* scale each frame to its card */
+var ro = new ResizeObserver(function (es) { es.forEach(function (e) { e.target.style.setProperty('--s', e.contentRect.width / 1440); }); });
+document.querySelectorAll('.fit').forEach(function (f) { ro.observe(f); });
+
+/* click-to-try, state switches, dialog previews */
+function frameDoc(f) { try { return f.contentDocument; } catch (e) { return null; } }
+function load(shot, src, click) {
+  var f = shot.querySelector('iframe'), note = shot.querySelector('[data-note]');
+  shot.querySelector('[data-url]').textContent = src; shot.querySelector('[data-open]').href = src;
+  note.textContent = '';
+  f.onload = function () {
+    if (!click) return;
+    setTimeout(function () {
+      var d = frameDoc(f), el = d && d.querySelector(click);
+      if (el) { el.click(); note.textContent = 'Showing the dialog this page opens. Click the screen to use it.'; }
+      else note.textContent = 'Serve the ui folder over http to preview this dialog.';
+    }, 900);
+  };
+  f.src = src;
+}
+document.getElementById('board').addEventListener('click', function (e) {
+  var cover = e.target.closest('.cover');
+  if (cover) { var fr = cover.closest('.frame'); fr.querySelector('.fit').classList.add('live'); fr.querySelector('[data-note]').textContent = 'Live: the screen takes clicks and scrolls now.'; return; }
+  var b = e.target.closest('.states button'); if (!b) return;
+  var shot = b.closest('.shot');
+  shot.querySelectorAll('.states button').forEach(function (x) { x.classList.toggle('on', x === b); });
+  load(shot, b.dataset.src, b.dataset.click);
+});
+
+/* highlight the section in view */
+var links = document.querySelectorAll('#index a');
+var io = new IntersectionObserver(function (es) {
+  es.forEach(function (e) { if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle('on', a.dataset.sec === e.target.id); }); });
+}, { rootMargin: '-40% 0px -55% 0px' });
+document.querySelectorAll('.sec').forEach(function (s) { io.observe(s); });
+
+window.addEventListener('storage', function (e) { if (e.key === KEY) sync(); });
+sync();
+</script>
+</body>
+</html>

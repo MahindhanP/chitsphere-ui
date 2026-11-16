@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Group · Sri Venkata Chits</title>
+  <title>Chit group · Sri Venkata Chits</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
@@ -11,145 +11,100 @@
   <link rel="stylesheet" href="../assets/css/theme.css">
   <link rel="stylesheet" href="../assets/css/app.css">
 </head>
+<!--
+  GET …/groups/{id} (with enrolled, vacant, commencementBlockers, commencement), PUT while FORMING,
+  GET …/groups/{id}/tickets and /enrolments, POST …/enrolments {customerId, ticketNumber?, enrolledOn, salesType,
+  salesExecutiveId, referredBy, nominee}, POST …/enrolments/{id}/cancel {reason},
+  POST …/groups/{id}/commencement {ccNumber, ccDate, challanReference, documentReference, commencedOn, firstAuctionOn},
+  POST …/groups/{id}/cancel {reason}. Auctions and collections have no API yet.
+-->
 <body data-portal="tenant" data-page="groups">
 <main class="content">
-  <div class="crumbs"><a href="groups.html">Chit groups</a><i data-i="chevR"></i><span id="crumb"></span></div>
-
-  <div class="card mb-4">
-    <div class="card-body row wrap" style="gap:18px">
-      <span class="avatar xl" id="gIcon"></span>
-      <div style="flex:1;min-width:240px">
-        <div class="row wrap"><h1 class="mono" id="gName"></h1><span id="gStatus"></span><span class="badge hl" id="gLabel"></span></div>
-        <div class="small muted mt-1" id="gMeta"></div>
-      </div>
-      <div class="row wrap">
-        <button class="btn"><i data-i="download"></i>Group register</button>
-        <button class="btn primary" id="auctionBtn"><i data-i="gavel"></i>Conduct auction</button>
-      </div>
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="groups.html">Groups</a><i data-i="chevR"></i><span id="crumb"></span></div>
+      <div class="row" style="gap:12px"><span class="avatar sq lg" id="av"></span><div><h1 id="gName"></h1><p id="gSub"></p></div></div>
     </div>
-    <div class="calc-strip" id="gStrip" style="border-left:0;border-right:0;border-radius:0"></div>
-    <div class="tabs" data-tabs style="padding:0 12px">
-      <button class="active" data-tab="ov">Overview</button>
-      <button data-tab="auc">Auctions</button>
-      <button data-tab="mem">Subscribers <span class="count" id="memCount"></span></button>
-      <button data-tab="docs">Compliance documents</button>
+    <div class="actions" id="acts"></div>
+  </div>
+  <div class="card mb-4"><div class="card-body"><div id="stages"></div></div></div>
+  <div class="grid g-4" id="kpis"></div>
+  <div id="ready" class="mt-4"></div>
+  <div class="card mt-4">
+    <div class="tabs" data-tabs>
+      <button data-tab="en" class="active">Enrolments <span class="count" id="cEn"></span></button>
+      <button data-tab="tm">Terms & details</button>
+      <button data-tab="cc">Commencement</button>
     </div>
   </div>
-
-  <div class="tab-panel" data-tab-panel="ov">
-    <div class="grid g-main-side">
-      <div class="stack-lg">
-        <div class="card">
-          <div class="card-head"><div><h3>Progress</h3><div class="sub" id="progSub"></div></div></div>
-          <div class="card-body">
-            <div class="meter"><div class="meter-bar" style="height:10px"><div class="meter-fill" id="progBar"></div></div></div>
-            <div class="grid g-4 mt-4">
-              <div class="kv-card"><span>Prized</span><b id="pPrized"></b></div>
-              <div class="kv-card"><span>Non-prized</span><b id="pNon"></b></div>
-              <div class="kv-card"><span>Avg. discount</span><b>18.4%</b></div>
-              <div class="kv-card"><span>Dividend paid</span><b id="pDiv"></b></div>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h3>Group details</h3></div>
-          <div class="card-body"><dl class="kv" id="details"></dl></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h3>Lifecycle</h3></div>
-        <div class="card-body"><div class="timeline" id="lifecycle"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-tab-panel="auc">
-    <div class="card"><div class="card-head"><div><h3>Auction history & schedule</h3><div class="sub">Discount (bid), commission and dividend per auction</div></div></div><div id="aucTbl"></div></div>
-  </div>
-
-  <div class="tab-panel" data-tab-panel="mem">
-    <div class="card"><div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="mq" placeholder="Search subscriber…"></div></div><div id="memTbl"></div></div>
-  </div>
-
-  <div class="tab-panel" data-tab-panel="docs">
-    <div class="card"><div class="list" id="docs"></div></div>
-  </div>
+  <div data-tab-panel="en" class="active mt-4"><div class="card"><div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search customer…"></div><select class="select" id="fSt"><option value="">All</option><option value="ACTIVE">Active</option><option value="CANCELLED">Cancelled</option></select></div><div id="enTbl"></div></div></div>
+  <div data-tab-panel="tm" class="mt-4"><div class="grid g-2"><div class="card"><div class="card-head"><h3>Terms (copied from scheme)</h3></div><div class="card-body" id="terms"></div></div><div class="card"><div class="card-head"><h3>Group</h3></div><div class="card-body" id="details"></div></div></div></div>
+  <div data-tab-panel="cc" class="mt-4"><div class="card"><div class="card-body" id="cc"></div></div></div>
 </main>
 
 <script src="../assets/js/data.js"></script>
 <script src="../assets/js/app.js"></script>
 <script>
 document.addEventListener('app:ready', function () {
-  var g = DB.group(UI.param('id')) || DB.groups[0];
-  var s = DB.scheme(g.scheme), b = DB.branch(g.branch), $ = function (id) { return document.getElementById(id); };
-  var sub = Math.round(s.chitValue / s.installments);
-  document.title = g.name + ' · Sri Venkata Chits';
-  $('crumb').textContent = g.name; $('gName').textContent = g.name;
-  $('gIcon').innerHTML = UI.icon('grid', 'lg'); $('gIcon').style.cssText = 'background:' + s.color + ';color:#fff';
-  $('gStatus').innerHTML = UI.badge(g.status); $('gLabel').textContent = g.label;
-  $('gMeta').innerHTML = g.id + ' · ' + s.name + ' · ' + b.name + ' · Auctions ' + g.auctionDay;
-  if (g.status === 'Closed') $('auctionBtn').disabled = true;
-  $('gStrip').innerHTML = [['Chit value', UI.inr(g.chitValue)], ['Subscription', UI.inr(sub)], ['Tickets', g.enrolled + ' / ' + g.tickets], ['Auctions done', g.auctionNo + ' / ' + g.tickets], ['Commenced', UI.date(g.startDate)]]
-    .map(function (c) { return '<div><span>' + c[0] + '</span><b>' + c[1] + '</b></div>'; }).join('');
-  $('memCount').textContent = g.enrolled;
+  var $ = function (id) { return document.getElementById(id); };
+  var g = DB.group(UI.param('id') || 'g-5') || DB.groups[4];
+  $('stages').innerHTML = UI.groupStages(g) + (g.status === 'CANCELLED' ? '<p class="xs muted mt-4">This group was cancelled before it commenced.</p>' : '');
+  function goTab(k) { var b = [].filter.call(document.querySelectorAll('[data-tab="' + k + '"]'), function (x) { return x.offsetParent; })[0]; if (b) { b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+  $('stages').addEventListener('click', function (e) { var st = e.target.closest('[data-go]'); if (st) goTab(st.getAttribute('data-go')); });
+  $('stages').addEventListener('keydown', function (e) { var st = e.target.closest('[data-go]'); if (st && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); goTab(st.getAttribute('data-go')); } });
+  var en = DB.enrolmentsFor(g), tk = DB.ticketsFor(g), forming = g.status === 'FORMING';
+  document.title = g.name + ' · Groups';
+  $('crumb').textContent = g.code; $('gName').textContent = g.name;
+  $('av').textContent = g.installments; $('av').style.cssText = 'background:' + g.color + ';color:#fff;width:48px;height:48px';
+  $('gSub').innerHTML = '<span class="mono">' + g.code + '</span> · ' + UI.badge(g.status) + ' · ' + DB.branchName(g.branchId) + ' · scheme <a href="scheme.html?id=' + g.schemeId + '" class="mono">' + g.schemeCode + '</a>';
+  $('acts').innerHTML = forming ? '<button class="btn" id="editBtn"><i data-i="edit"></i>Edit</button><button class="btn danger-ghost" id="cancelBtn"><i data-i="x"></i>Cancel group</button><button class="btn primary" id="enrolBtn"><i data-i="plus"></i>Enrol customer</button>' : '';
+  UI.hydrateIcons($('acts'));
+  $('kpis').innerHTML = [['Chit value', UI.inr(g.chitValue)], ['Instalment', UI.inr(g.installmentAmount) + ' × ' + g.installments], ['Enrolled', g.enrolled + ' / ' + g.installments], ['Vacant', g.vacant]].map(function (k) { return '<div class="card kpi"><div class="label">' + k[0] + '</div><div class="value" style="font-size:20px">' + k[1] + '</div></div>'; }).join('');
 
-  $('progBar').style.width = (g.auctionNo / g.tickets * 100) + '%';
-  $('progSub').textContent = g.auctionNo + ' of ' + g.tickets + ' auctions completed · ' + (g.tickets - g.auctionNo) + ' remaining';
-  $('pPrized').textContent = g.auctionNo; $('pNon').textContent = g.tickets - g.auctionNo;
-  $('pDiv').textContent = UI.inrShort(g.chitValue * 0.134 * g.auctionNo / 1);
+  if (forming) $('ready').innerHTML = g.commencementBlockers.length
+    ? '<div class="alert warning">' + UI.icon('alert') + '<div><b>Not ready to commence</b>' + g.commencementBlockers.map(UI.esc).join('<br>') + '</div></div>'
+    : '<div class="alert success">' + UI.icon('checkCircle') + '<div><b>Ready to commence</b>Record the commencement certificate on the Commencement tab.</div></div>';
+  if (g.status === 'CANCELLED') $('ready').innerHTML = '<div class="alert danger">' + UI.icon('x') + '<div><b>Cancelled</b>' + UI.esc(g.cancelReason) + '</div></div>';
 
-  $('details').innerHTML = [['Scheme', '<a href="schemes.html?open=' + s.id + '">' + s.name + '</a>'], ['Auction type', s.auctionType + ' · ' + g.mode], ['Collection', s.collection === 'BEFORE_AUCTION' ? 'Before auction' : 'After auction'], ['Bid range', s.minBid + '% – ' + s.maxBid + '%'], ['Commission', s.commission + '% (' + UI.inr(g.chitValue * s.commission / 100) + ')'], ['Company ticket', '#' + s.companyTicket], ['Overdue', 'After auction · 7 days'], ['Penalty (NPS / PS)', s.penaltyNPS + '% / ' + s.penaltyPS + '% p.m.'], ['Allowed branches', b.name + ', Kukatpally']]
-    .map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
+  $('cEn').textContent = en.filter(function (e) { return e.status === 'ACTIVE'; }).length;
+  UI.table({ el: '#enTbl', rows: en, search: '#q', searchKeys: ['customerName', 'customerCode'], filters: [{ el: '#fSt', key: 'status' }], pageSize: 10, columns: [
+    { key: 'ticketNumber', label: 'Ticket', num: true, sort: true, render: function (e) { return e.ticketNumber ? '<b>' + e.ticketNumber + '</b>' : '—'; } },
+    { key: 'customerName', label: 'Subscriber', render: function (e) { return e.subscriberType === 'COMPANY' ? '<span class="badge primary">Company ticket</span>' : UI.esc(e.customerName) + '<div class="xs muted mono">' + e.customerCode + '</div>'; } },
+    { key: 'enrolledOn', label: 'Enrolled', render: function (e) { return UI.date(e.enrolledOn); } },
+    { key: 'salesType', label: 'Sale', render: function (e) { return UI.human(e.salesType) + (e.salesExecutive ? '<div class="xs muted">' + e.salesExecutive + '</div>' : e.referredBy ? '<div class="xs muted">Ref: ' + e.referredBy + '</div>' : ''); } },
+    { key: 'nominee', label: 'Nominee', render: function (e) { return e.nominee ? UI.esc(e.nominee.name) + '<div class="xs muted">' + UI.human(e.nominee.relationship) + '</div>' : '—'; } },
+    { key: 'status', label: 'Status', render: function (e) { return UI.badge(e.status) + (e.cancelReason ? '<div class="xs muted">' + UI.esc(e.cancelReason) + '</div>' : ''); } },
+    { key: 'x', label: '', render: function (e) { return forming && e.status === 'ACTIVE' && e.subscriberType !== 'COMPANY' ? '<button class="btn sm danger-ghost" data-act="cancelEn" data-id="' + e.id + '">Cancel</button>' : ''; } }] });
 
-  var dates = ['12 Sep 2024', '20 Sep 2024', '24 Oct 2024', '30 Oct 2024', '11 Nov 2024', '18 Nov 2024', '27 Nov 2024', '02 Dec 2024'];
-  $('lifecycle').innerHTML = DB.stages.map(function (st, i) {
-    return '<div class="tl-item"><span class="tl-dot ok"></span><div class="tl-body"><b>' + st.name + '</b> <span class="mono xs muted">' + st.code + '</span><div class="when">' + dates[i] + '</div></div></div>';
-  }).join('') + '<div class="tl-item"><span class="tl-dot"></span><div class="tl-body"><b>Group commenced</b><div class="when">' + UI.date(g.startDate) + '</div></div></div>';
+  $('terms').innerHTML = UI.kv([['Chit value', UI.inr(g.chitValue)], ['Instalments', g.installments + ' × ' + UI.inr(g.installmentAmount)], ['Frequency', UI.human(g.auctionFrequency)], ['Collection', UI.human(g.collectionOption)], ['Company tickets', g.companyTickets], ['Enrolment fee', UI.inr(g.enrolmentFee)], ['Commence at', g.minMembersForCommencement + ' enrolled']]);
+  $('details').innerHTML = UI.kv([['Branch', DB.branchName(g.branchId)], ['Planned start', UI.date(g.startsOn)], ['Advance instalments', g.advanceInstallments], ['Remarks', UI.esc(g.remarks)]]);
 
-  /* auctions */
-  var auc = [];
-  for (var i = 1; i <= Math.min(g.tickets, g.auctionNo + 3); i++) {
-    var done = i <= g.auctionNo;
-    var bid = i === 1 ? s.commission : Math.max(s.minBid, s.maxBid - (i - 2) * ((s.maxBid - s.minBid) / g.tickets) * 1.6);
-    var d = new Date(g.startDate); d.setMonth(d.getMonth() + i - 1);
-    var disc = g.chitValue * bid / 100, comm = g.chitValue * s.commission / 100;
-    auc.push({ no: i, date: d.toISOString().slice(0, 10), done: done, winner: done ? (i === 1 ? 'Company Ticket' : DB.members[(i % 7) + 1].name) : '—', bid: bid, disc: disc, prize: g.chitValue - disc, div: Math.max(0, (disc - comm) / g.tickets) });
-  }
-  UI.table({
-    el: '#aucTbl', rows: auc.reverse(), pageSize: 10,
-    columns: [
-      { key: 'no', label: '#', render: function (a) { return '<b class="mono">' + a.no + '</b>'; } },
-      { key: 'date', label: 'Date', render: function (a) { return UI.date(a.date); } },
-      { key: 'winner', label: 'Prized subscriber', render: function (a) { return a.done ? '<b>' + a.winner + '</b>' : '<span class="muted">Scheduled</span>'; } },
-      { key: 'bid', label: 'Bid %', num: true, render: function (a) { return a.done ? a.bid.toFixed(1) + '%' : '—'; } },
-      { key: 'disc', label: 'Discount', num: true, render: function (a) { return a.done ? UI.inr(a.disc) : '—'; } },
-      { key: 'prize', label: 'Prize amount', num: true, render: function (a) { return a.done ? '<b>' + UI.inr(a.prize) + '</b>' : '—'; } },
-      { key: 'div', label: 'Dividend / ticket', num: true, render: function (a) { return a.done ? UI.inr(a.div) : '—'; } },
-      { key: 'st', label: 'Status', render: function (a) { return a.done ? UI.badge('Closed') : '<span class="badge info dot">Upcoming</span>'; } }
-    ]
+  var c = g.commencement;
+  if (c) $('cc').innerHTML = UI.kv([['CC number', '<span class="mono">' + c.ccNumber + '</span>'], ['CC date', UI.date(c.ccDate)], ['Commenced on', UI.date(c.commencedOn)], ['First auction', UI.date(c.firstAuctionOn)], ['Challan reference', c.challanReference], ['Document reference', c.documentReference]]);
+  else if (forming) {
+    $('cc').innerHTML = '<p class="muted small mb-4">Record the Registrar’s commencement certificate (CC). The group becomes COMMENCED and enrolment closes.</p><form id="ccF" novalidate>' + UI.form([
+      { id: 'ccNumber', label: 'CC number', req: true, mono: true }, { id: 'ccDate', label: 'CC date', type: 'date', req: true }, { id: 'commencedOn', label: 'Commenced on', type: 'date', req: true, value: g.startsOn }, { id: 'firstAuctionOn', label: 'First auction on', type: 'date', req: true },
+      { id: 'challanReference', label: 'Challan reference' }, { id: 'documentReference', label: 'Document reference' }]) + '<div class="row mt-4"><button class="btn primary" type="submit"' + (g.commencementBlockers.length ? ' disabled title="Clear the blockers first"' : '') + '>' + UI.icon('play') + 'Commence group</button>' +
+      (g.commencementBlockers.length ? '<span class="xs muted">' + UI.esc(g.commencementBlockers[0]) + '</span>' : '') + '</div></form>';
+    $('ccF').addEventListener('submit', function (e) { e.preventDefault(); if (UI.validate(this)) UI.toast('Group commenced (POST …/commencement)', 'success'); });
+  } else $('cc').innerHTML = '<div class="empty">Not applicable for a cancelled group.</div>';
+
+  if (!forming) return;
+  var custs = DB.customers.filter(function (x) { return x.status === 'ACTIVE'; });
+  var vacant = tk.filter(function (t) { return t.status === 'VACANT'; }).map(function (t) { return t.ticketNumber; });
+  $('enrolBtn').addEventListener('click', function () {
+    UI.dialog({ drawer: true, wide: true, title: 'Enrol customer', sub: g.code + ' · ' + vacant.length + ' tickets vacant', icon: 'ticket', ok: 'Enrol', api: 'POST …/groups/{groupId}/enrolments', done: 'Customer enrolled',
+      fields: [{ id: 'customerId', label: 'Customer', type: 'select', req: true, span: 2, options: custs.map(function (x) { return [x.id, x.fullName + ' · ' + x.code + ' · ' + x.phone]; }), blank: 'Search customers…', hint: 'Not listed? <a href="customers.html?new=1">Add a customer</a>' },
+        { id: 'ticketNumber', label: 'Ticket number', type: 'select', options: vacant.map(String), blank: 'Next vacant (' + vacant[0] + ')' }, { id: 'enrolledOn', label: 'Enrolled on', type: 'date', req: true, value: '2026-11-14' },
+        { id: 'salesType', label: 'Sale type', type: 'select', req: true, enum: 'SalesType' }, { id: 'salesExecutiveId', label: 'Sales executive', type: 'select', options: DB.memberships.filter(function (m) { return m.roleIds.indexOf('r-agent') > -1 || m.roleIds.indexOf('r-bm') > -1; }).map(function (m) { return [m.id, m.fullName]; }), blank: '—' },
+        { id: 'referredBy', label: 'Referred by', span: 2 },
+        { section: 'Nominee', text: 'Who receives the benefit if the subscriber dies' }, { id: 'nName', label: 'Name', req: true }, { id: 'nRel', label: 'Relationship', type: 'select', req: true, enum: 'NomineeRelationship', blank: 'Select' },
+        { id: 'nPhone', label: 'Phone', type: 'tel' }, { id: 'nDob', label: 'Date of birth', type: 'date' }],
+      html: '<div class="alert info mb-4">' + UI.icon('info') + '<div><b>Enrolment fee ' + UI.inr(g.enrolmentFee) + '</b>' + (g.advanceInstallments ? 'Plus ' + g.advanceInstallments + ' advance instalment(s) of ' + UI.inr(g.installmentAmount) + '.' : 'No advance instalments for this group.') + '</div></div>' });
   });
-
-  var mem = DB.members.concat(Array.from({ length: Math.max(0, g.enrolled - DB.members.length) }, function (_, i) {
-    var names = ['Lakshmi N', 'Rajesh K', 'Swathi P', 'Naveen R', 'Bhavani D', 'Krishna M', 'Anitha S', 'Gopal V', 'Sirisha T', 'Rakesh B'];
-    return { ticket: DB.members.length + i + 1, name: names[i % names.length] + (i >= names.length ? ' ' + Math.floor(i / names.length + 1) : ''), phone: '+91 90000 1' + String(i + 9).padStart(4, '0'), branch: i % 3 ? b.name : 'Kukatpally', kyc: i % 9 ? 'Verified' : 'Pending', status: (DB.members.length + i + 1) <= g.auctionNo ? 'Prized' : 'Non-prized' };
-  }));
-  UI.table({
-    el: '#memTbl', rows: mem.slice(0, g.enrolled), pageSize: 10, search: '#mq', searchKeys: ['name', 'phone', 'ticket'],
-    columns: [
-      { key: 'ticket', label: 'Ticket', sort: true, render: function (m) { return '<b class="mono">#' + m.ticket + '</b>'; } },
-      { key: 'name', label: 'Subscriber', sort: true, render: function (m) { return '<div class="ent"><span class="avatar sm">' + UI.initials(m.name) + '</span><div class="ent-txt"><b>' + m.name + '</b><span>' + m.phone + '</span></div></div>'; } },
-      { key: 'branch', label: 'Branch' },
-      { key: 'kyc', label: 'KYC', render: function (m) { return UI.badge(m.kyc); } },
-      { key: 'status', label: 'Status', sort: true, render: function (m) { return UI.badge(m.status); } },
-      { key: 'due', label: 'Dues', num: true, render: function (m) { return m.ticket % 6 === 0 ? '<b style="color:var(--danger)">' + UI.inr(sub) + '</b>' : '<span class="muted">Nil</span>'; } }
-    ]
-  });
-
-  $('docs').innerHTML = [['bank', 'FD certificate', 'FD No. 50300' + g.id.slice(-4) + ' · ' + UI.inr(g.chitValue) + ' · SBI Ameerpet'], ['shield', 'PSO application', 'Ref. ROC/HYD/' + g.id.slice(-4) + '/2024'], ['shieldCheck', 'Previous Sanction Order', 'PSO No. 1184/2024'], ['flag', 'CC application', 'Challan 7781' + g.id.slice(-3)], ['checkCircle', 'Commencement Certificate', 'CC No. 2209/2024']].map(function (d) {
-    return '<div class="list-item"><span class="card-title-icon">' + UI.icon(d[0]) + '</span><div style="flex:1"><b>' + d[1] + '</b><div class="xs muted">' + d[2] + '</div></div>' + UI.badge('Verified') + '<button class="btn sm ghost">' + UI.icon('eye') + 'View</button><button class="icon-btn sm" aria-label="Download">' + UI.icon('download') + '</button></div>';
-  }).join('');
-
-  $('auctionBtn').addEventListener('click', function () { UI.toast('Auction module is planned for the next phase', 'warning'); });
+  $('cancelBtn').addEventListener('click', function () { UI.dialog({ title: 'Cancel ' + g.code + '?', danger: true, ok: 'Cancel group', icon: 'x', api: 'POST …/groups/{groupId}/cancel', done: 'Group cancelled', text: 'Every active enrolment is cancelled. This can’t be undone.', fields: [{ id: 'reason', label: 'Reason', type: 'textarea', req: true, span: 2 }] }); });
+  $('editBtn').addEventListener('click', function () { UI.dialog({ title: 'Edit group', api: 'PUT …/groups/{groupId}', record: g, done: 'Group saved', fields: [{ id: 'name', label: 'Name', req: true }, { id: 'startsOn', label: 'Planned start', type: 'date', req: true }, { id: 'advanceInstallments', label: 'Advance instalments', type: 'number', min: 0, max: 12 }, { id: 'remarks', label: 'Remarks', type: 'textarea', span: 2 }] }); });
+  UI.onAct(function (act, id) { if (act === 'cancelEn') UI.dialog({ title: 'Cancel enrolment', danger: true, ok: 'Cancel enrolment', api: 'POST …/enrolments/{enrolmentId}/cancel', done: 'Enrolment cancelled · ticket is vacant again', fields: [{ id: 'reason', label: 'Reason', type: 'textarea', req: true, span: 2 }] }); });
 });
 </script>
 </body>

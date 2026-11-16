@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payroll runs · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  /api/payroll/v1/tenants/{tenantId}/runs: list (?branchId, ?period, ?status), POST {branchId, period YYYY-MM} (one live run per
+  branch+period; 409 PAYROLL_RUN_EXISTS). Lifecycle DRAFT → CALCULATED → APPROVED → DISBURSED; CANCELLED from DRAFT/CALCULATED.
+-->
+<body data-portal="tenant" data-page="payroll-runs">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Payroll<i data-i="chevR"></i>Runs</div>
+      <h1>Payroll runs</h1>
+      <p>One run per branch per month. Calculate, approve, then record the bank payout.</p>
+    </div>
+    <div class="actions"><a class="btn" href="salaries.html"><i data-i="wallet"></i>Salary structures</a><button class="btn primary" id="add"><i data-i="plus"></i>New run</button></div>
+  </div>
+  <div class="grid g-4" id="kpis"></div>
+  <div class="card mt-4">
+    <div class="toolbar"><div class="segmented" data-seg id="fSt"><button class="active" data-v="">All</button></div><select class="select" id="fBr"></select></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var R = DB.payrollRuns, brs = DB.branches.filter(function (b) { return b.status === 'ACTIVE'; }).map(function (b) { return [b.id, b.name]; });
+  var oct = R.filter(function (r) { return r.period === '2026-10' && r.status !== 'CANCELLED'; });
+  $('kpis').innerHTML = [['October net pay', UI.inrShort(oct.reduce(function (s, r) { return s + r.totalNet; }, 0))], ['Waiting for approval', R.filter(function (r) { return r.status === 'CALCULATED'; }).length], ['Approved, not paid', R.filter(function (r) { return r.status === 'APPROVED'; }).length], ['Drafts', R.filter(function (r) { return r.status === 'DRAFT'; }).length]].map(function (k) { return '<div class="card kpi"><div class="label">' + k[0] + '</div><div class="value">' + k[1] + '</div></div>'; }).join('');
+  $('fSt').innerHTML += DB.ENUM.PayrollRunStatus.map(function (s) { return '<button data-v="' + s + '">' + UI.human(s) + '</button>'; }).join('');
+  $('fBr').innerHTML = UI.options({ options: brs, blank: 'All branches' });
+  UI.table({ el: '#tbl', rows: R, filters: [{ el: '#fSt', key: 'status' }, { el: '#fBr', key: 'branchId' }], onRow: function (r) { location.href = 'payroll-run.html?id=' + r.id; },
+    columns: [
+      { key: 'period', label: 'Month', sort: true, render: function (r) { return '<b>' + UI.month(r.period) + '</b><div class="xs muted mono">' + r.period + '</div>'; } },
+      { key: 'branchId', label: 'Branch', render: function (r) { return DB.branchName(r.branchId); } },
+      { key: 'employeeCount', label: 'Employees', num: true, render: function (r) { return r.employeeCount + (r.skippedEmployees ? '<div class="xs" style="color:var(--warning)">' + r.skippedEmployees + ' skipped</div>' : ''); } },
+      { key: 'totalGross', label: 'Gross', num: true, render: function (r) { return UI.inr(r.totalGross); } },
+      { key: 'totalNet', label: 'Net pay', num: true, render: function (r) { return '<b>' + UI.inr(r.totalNet) + '</b>'; } },
+      { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status) + (r.disbursementReference ? '<div class="xs muted mono">' + r.disbursementReference + '</div>' : ''); } }] });
+  $('add').addEventListener('click', function () {
+    UI.dialog({ title: 'New payroll run', icon: 'wallet', api: 'POST /api/payroll/v1/tenants/{tenantId}/runs', done: 'Draft run created. Calculate it next.',
+      text: 'A branch can have only one live run per month. To redo a month, cancel the old run first.',
+      fields: [{ id: 'branchId', label: 'Branch', type: 'select', req: true, options: brs, blank: 'Select' }, { id: 'period', label: 'Month', type: 'month', req: true, value: '2026-11' }],
+      onOk: function (v) { var dup = R.find(function (r) { return r.branchId === v.branchId && r.period === v.period && r.status !== 'CANCELLED'; }); if (dup) { UI.toast('409 PAYROLL_RUN_EXISTS: ' + DB.branchName(v.branchId) + ' already has a ' + UI.human(dup.status).toLowerCase() + ' run for ' + v.period, 'danger'); return false; } } });
+  });
+});
+</script>
+</body>
+</html>

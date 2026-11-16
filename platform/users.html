@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Platform staff · ChitSphere Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET/POST /api/platform/v1/admin/users, PATCH …/{id}/status, PATCH …/{id}/role, POST …/{id}/unlock.
+  New staff get an activation email (PENDING_ACTIVATION until they set a password).
+-->
+<body data-portal="platform" data-page="staff">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Platform</a><i data-i="chevR"></i>Platform staff</div>
+      <h1>Platform staff</h1>
+      <p>ChitSphere employees who use the Platform Console. Admins manage tenants and plans; support can request time-limited access to a tenant.</p>
+    </div>
+    <div class="actions"><button class="btn primary" id="add"><i data-i="plus"></i>Add staff</button></div>
+  </div>
+  <div class="card">
+    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search name or email…"></div><select class="select" id="fRole"></select><select class="select" id="fStatus"></select></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('fRole').innerHTML = UI.options({ enum: 'PlatformRole', blank: 'All roles' });
+  $('fStatus').innerHTML = UI.options({ enum: 'UserStatus', blank: 'All statuses' });
+  UI.table({
+    el: '#tbl', rows: DB.staff, search: '#q', searchKeys: ['fullName', 'email'], filters: [{ el: '#fRole', key: 'role' }, { el: '#fStatus', key: 'status' }],
+    columns: [
+      { key: 'fullName', label: 'Name', sort: true, render: function (u) { return UI.ent(u.fullName, UI.esc(u.email)); } },
+      { key: 'role', label: 'Role', render: function (u) { return '<span class="badge ' + (u.role === 'PLATFORM_ADMIN' ? 'primary' : 'outline') + '">' + UI.human(u.role) + '</span>'; } },
+      { key: 'status', label: 'Status', render: function (u) { return UI.badge(u.status) + (u.lockedUntil ? ' ' + UI.badge('LOCKED') + '<div class="xs muted">' + u.failedLoginAttempts + ' failed · until ' + UI.dt(u.lockedUntil) + '</div>' : ''); } },
+      { key: 'phone', label: 'Phone', render: function (u) { return UI.esc(u.phone) || '—'; } },
+      { key: 'lastLoginAt', label: 'Last sign-in', sort: true, render: function (u) { return UI.dt(u.lastLoginAt); } },
+      { key: 'x', label: '', cls: 'actions-cell', render: function (u) {
+        return u.id === 'u-arjun' ? '<span class="xs muted">You</span>' : UI.rowMenu('rm_' + u.id, [['role', 'Change role', false, 'userCog'], u.lockedUntil ? ['unlock', 'Unlock', false, 'unlock'] : null,
+          u.status === 'PENDING_ACTIVATION' ? ['resend', 'Resend activation email', false, 'mail'] : null, ['status', u.status === 'DISABLED' ? 'Enable' : 'Disable', u.status !== 'DISABLED', 'x']]); } }
+    ]
+  });
+  $('add').addEventListener('click', function () {
+    UI.dialog({ title: 'Add platform staff', icon: 'userCog', api: 'POST /api/platform/v1/admin/users', done: 'Staff added · activation email sent', ok: 'Add',
+      fields: [{ id: 'fullName', label: 'Full name', req: true }, { id: 'email', label: 'Email', type: 'email', req: true, placeholder: 'name@chitsphere.in' }, { id: 'phone', label: 'Phone' }, { id: 'role', label: 'Role', type: 'select', enum: 'PlatformRole', value: 'PLATFORM_SUPPORT' }] });
+  });
+  UI.onAct(function (act, id) {
+    var u = DB.staff.filter(function (x) { return x.id === id; })[0];
+    if (act === 'role') UI.dialog({ title: 'Change role', sub: u.fullName, api: 'PATCH …/users/{id}/role', done: 'Role changed', fields: [{ id: 'role', label: 'Role', type: 'select', enum: 'PlatformRole', value: u.role, span: 2 }] });
+    if (act === 'unlock') UI.confirm('Unlock ' + u.fullName + '?', 'Clears ' + u.failedLoginAttempts + ' failed attempts. They can sign in again now.', { ok: 'Unlock', api: 'POST …/users/{id}/unlock', done: 'Unlocked' });
+    if (act === 'resend') UI.confirm('Resend activation email?', 'Sends a new link to ' + u.email + '. It works once and expires in 30 minutes.', { ok: 'Send', api: 'POST /api/auth/v1/password/forgot', done: 'Activation email sent' });
+    if (act === 'status') UI.confirm((u.status === 'DISABLED' ? 'Enable ' : 'Disable ') + u.fullName + '?', u.status === 'DISABLED' ? 'They can sign in again.' : 'Ends their sessions and blocks sign-in.', { danger: u.status !== 'DISABLED', api: 'PATCH …/users/{id}/status', done: 'Status changed' });
+  });
+});
+</script>
+</body>
+</html>

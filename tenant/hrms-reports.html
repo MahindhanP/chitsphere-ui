@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HR reports · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /api/hrms/v1/tenants/{tenantId}/reports/employee-register, /leave-register, /attendance-sheet (CSV export).
+-->
+<body data-portal="tenant" data-page="hrms-reports">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>HRMS<i data-i="chevR"></i>Reports</div>
+      <h1>HR reports</h1>
+      <p>Statutory-style registers you can view and download.</p>
+    </div>
+    <div class="actions"><select class="select" id="br" style="width:auto"></select><input class="input" type="month" value="2026-11" style="width:auto"><button class="btn primary" id="dl"><i data-i="download"></i>Download CSV</button></div>
+  </div>
+  <div class="card"><div class="tabs" data-tabs><button data-tab="er" class="active">Employee register</button><button data-tab="lr">Leave register</button><button data-tab="as">Attendance summary</button></div></div>
+  <div data-tab-panel="er" class="active mt-4"><div class="card"><div id="er"></div></div></div>
+  <div data-tab-panel="lr" class="mt-4"><div class="card"><div id="lr"></div></div></div>
+  <div data-tab-panel="as" class="mt-4"><div class="card"><div id="as"></div></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('br').innerHTML = UI.options({ options: DB.branches.map(function (b) { return [b.id, b.name]; }), blank: 'All branches' });
+  UI.table({ el: '#er', rows: DB.employees, pageSize: 12, columns: [{ key: 'code', label: 'Code', render: function (e) { return '<span class="mono">' + e.code + '</span>'; } }, { key: 'fullName', label: 'Name' }, { key: 'd', label: 'Designation', render: function (e) { return DB.desig(e.designationId); } }, { key: 'b', label: 'Branch', render: function (e) { return DB.branchName(e.branchId); } }, { key: 'employmentType', label: 'Type', render: function (e) { return UI.human(e.employmentType); } }, { key: 'joinedOn', label: 'Joined', render: function (e) { return UI.date(e.joinedOn); } }, { key: 'status', label: 'Status', render: function (e) { return UI.badge(e.status); } }] });
+  UI.table({ el: '#lr', rows: DB.leaveRequests.filter(function (r) { return r.status === 'APPROVED' || r.status === 'PENDING'; }), columns: [{ key: 'employeeName', label: 'Employee' }, { key: 'leaveTypeCode', label: 'Type' }, { key: 'fromDate', label: 'From', render: function (r) { return UI.date(r.fromDate); } }, { key: 'toDate', label: 'To', render: function (r) { return UI.date(r.toDate); } }, { key: 'days', label: 'Days', num: true }, { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } }] });
+  UI.table({ el: '#as', rows: DB.employees.filter(function (e) { return e.status !== 'EXITED'; }).map(function (e, i) { return { name: e.fullName, P: 10 - (i % 3), A: i % 3 === 1 ? 1 : 0, HD: i % 4 === 0 ? 1 : 0, L: i % 5 === 0 ? 1 : 0, H: 1, WO: 2 }; }),
+    columns: [{ key: 'name', label: 'Employee' }].concat(['P', 'A', 'HD', 'L', 'H', 'WO'].map(function (k) { return { key: k, label: '<span class="att ' + k + '">' + k + '</span>', num: true }; })) });
+  $('dl').addEventListener('click', function () { UI.toast('Downloading CSV (Accept: text/csv)', 'info'); });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Financial reports · Accounting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /reports/trial-balance (?asOf), /reports/profit-loss (?from, ?to, ?segmentId), /reports/balance-sheet (?asOf), /reports/day-book (?date),
+  /reports/ledger (?accountId, ?from, ?to), /reports/party-statement (?partyAccountId, ?from, ?to), /reports/segments (?asOf),
+  /reports/cash-position (?asOf), /segments/{id}/transferable-earnings, /segments/{id}/reports/receipts-payments. Built from POSTED entries only.
+-->
+<body data-portal="auto" data-page="acc-reports">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a class="home" href="#">Home</a><i data-i="chevR"></i>Accounting<i data-i="chevR"></i>Reports</div>
+      <h1>Financial reports</h1>
+      <p id="sub"></p>
+    </div>
+    <div class="actions"><input class="input" type="date" id="asOf" value="2026-11-14" style="width:auto"><button class="btn" id="exp"><i data-i="download"></i>Export</button></div>
+  </div>
+  <div class="card"><div class="tabs" data-tabs>
+    <button data-tab="tb" class="active">Trial balance</button><button data-tab="pl">Profit & loss</button><button data-tab="bs">Balance sheet</button><button data-tab="db">Day book</button>
+    <button data-tab="lg">Ledger</button><button data-tab="ps">Party statement</button><button data-tab="sg">Segments</button><button data-tab="cp">Cash position</button>
+  </div></div>
+  <div data-tab-panel="tb" class="active mt-4"><div class="card" id="tb"></div></div>
+  <div data-tab-panel="pl" class="mt-4"><div class="card" id="pl"></div></div>
+  <div data-tab-panel="bs" class="mt-4"><div class="card" id="bs"></div></div>
+  <div data-tab-panel="db" class="mt-4"><div class="card" id="db"></div></div>
+  <div data-tab-panel="lg" class="mt-4"><div class="card"><div class="toolbar"><select class="select" id="lgAcc" style="max-width:360px"></select></div><div id="lg"></div></div></div>
+  <div data-tab-panel="ps" class="mt-4"><div class="card"><div class="toolbar"><select class="select" id="psAcc" style="max-width:360px"></select></div><div id="ps"></div></div></div>
+  <div data-tab-panel="sg" class="mt-4"><div class="card" id="sg"></div></div>
+  <div data-tab-panel="cp" class="mt-4"><div class="card" id="cp"></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); }, A = UI.acc(), I = UI.inr;
+  document.querySelectorAll('.home').forEach(function (a) { a.href = A.home; });
+  $('sub').innerHTML = UI.esc(A.book.name) + ' · FY ' + A.book.currentFiscalYear + ' · posted vouchers only';
+  var P = DB.accounts.filter(function (a) { return a.postable; }), debitSide = function (a) { return /ASSET|EXPENSE/.test(a.type); };
+  var sumT = function (t) { return P.filter(function (a) { return a.type === t; }).reduce(function (s, a) { return s + a.balance; }, 0); };
+  var tbl = function (head, rows, foot) { return '<div class="table-wrap"><table class="table"><thead><tr>' + head.map(function (h, i) { return '<th' + (i && i >= head.length - 2 ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody>' + (foot ? '<tfoot>' + foot + '</tfoot>' : '') + '</table></div>'; };
+  // Trial balance
+  var dr = 0, cr = 0;
+  $('tb').innerHTML = tbl(['Account', 'Type', 'Debit', 'Credit'], P.map(function (a) { var d = debitSide(a); if (d) dr += a.balance; else cr += a.balance; return '<tr><td><span class="mono">' + a.code + '</span> ' + UI.esc(a.name) + '</td><td>' + UI.human(a.type) + '</td><td class="num">' + (d ? I(a.balance) : '') + '</td><td class="num">' + (d ? '' : I(a.balance)) + '</td></tr>'; }),
+    '<tr><td colspan="2"><b>Total</b> ' + (dr === cr ? '<span class="badge success">Balanced</span>' : '<span class="badge danger">Out by ' + I(dr - cr) + '</span>') + '</td><td class="num"><b>' + I(dr) + '</b></td><td class="num"><b>' + I(cr) + '</b></td></tr>');
+  // P&L
+  var inc = sumT('INCOME'), exp = sumT('EXPENSE'), profit = inc - exp;
+  var sect = function (t) { return P.filter(function (a) { return a.type === t; }).map(function (a) { return '<tr><td style="padding-left:28px">' + UI.esc(a.name) + '</td><td class="num">' + I(a.balance) + '</td></tr>'; }).join(''); };
+  $('pl').innerHTML = '<div class="toolbar"><input class="input" type="date" value="2026-04-01" style="width:auto"><span class="muted">to</span><input class="input" type="date" value="2026-11-14" style="width:auto"><select class="select" style="width:auto">' + UI.options({ options: DB.segments.map(function (s) { return [s.id, s.code]; }), blank: 'Whole book' }) + '</select></div>' +
+    tbl(['', 'Amount'], ['<tr><td><b>Income</b></td><td></td></tr>' + sect('INCOME') + '<tr><td><b>Total income</b></td><td class="num"><b>' + I(inc) + '</b></td></tr>', '<tr><td><b>Expenses</b></td><td></td></tr>' + sect('EXPENSE') + '<tr><td><b>Total expenses</b></td><td class="num"><b>' + I(exp) + '</b></td></tr>'],
+      '<tr><td><b>' + (profit >= 0 ? 'Net profit' : 'Net loss') + '</b></td><td class="num"><b style="color:var(--' + (profit >= 0 ? 'success' : 'danger') + ')">' + I(Math.abs(profit)) + '</b></td></tr>');
+  // Balance sheet
+  var asset = sumT('ASSET'), liab = sumT('LIABILITY'), eq = sumT('EQUITY');
+  $('bs').innerHTML = '<div class="grid g-2" style="padding:var(--card-p)"><div>' + tbl(['Assets', 'Amount'], [sect('ASSET')], '<tr><td><b>Total assets</b></td><td class="num"><b>' + I(asset) + '</b></td></tr>') + '</div><div>' +
+    tbl(['Liabilities & equity', 'Amount'], [sect('LIABILITY'), sect('EQUITY'), '<tr><td style="padding-left:28px">Profit for the year</td><td class="num">' + I(profit) + '</td></tr>'], '<tr><td><b>Total</b></td><td class="num"><b>' + I(liab + eq + profit) + '</b></td></tr>') + '</div></div>' +
+    '<div class="alert ' + (asset === liab + eq + profit ? 'success' : 'danger') + ' compact" style="margin:0 var(--card-p) var(--card-p)">' + UI.icon(asset === liab + eq + profit ? 'check' : 'alert') + '<div><b>' + (asset === liab + eq + profit ? 'Assets equal liabilities plus equity' : 'Sides differ') + '</b></div></div>';
+  // Day book
+  var posted = DB.journal.filter(function (j) { return j.status === 'POSTED'; });
+  $('db').innerHTML = tbl(['Date', 'Voucher', 'Narration', 'Debit', 'Credit'], posted.map(function (j) { return '<tr><td>' + UI.date(j.entryDate) + '</td><td><a class="mono" href="voucher.html?id=' + j.id + A.q + '">' + j.voucherNo + '</a></td><td>' + UI.esc(j.narration) + '</td><td class="num">' + I(j.amount) + '</td><td class="num">' + I(j.amount) + '</td></tr>'; }));
+  // Ledger
+  $('lgAcc').innerHTML = UI.options({ options: P.map(function (a) { return [a.code, a.code + ' ' + a.name]; }), value: '1110' });
+  function ledger() {
+    var code = $('lgAcc').value, a = P.find(function (x) { return x.code === code; }), run = 0, rows = [];
+    posted.slice().reverse().forEach(function (j) { j.lines.forEach(function (l) { if (l.account.indexOf(code + ' ') === 0) { var sgn = (l.side === 'DEBIT') === debitSide(a) ? 1 : -1; run += sgn * l.amount; rows.push('<tr><td>' + UI.date(j.entryDate) + '</td><td class="mono">' + j.voucherNo + '</td><td>' + UI.esc(j.narration) + '</td><td class="num">' + (l.side === 'DEBIT' ? I(l.amount) : '') + '</td><td class="num">' + (l.side === 'CREDIT' ? I(l.amount) : '') + '</td></tr>'); } }); });
+    $('lg').innerHTML = tbl(['Date', 'Voucher', 'Narration', 'Debit', 'Credit'], rows.length ? rows : ['<tr><td colspan="5"><div class="empty">No posted entries in this range.</div></td></tr>'], '<tr><td colspan="3"><b>Closing balance</b></td><td colspan="2" class="num"><b>' + I(a.balance) + '</b> ' + (debitSide(a) ? 'Dr' : 'Cr') + '</td></tr>');
+  }
+  $('lgAcc').addEventListener('change', ledger); ledger();
+  // Party statement
+  var pas = []; DB.parties.forEach(function (p) { p.accounts.forEach(function (x) { pas.push([x.code, x.code + ' · ' + p.displayName]); }); });
+  $('psAcc').innerHTML = UI.options({ options: pas, value: 'SV-5L-A24-T02' });
+  function stmt() {
+    var code = $('psAcc').value, rows = [];
+    posted.forEach(function (j) { j.lines.forEach(function (l) { if (l.party === code) rows.push('<tr><td>' + UI.date(j.entryDate) + '</td><td class="mono">' + j.voucherNo + '</td><td>' + UI.esc(j.narration) + '</td><td class="num">' + (l.side === 'DEBIT' ? I(l.amount) : '') + '</td><td class="num">' + (l.side === 'CREDIT' ? I(l.amount) : '') + '</td></tr>'); }); });
+    $('ps').innerHTML = tbl(['Date', 'Voucher', 'Narration', 'Debit', 'Credit'], rows.length ? rows : ['<tr><td colspan="5"><div class="empty">No posted entries for this party account.</div></td></tr>']);
+  }
+  $('psAcc').addEventListener('change', stmt); stmt();
+  // Segments
+  $('sg').innerHTML = tbl(['Segment', 'Income', 'Expenses', 'Profit', 'Transferred', 'Transferable'], DB.segmentRows.map(function (r) { var s = DB.segment(r.segmentId); return '<tr><td><b class="mono">' + s.code + '</b><div class="xs muted">' + UI.esc(s.name) + '</div></td><td class="num">' + I(r.income) + '</td><td class="num">' + I(r.expenses) + '</td><td class="num">' + I(r.profit) + '</td><td class="num">' + I(r.transferred) + '</td><td class="num"><b>' + I(r.transferable) + '</b> <button class="btn sm ghost" data-act="tr" data-id="' + r.segmentId + '">Why?</button></td></tr>'; }));
+  $('sg').querySelectorAll('th').forEach(function (th, i) { if (i) th.className = 'num'; });
+  // Cash position
+  var cash = P.filter(function (a) { return a.cash; }), totalCash = cash.reduce(function (s, a) { return s + a.balance; }, 0), shares = DB.segmentRows.reduce(function (s, r) { return s + r.cashShare; }, 0);
+  $('cp').innerHTML = '<div class="grid g-3" style="padding:var(--card-p)">' + cash.map(function (a) { return '<div class="card kpi"><div class="label">' + UI.esc(a.name) + '</div><div class="value">' + UI.inrShort(a.balance) + '</div></div>'; }).join('') + '<div class="card kpi"><div class="label">Total cash and bank</div><div class="value">' + UI.inrShort(totalCash) + '</div></div></div>' +
+    tbl(['Who owns the cash', 'Share'], DB.segmentRows.map(function (r) { return '<tr><td><span class="mono">' + DB.segment(r.segmentId).code + '</span></td><td class="num">' + I(r.cashShare) + '</td></tr>'; }).concat(['<tr><td>Company (not ring-fenced)</td><td class="num">' + I(totalCash - shares) + '</td></tr>']), '<tr><td><b>Total</b></td><td class="num"><b>' + I(totalCash) + '</b></td></tr>') +
+    '<p class="xs muted" style="padding:0 var(--card-p) var(--card-p)">Cash share policy: <b>' + UI.human(A.book.cashSharePolicy) + '</b>. ' + (A.book.cashSharePolicy === 'BLOCK' ? 'Postings that would make a segment&#39;s share negative are refused.' : 'Postings that would make a segment&#39;s share negative get a warning.') + '</p>';
+  UI.onAct(function (act, id) {
+    if (act !== 'tr') return; var r = DB.segmentRows.find(function (x) { return x.segmentId === id; }), s = DB.segment(id);
+    UI.dialog({ title: 'Transferable earnings · ' + s.code, icon: 'chart', ok: false, html: UI.kv([['Profit to date', I(r.profit)], ['Already transferred', '− ' + I(r.transferred)], ['Commission due to company', I(r.dueToCompany)], ['Subscriptions receivable', I(r.receivable)], ['Prize money payable', I(r.prizePayable)], ['Segment cash share', I(r.cashShare)], ['Can transfer now', '<b>' + I(r.transferable) + '</b>']]) + '<p class="xs muted mt-4">GET ' + A.base + '/segments/{segmentId}/transferable-earnings. Limited by the segment&#39;s cash share, after keeping enough for prize money owed.</p>' });
+  });
+  $('exp').addEventListener('click', function () { UI.toast('Exporting the open report', 'info'); });
+});
+</script>
+</body>
+</html>

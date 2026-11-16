@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Employees · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  /api/hrms/v1/tenants/{tenantId}/employees: list, POST, PUT, POST …/notice, POST …/exit, POST …/import (CSV).
+  Status ACTIVE → ON_NOTICE → EXITED. An employee can be linked to a member (membershipId) for self-service.
+-->
+<body data-portal="tenant" data-page="employees">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>HRMS<i data-i="chevR"></i>Employees</div>
+      <h1>Employees</h1>
+      <p>Your staff records. <b id="usage"></b></p>
+    </div>
+    <div class="actions"><button class="btn" id="imp"><i data-i="upload"></i>Import CSV</button><button class="btn primary" id="add"><i data-i="plus"></i>Add employee</button></div>
+  </div>
+  <div class="card">
+    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search name, code, email…"></div><select class="select" id="fBranch"></select><select class="select" id="fDept"></select><select class="select" id="fStatus"></select></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var lim = DB.entitlement.limits.filter(function (l) { return l.id === 'hrms.employee.max'; })[0];
+  $('usage').textContent = lim.used + ' of ' + lim.limit + ' employees on your plan.';
+  var brs = DB.branches.filter(function (b) { return b.status === 'ACTIVE'; }).map(function (b) { return [b.id, b.name]; });
+  $('fBranch').innerHTML = UI.options({ options: brs, blank: 'All branches' });
+  $('fDept').innerHTML = UI.options({ options: DB.departments.map(function (d) { return [d.id, d.name]; }), blank: 'All departments' });
+  $('fStatus').innerHTML = UI.options({ enum: 'EmployeeStatus', blank: 'All statuses' });
+  UI.table({ el: '#tbl', rows: DB.employees, search: '#q', searchKeys: ['fullName', 'code', 'email'], pageSize: 10, filters: [{ el: '#fBranch', key: 'branchId' }, { el: '#fDept', key: 'departmentId' }, { el: '#fStatus', key: 'status' }],
+    onRow: function (e) { location.href = 'employee.html?id=' + e.id; },
+    columns: [
+      { key: 'fullName', label: 'Employee', sort: true, render: function (e) { return UI.ent(e.fullName, '<span class="mono">' + e.code + '</span>' + (e.email ? ' · ' + UI.esc(e.email) : '')); } },
+      { key: 'designationId', label: 'Role', render: function (e) { return DB.desig(e.designationId) + '<div class="xs muted">' + DB.dept(e.departmentId) + '</div>'; } },
+      { key: 'branchId', label: 'Branch', render: function (e) { return DB.branchName(e.branchId); } },
+      { key: 'employmentType', label: 'Type', render: function (e) { return UI.human(e.employmentType); } },
+      { key: 'joinedOn', label: 'Joined', sort: true, render: function (e) { return UI.date(e.joinedOn); } },
+      { key: 'membershipId', label: 'Sign-in', render: function (e) { return e.membershipId ? '<span class="badge success">Linked</span>' : '<span class="badge outline">None</span>'; } },
+      { key: 'status', label: 'Status', render: function (e) { return UI.badge(e.status) + (e.lastWorkingDay ? '<div class="xs muted">Last day ' + UI.date(e.lastWorkingDay) + '</div>' : ''); } }] });
+  window.empForm = function (e) {
+    UI.dialog({ drawer: true, wide: true, title: e ? 'Edit ' + e.fullName : 'Add employee', icon: 'user', record: e, done: 'Employee saved', api: e ? 'PUT …/employees/{id}' : 'POST /api/hrms/v1/tenants/{tenantId}/employees',
+      fields: [{ id: 'code', label: 'Employee code', req: true, mono: true, readonly: !!e }, { id: 'fullName', label: 'Full name', req: true }, { id: 'email', label: 'Work email', type: 'email' }, { id: 'phone', label: 'Phone', type: 'tel' },
+        { section: 'Job' }, { id: 'branchId', label: 'Branch', type: 'select', req: true, options: brs, blank: 'Select' }, { id: 'departmentId', label: 'Department', type: 'select', options: DB.departments.filter(function (d) { return d.status === 'ACTIVE'; }).map(function (d) { return [d.id, d.name]; }), blank: '—' },
+        { id: 'designationId', label: 'Designation', type: 'select', options: DB.designations.map(function (d) { return [d.id, d.name]; }), blank: '—' }, { id: 'managerEmployeeId', label: 'Reports to', type: 'select', options: DB.employees.filter(function (x) { return x.status !== 'EXITED'; }).map(function (x) { return [x.id, x.fullName]; }), blank: '—' },
+        { id: 'employmentType', label: 'Employment type', type: 'select', req: true, enum: 'EmploymentType' }, { id: 'joinedOn', label: 'Joined on', type: 'date', req: true },
+        { section: 'Personal' }, { id: 'dateOfBirth', label: 'Date of birth', type: 'date' }, { id: 'gender', label: 'Gender', type: 'select', enum: 'Gender', blank: '—' }, { id: 'bloodGroup', label: 'Blood group', type: 'select', options: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], blank: '—' },
+        { id: 'membershipId', label: 'Linked member (self-service)', type: 'select', options: DB.memberships.map(function (m) { return [m.id, m.fullName + ' · ' + m.email]; }), blank: 'Not linked' },
+        { id: 'address', label: 'Address', type: 'textarea', span: 2 }, { id: 'emergencyContact', label: 'Emergency contact', span: 2 }] });
+  };
+  $('add').addEventListener('click', function () { empForm(null); });
+  if (UI.param('edit')) empForm(DB.employee(UI.param('edit')));
+  $('imp').addEventListener('click', function () {
+    UI.dialog({ title: 'Import employees', icon: 'upload', ok: 'Import', api: 'POST …/employees/import (text/csv)', done: 'Imported 12 employees · 1 row skipped',
+      html: '<label class="dropzone" style="display:block"><input type="file" accept=".csv" hidden><b>Choose a CSV file</b><span>Columns: code, fullName, email, phone, branchCode, department, designation, employmentType, joinedOn</span></label><p class="xs muted mt-2">Rows with errors are reported back by line number; valid rows are imported.</p>' });
+  });
+});
+</script>
+</body>
+</html>

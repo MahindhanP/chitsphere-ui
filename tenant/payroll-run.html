@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payroll run · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET …/runs/{id}, GET …/runs/{id}/payslips; POST …/runs/{id}/calculate (DRAFT|CALCULATED → CALCULATED; skips employees without a
+  salary structure), /approve (maker-checker: approver ≠ calculator), /disburse {disbursementReference, paidOn}, /cancel {reason}.
+-->
+<body data-portal="tenant" data-page="payroll-runs">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="payroll-runs.html">Payroll runs</a><i data-i="chevR"></i><span id="crumb"></span></div>
+      <h1 id="title"></h1>
+      <p id="sub"></p>
+    </div>
+    <div class="actions" id="acts"></div>
+  </div>
+  <div class="card"><div class="card-body"><div class="stepper" id="stage"></div></div></div>
+  <div id="alerts"></div>
+  <div class="grid g-4 mt-4" id="kpis"></div>
+  <div class="card mt-4"><div class="card-head"><h3>Payslips</h3><div class="tools"><button class="btn sm" id="exp"><i data-i="download"></i>Export</button></div></div><div id="tbl"></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var r = DB.run(UI.param('id') || 'pr-3') || DB.payrollRuns[2];
+  var title = DB.branchName(r.branchId) + ' · ' + UI.month(r.period);
+  document.title = title + ' · Payroll'; $('crumb').textContent = title; $('title').textContent = title;
+  $('sub').innerHTML = UI.badge(r.status) + ' · prepared by ' + r.preparedBy + (r.calculatedBy ? ' · calculated by ' + r.calculatedBy : '') + (r.approvedBy ? ' · approved by ' + r.approvedBy + ' on ' + UI.date(r.approvedAt) : '');
+  var order = ['DRAFT', 'CALCULATED', 'APPROVED', 'DISBURSED'], idx = order.indexOf(r.status);
+  $('stage').innerHTML = order.map(function (s, i) { return '<div class="step ' + (r.status === 'CANCELLED' ? '' : i < idx ? 'done' : i === idx ? 'active' : '') + '"><span class="bubble">' + (i < idx ? UI.icon('check', 'sm') : i + 1) + '</span><span class="step-txt"><b>' + UI.human(s) + '</b></span></div>'; }).join('');
+  var a = '';
+  if (/DRAFT|CALCULATED/.test(r.status)) a += '<button class="btn danger-ghost" id="cancel">' + UI.icon('x') + 'Cancel run</button><button class="btn' + (r.status === 'DRAFT' ? ' primary' : '') + '" id="calc">' + UI.icon('refresh') + (r.status === 'DRAFT' ? 'Calculate' : 'Recalculate') + '</button>';
+  if (r.status === 'CALCULATED') a += '<button class="btn primary" id="appr">' + UI.icon('check') + 'Approve</button>';
+  if (r.status === 'APPROVED') a += '<button class="btn primary" id="pay">' + UI.icon('wallet') + 'Record payout</button>';
+  $('acts').innerHTML = a;
+  var al = '';
+  if (r.status === 'CALCULATED') al += '<div class="alert info mt-4">' + UI.icon('info') + '<div><b>Needs a second person</b>' + r.calculatedBy + ' calculated this run, so someone else must approve it.</div></div>';
+  if (r.skippedEmployees) al += '<div class="alert warning mt-4">' + UI.icon('alert') + '<div><b>' + r.skippedEmployees + ' employee skipped</b>They have no salary structure for this month. <a href="salaries.html">Add one</a>, then recalculate.</div></div>';
+  if (r.status === 'DISBURSED') al += '<div class="alert success mt-4">' + UI.icon('check') + '<div><b>Paid on ' + UI.date(r.disbursedAt) + '</b>Bank reference <span class="mono">' + r.disbursementReference + '</span>. Employees can see their payslips.</div></div>';
+  if (r.status === 'DRAFT') al += '<div class="alert info mt-4">' + UI.icon('info') + '<div><b>Not calculated yet</b>Calculating reads each salary structure and this month&#39;s attendance. Unpaid leave and absences reduce paid days.</div></div>';
+  if (r.status === 'CANCELLED') al += '<div class="alert danger mt-4">' + UI.icon('x') + '<div><b>Cancelled</b>A new run can be created for this branch and month.</div></div>';
+  $('alerts').innerHTML = al;
+  var slips = r.status === 'DRAFT' ? [] : DB.payslipsFor(r);
+  if (slips.length) { r.employeeCount = slips.length; r.totalGross = slips.reduce(function (t, p) { return t + p.gross; }, 0); r.totalDeductions = slips.reduce(function (t, p) { return t + p.totalDeductions; }, 0); r.totalNet = r.totalGross - r.totalDeductions; }
+  $('kpis').innerHTML = [['Employees', r.employeeCount], ['Gross', UI.inr(r.totalGross)], ['Deductions', UI.inr(r.totalDeductions)], ['Net pay', UI.inr(r.totalNet)]].map(function (k) { return '<div class="card kpi"><div class="label">' + k[0] + '</div><div class="value">' + k[1] + '</div></div>'; }).join('');
+  UI.table({ el: '#tbl', rows: slips, empty: 'Calculate the run to see payslips', columns: [
+    { key: 'employeeName', label: 'Employee', render: function (p) { return '<b>' + p.employeeName + '</b><div class="xs muted mono">' + p.employeeCode + '</div>'; } },
+    { key: 'paidDays', label: 'Paid days', num: true, render: function (p) { return p.paidDays + '/' + p.daysInPeriod + (p.unpaidDays ? '<div class="xs" style="color:var(--warning)">' + p.unpaidDays + ' unpaid</div>' : ''); } },
+    { key: 'gross', label: 'Gross', num: true, render: function (p) { return UI.inr(p.gross); } },
+    { key: 'providentFund', label: 'PF', num: true, render: function (p) { return UI.inr(p.providentFund); } },
+    { key: 'fixedDeductions', label: 'Other', num: true, render: function (p) { return UI.inr(p.fixedDeductions); } },
+    { key: 'net', label: 'Net pay', num: true, render: function (p) { return '<b>' + UI.inr(p.net) + '</b>'; } },
+    { key: 'x', label: '', render: function (p) { return '<button class="btn sm" data-act="slip" data-id="' + p.id + '">View</button>'; } }] });
+  var on = function (id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); };
+  on('calc', function () { UI.confirm(r.status === 'DRAFT' ? 'Calculate payroll?' : 'Recalculate payroll?', 'Payslips are rebuilt from current salary structures and attendance.', { ok: 'Calculate', api: 'POST …/runs/{runId}/calculate', done: 'Run calculated' }); });
+  on('appr', function () { UI.confirm('Approve this run?', 'Net pay of ' + UI.inr(r.totalNet) + ' for ' + r.employeeCount + ' employees. Once approved, it cannot be recalculated.', { ok: 'Approve', api: 'POST …/runs/{runId}/approve', done: 'Run approved' }); });
+  on('pay', function () { UI.dialog({ title: 'Record payout', icon: 'wallet', api: 'POST …/runs/{runId}/disburse', done: 'Run marked as paid', fields: [{ id: 'disbursementReference', label: 'Bank batch reference', req: true, mono: true }, { id: 'paidOn', label: 'Paid on', type: 'date', req: true, value: '2026-11-14' }] }); });
+  on('cancel', function () { UI.dialog({ title: 'Cancel this run?', danger: true, ok: 'Cancel run', api: 'POST …/runs/{runId}/cancel', done: 'Run cancelled', text: 'You can then start a new run for the same month.', fields: [{ id: 'reason', label: 'Reason', type: 'textarea', req: true, span: 2 }] }); });
+  on('exp', function () { UI.toast('Exporting payslips as CSV', 'info'); });
+  UI.onAct(function (act, id) {
+    if (act !== 'slip') return; var p = slips.find(function (x) { return x.id === id; }) || slips[0];
+    UI.dialog({ title: p.employeeName + ' · ' + p.period, icon: 'file', ok: false, html: UI.kv([['Paid days', p.paidDays + ' of ' + p.daysInPeriod], ['Basic', UI.inr(p.basic)], ['HRA', UI.inr(p.hra)], ['Allowances', UI.inr(p.allowances)], ['Gross', '<b>' + UI.inr(p.gross) + '</b>'], ['Provident fund', '− ' + UI.inr(p.providentFund)], ['Other deductions', '− ' + UI.inr(p.fixedDeductions)], ['Net pay', '<b>' + UI.inr(p.net) + '</b>']]) });
+  });
+});
+</script>
+</body>
+</html>

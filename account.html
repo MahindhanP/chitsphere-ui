@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Account & security · ChitSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="assets/js/theme.js"></script>
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-portal="auto" data-page="account">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a id="homeLink" href="tenant/dashboard.html">Home</a><i data-i="chevR"></i>Account</div>
+      <h1>Account & security</h1>
+      <p>Your sign-in details. They apply to every organisation you belong to.</p>
+    </div>
+  </div>
+  <div class="grid g-main-side">
+    <div class="stack-lg">
+      <div class="card">
+        <div class="card-head"><div class="card-title-icon"><i data-i="user"></i></div><div><h3>Profile</h3><div class="sub">GET /api/auth/v1/me</div></div></div>
+        <div class="card-body" id="profile"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title-icon"><i data-i="key"></i></div><div><h3>Change password</h3><div class="sub">POST /api/auth/v1/password/change</div></div></div>
+        <div class="card-body">
+          <form id="pw" class="form-grid" novalidate>
+            <div class="field span-2"><label for="cur">Current password <span class="req">*</span></label><input class="input" type="password" id="cur" required autocomplete="current-password"><span class="err">Required</span></div>
+            <div class="field"><label for="n1">New password <span class="req">*</span></label><input class="input" type="password" id="n1" required autocomplete="new-password"><span class="err">Meet every rule</span></div>
+            <div class="field"><label for="n2">Confirm new password <span class="req">*</span></label><input class="input" type="password" id="n2" required autocomplete="new-password"><span class="err">Passwords don’t match</span></div>
+            <ul class="pw-rules span-2" id="rules"></ul>
+            <div class="span-2 row"><button class="btn primary" type="submit">Update password</button><span class="xs muted">Other devices stay signed in. Use “Sign out everywhere” to end them.</span></div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="stack-lg">
+      <div class="card" id="orgCard">
+        <div class="card-head"><div class="card-title-icon"><i data-i="building"></i></div><div><h3>My organisations</h3><div class="sub">GET /api/platform/v1/me/tenants</div></div></div>
+        <div class="list" id="orgs"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title-icon"><i data-i="logout"></i></div><div><h3>Sessions</h3><div class="sub">Access tokens last 15 minutes and refresh for up to 7 days.</div></div></div>
+        <div class="card-body stack">
+          <button class="btn block" id="out1"><i data-i="logout"></i>Sign out of this device</button>
+          <button class="btn danger-ghost block" id="outAll"><i data-i="logout"></i>Sign out everywhere</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-body row between"><div><b>Personal theme</b><div class="xs muted">Colours, density and layout on this device only.</div></div><a class="btn soft sm" href="tenant/appearance.html">Open</a></div></div>
+    </div>
+  </div>
+</main>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var plat = document.body.getAttribute('data-portal') === 'platform';
+  var me = plat ? DB.platformMe : DB.me;
+  $('homeLink').href = UI.link((plat ? 'platform' : 'tenant') + '/dashboard.html');
+  $('profile').innerHTML = UI.kv([['Name', UI.esc(me.fullName)], ['Email', UI.esc(me.email)], ['Account type', plat ? 'Platform staff' : 'Tenant user'], ['Role here', UI.human(me.role)], ['Last sign-in', UI.dt(me.lastLoginAt || '2026-11-14T09:12:00Z')]]) +
+    '<p class="xs muted mt-4">Name and phone are changed by your ' + (plat ? 'platform admin' : 'organisation admin') + ' from Members.</p>';
+  if (plat) $('orgCard').classList.add('hidden');
+  else $('orgs').innerHTML = DB.myTenants.map(function (m) {
+    return '<div class="list-item"><div style="flex:1"><b>' + UI.esc(m.name) + '</b><div class="xs muted mono">' + m.code + '</div></div>' + (m.status === 'ACTIVE' ? '<span class="badge outline">' + UI.human(m.role) + '</span>' : UI.badge(m.status)) + '</div>';
+  }).join('');
+  var ok = UI.pwRules($('n1'), $('rules'), function () { return me.fullName.split(' ').concat([me.email]); });
+  $('pw').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!UI.validate(this)) return;
+    var good = ok(), same = $('n1').value === $('n2').value;
+    $('n1').closest('.field').classList.toggle('invalid', !good); $('n2').closest('.field').classList.toggle('invalid', !same);
+    if (!good || !same) return;
+    this.reset(); ok(); UI.toast('Password updated', 'success');
+  });
+  $('out1').addEventListener('click', function () { location.href = UI.link('login.html?signedOut=1'); });
+  $('outAll').addEventListener('click', function () {
+    UI.confirm('Sign out everywhere?', 'Ends every session for your account on all devices, including this one.', { danger: true, ok: 'Sign out everywhere', api: 'POST /api/auth/v1/logout-all', onOk: function () { location.href = UI.link('login.html?signedOut=all'); return false; } });
+  });
+});
+</script>
+</body>
+</html>

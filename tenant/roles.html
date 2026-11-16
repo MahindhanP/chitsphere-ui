@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roles & permissions · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  /api/platform/v1/tenants/{tenantId}/roles (list, POST {code, name, description, template, permissions}, PUT, archive),
+  GET …/role-templates and GET …/permissions (only permissions of modules the tenant is entitled to).
+-->
+<body data-portal="tenant" data-page="roles">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Settings<i data-i="chevR"></i>Roles</div>
+      <h1>Roles & permissions</h1>
+      <p>Roles decide what a member with <b>User</b> access can do. Start from a template and adjust. <b id="usage"></b></p>
+    </div>
+    <div class="actions"><button class="btn primary" id="add"><i data-i="plus"></i>New role</button></div>
+  </div>
+  <div class="card">
+    <div class="tabs" data-tabs><button data-tab="r" class="active">Roles</button><button data-tab="t">Templates</button><button data-tab="p">Permission catalog</button></div>
+  </div>
+  <div data-tab-panel="r" class="active mt-4"><div class="card"><div id="tbl"></div></div></div>
+  <div data-tab-panel="t" class="mt-4"><div class="grid g-3" id="tpl"></div></div>
+  <div data-tab-panel="p" class="mt-4"><div class="card"><div class="card-body" id="cat"></div></div></div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var lim = DB.entitlement.limits.filter(function (l) { return l.id === 'platform.role.max'; })[0];
+  $('usage').textContent = lim.used + ' of ' + lim.limit + ' custom roles used.';
+  var enabled = DB.enabledModules.concat(['platform.tenant', 'platform.membership', 'platform.branch', 'platform.role', 'platform.subscription', 'platform.audit']);
+  var members = function (r) { return DB.memberships.filter(function (m) { return m.roleIds.indexOf(r.id) > -1; }).length; };
+  UI.table({ el: '#tbl', rows: DB.roles, onRow: function (r) { edit(r); }, columns: [
+    { key: 'name', label: 'Role', sort: true, render: function (r) { return '<b>' + r.name + '</b> <span class="mono xs muted">' + r.code + '</span><div class="xs muted">' + UI.esc(r.description) + '</div>'; } },
+    { key: 'template', label: 'Template', render: function (r) { return r.template ? UI.human(r.template) : '<span class="muted">Custom</span>'; } },
+    { key: 'perms', label: 'Permissions', num: true, render: function (r) { return DB.rolePerms(r).length; } },
+    { key: 'members', label: 'Members', num: true, render: members },
+    { key: 'status', label: 'Status', render: function (r) { return UI.badge(r.status); } },
+    { key: 'x', label: '', cls: 'actions-cell', render: function (r) { return r.status === 'ACTIVE' ? UI.rowMenu('rm_' + r.id, [['edit', 'Edit', false, 'edit'], ['archive', 'Archive', true, 'trash']]) : ''; } }] });
+
+  function permChecks(sel) {
+    return DB.catalog.filter(function (p) { return p.status !== 'DISABLED'; }).map(function (p) {
+      var mods = p.modules.filter(function (m) { return enabled.indexOf(m.id) > -1; });
+      if (!mods.length) return '';
+      return '<div class="perm-group"><h4>' + p.label + '</h4>' + mods.map(function (m) {
+        return '<div class="xs muted" style="margin:6px 0 4px">' + m.label + '</div><div class="checks">' + m.perms.map(function (x) { return '<label><input type="checkbox" value="' + x + '"' + (sel.indexOf(x) > -1 ? ' checked' : '') + '><span class="mono xs">' + x + '</span></label>'; }).join('') + '</div>';
+      }).join('') + '</div>';
+    }).join('');
+  }
+  function form(r) {
+    var perms = r ? DB.rolePerms(r) : [];
+    UI.dialog({ drawer: true, wide: true, title: r ? 'Edit ' + r.name : 'New role', icon: 'key', ok: r ? 'Save role' : 'Create role', done: r ? 'Role saved' : 'Role created',
+      api: r ? 'PUT …/roles/{roleId}' : 'POST /api/platform/v1/tenants/{tenantId}/roles',
+      fields: [{ id: 'code', label: 'Code', req: true, mono: true, value: r ? r.code : '', readonly: !!r, pattern: '[A-Z][A-Z0-9_]{1,39}', err: 'Upper case letters, digits, _' }, { id: 'name', label: 'Name', req: true, value: r ? r.name : '' },
+        { id: 'description', label: 'Description', type: 'textarea', span: 2, value: r ? r.description : '' },
+        { id: 'template', label: 'Start from template', type: 'select', span: 2, options: DB.roleTemplates.map(function (t) { return [t.code, t.name]; }), blank: 'None (custom)', value: r ? r.template : '' },
+        { html: '<label>Permissions <span class="xs muted" id="pc"></span></label><div id="perms" class="mt-2">' + permChecks(perms) + '</div>', span: 2 }],
+      onOpen: function (el) {
+        function count() { el.querySelector('#pc').textContent = '· ' + el.querySelectorAll('#perms input:checked').length + ' selected'; }
+        el.querySelector('#perms').addEventListener('change', count); count();
+        el.querySelector('#template').addEventListener('change', function () {
+          var t = DB.roleTemplates.filter(function (x) { return x.code === this.value; }, this)[0];
+          el.querySelectorAll('#perms input').forEach(function (i) { i.checked = !!t && t.permissions.indexOf(i.value) > -1; }); count();
+        });
+      } });
+  }
+  function edit(r) { if (r.status === 'ACTIVE') form(r); }
+  $('add').addEventListener('click', function () { form(null); });
+  UI.onAct(function (act, id) {
+    var r = DB.role(id);
+    if (act === 'edit') form(r);
+    if (act === 'archive') UI.confirm('Archive ' + r.name + '?', members(r) + ' member(s) lose the permissions this role gives them. Archived roles can’t be assigned.', { danger: true, ok: 'Archive', api: 'POST …/roles/{roleId}/archive', done: 'Role archived' });
+  });
+
+  $('tpl').innerHTML = DB.roleTemplates.map(function (t) {
+    return '<div class="card"><div class="card-body stack"><div class="row between"><b>' + t.name + '</b><span class="badge outline">' + t.permissions.length + '</span></div><div class="small muted">' + t.description + '</div><button class="btn sm soft" data-tpl="' + t.code + '">Create role from this</button></div></div>';
+  }).join('');
+  $('tpl').addEventListener('click', function (e) { var b = e.target.closest('[data-tpl]'); if (!b) return; form(null); var s = document.getElementById('template'); s.value = b.getAttribute('data-tpl'); s.dispatchEvent(new Event('change')); });
+  $('cat').innerHTML = DB.catalog.filter(function (p) { return p.status !== 'DISABLED'; }).map(function (p) {
+    return '<div class="perm-group"><h4>' + p.label + '</h4>' + p.modules.map(function (m) {
+      var on = enabled.indexOf(m.id) > -1;
+      return '<div class="row between small" style="padding:4px 0;' + (on ? '' : 'opacity:.5') + '"><span>' + m.label + ' <span class="mono xs muted">' + m.perms.join(', ') + '</span></span>' + (on ? UI.badge('ACTIVE') : '<span class="badge outline">Not in plan</span>') + '</div>';
+    }).join('') + '</div>';
+  }).join('');
+});
+</script>
+</body>
+</html>

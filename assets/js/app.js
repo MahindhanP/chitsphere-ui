@@ -94,7 +94,15 @@
     zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>',
     star: '<path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01Z"/>',
     flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
-    reset: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>'
+    reset: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    checkSquare: '<path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+    idCard: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4M5 17c.6-1.2 1.7-2 3-2s2.4.8 3 2"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M7 16V11M12 16V7M17 16v-3"/>',
+    unlock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'
   };
   function icon(name, cls) {
     return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (P[name] || P.info) + '</svg>';
@@ -125,75 +133,164 @@
   function initials(name) {
     return (name || '?').replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase();
   }
+  /* Badge colour per contract enum value (contracts/json-schemas/common/enums + module schemas) */
   var STATUS = {
-    'Active': 'success', 'Running': 'success', 'Paid': 'success', 'Verified': 'success', 'Prized': 'primary',
-    'Trial': 'info', 'Enrolling': 'info', 'Invited': 'info', 'Pending': 'warning', 'Pending KYC': 'warning',
-    'Past due': 'danger', 'Overdue': 'danger', 'Suspended': 'danger', 'Disabled': 'neutral',
-    'Draft': 'neutral', 'Inactive': 'neutral', 'Closed': 'neutral', 'Void': 'neutral', 'Non-prized': 'outline',
-    'FD Pending': 'warning', 'PSO Pending': 'warning', 'CC Pending': 'warning',
-    'In review': 'warning', 'Building': 'info', 'Rejected': 'danger', 'Unpublished': 'neutral', 'Not started': 'neutral'
+    ACTIVE: 'success', PUBLISHED: 'success', COMMENCED: 'success', PRESENT: 'success', APPROVED: 'success', WON: 'success',
+    DONE: 'success', DISBURSED: 'success', POSTED: 'success', OPEN: 'success', SUCCESS: 'success', ENROLLED: 'success', OK: 'success', FULL: 'success', IN_EFFECT: 'success',
+    TRIALING: 'info', PROVISIONING: 'info', RESTORING: 'info', FORMING: 'info', ON_LEAVE: 'info', NEW: 'info', PLANNED: 'info', CALCULATED: 'info',
+    PENDING: 'warning', PENDING_ACTIVATION: 'warning', GRACE: 'warning', ON_NOTICE: 'warning', HALF_DAY: 'warning', QUALIFIED: 'warning', SUBMITTED: 'warning', NEAR_LIMIT: 'warning', READ_ONLY: 'warning', ARCHIVING: 'warning', CLOSING: 'warning', LOCKED: 'danger',
+    PAST_DUE: 'danger', SUSPENDED: 'danger', TRIAL_EXPIRED: 'danger', ABSENT: 'danger', REJECTED: 'danger', MISSED: 'danger', OVERDUE: 'danger', FAILURE: 'danger', FAILED: 'danger', EXHAUSTED: 'danger', NONE: 'danger',
+    CONTACTED: 'primary', COMPANY: 'primary', UNLIMITED: 'primary',
+    DRAFT: 'neutral', RETIRED: 'neutral', ARCHIVED: 'neutral', CLOSED: 'neutral', DISABLED: 'neutral', INACTIVE: 'neutral', CANCELLED: 'neutral', CANCELED: 'neutral',
+    ENDED: 'neutral', EXITED: 'neutral', LOST: 'neutral', HOLIDAY: 'neutral', EXPIRED: 'neutral', REVOKED: 'neutral', VACANT: 'outline'
   };
+  var LABEL = {
+    TENANT_OWNER: 'Owner', TENANT_ADMIN: 'Admin', TENANT_USER: 'User', PLATFORM_ADMIN: 'Platform admin', PLATFORM_SUPPORT: 'Platform support',
+    PAST_DUE: 'Past due', PENDING_ACTIVATION: 'Not activated', BI_MONTHLY: 'Bi-monthly', BEFORE_AUCTION: 'Before auction', AFTER_AUCTION: 'After auction',
+    DRIVING_LICENCE: 'Driving licence', VOTER_ID: 'Voter ID', AADHAAR: 'Aadhaar', PAN: 'PAN', WALK_IN: 'Walk-in', WHATSAPP: 'WhatsApp', CHIT_GROUP: 'Chit group',
+    IN_EFFECT: 'In effect', NEAR_LIMIT: 'Near limit', READ_ONLY: 'Read only', TENANT: 'All branches', BRANCHES: 'Selected branches'
+  };
+  function human(s) {
+    if (s == null || s === '') return '—';
+    s = String(s);
+    if (LABEL[s]) return LABEL[s];
+    if (!/^[A-Z0-9_]+$/.test(s)) return s;
+    var t = s.toLowerCase().replace(/_/g, ' ');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
   function badge(status, extra) {
-    return '<span class="badge dot ' + (STATUS[status] || '') + (extra ? ' ' + extra : '') + '">' + status + '</span>';
+    var key = String(status == null ? '' : status), cls = STATUS[key] || STATUS[key.toUpperCase().replace(/[ -]/g, '_')] || '';
+    return '<span class="badge dot ' + cls + (extra ? ' ' + extra : '') + '" title="' + key + '">' + human(key) + '</span>';
+  }
+  function dt(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+  function month(ym) {
+    if (!ym) return '—';
+    var d = new Date(ym + '-01T00:00:00');
+    return isNaN(d) ? ym : d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function param(k) { return new URLSearchParams(location.search).get(k); }
   function link(path) { return ROOT + path; }
 
-  /* ------------------------------------------------------------ Nav config */
+  /* ------------------------------------------------------------ Nav config
+     Tenant items carry the catalog module that gates them (entitlements);
+     a module outside the tenant's plan shows as locked. */
+  function accItems(realm) {
+    var q = realm === 'platform' ? '?realm=platform' : '';
+    return [
+      { id: 'acc-vouchers', label: 'Vouchers', icon: 'receipt', href: 'accounting/vouchers.html' + q, module: 'accounting.voucher' },
+      { id: 'acc-approvals', label: 'Approvals', icon: 'checkSquare', href: 'accounting/approvals.html' + q, module: 'accounting.approval', tag: realm === 'platform' ? '' : '2' },
+      { id: 'acc-ledger', label: 'Accounts & parties', icon: 'book', href: 'accounting/ledger.html' + q, module: 'accounting.ledger' },
+      { id: 'acc-reports', label: 'Financial reports', icon: 'chart', href: 'accounting/reports.html' + q, module: 'accounting.report' },
+      { id: 'acc-setup', label: 'Books & periods', icon: 'settings', href: 'accounting/setup.html' + q, module: 'accounting.ledger' }
+    ];
+  }
   var NAV = {
     platform: {
       brand: { mark: 'CS', name: 'ChitSphere', sub: 'Platform Console' },
-      user: { name: 'Arjun Mehta', role: 'Super Admin' },
       items: [
         { section: 'Overview' },
         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: 'platform/dashboard.html' },
         { section: 'Tenants' },
         { id: 'tenants', label: 'All tenants', icon: 'building', href: 'platform/tenants.html' },
-        { id: 'registrations', label: 'Registration requests', icon: 'shieldCheck', href: 'platform/registrations.html', tag: '3' },
-        { id: 'tenant-new', label: 'Onboard manually', icon: 'plusCircle', href: 'platform/tenant-new.html' },
+        { id: 'tenant-new', label: 'New tenant', icon: 'plusCircle', href: 'platform/tenant-new.html' },
         { section: 'Commercial' },
-        { id: 'plans', label: 'Subscription plans', icon: 'layers', href: 'platform/plans.html' },
-        { id: 'billing', label: 'Billing & invoices', icon: 'receipt', href: 'platform/billing.html' },
-        { section: 'Member apps' },
-        { id: 'apps', label: 'App builds & releases', icon: 'phone', href: 'platform/apps.html' },
+        { id: 'plans', label: 'Plans & versions', icon: 'layers', href: 'platform/plans.html' },
+        { section: 'Access' },
+        { id: 'staff', label: 'Platform staff', icon: 'userCog', href: 'platform/users.html' },
+        { id: 'support', label: 'Support access', icon: 'shield', href: 'platform/support.html' },
+        { section: 'Platform books' }
+      ].concat(accItems('platform')).concat([
         { section: 'System' },
-        { id: 'audit', label: 'Audit logs', icon: 'activity', disabled: true, tag: 'Soon' },
-        { id: 'psettings', label: 'Platform settings', icon: 'settings', disabled: true, tag: 'Soon' }
-      ]
+        { id: 'audit', label: 'Audit trail', icon: 'activity', href: 'platform/audit.html' }
+      ])
     },
     tenant: {
       brand: { mark: 'SV', name: 'Sri Venkata Chits', sub: 'Powered by ChitSphere' },
-      user: { name: 'Ravi Kumar', role: 'Tenant Admin' },
       items: [
         { section: 'Overview' },
         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: 'tenant/dashboard.html' },
-        { section: 'Chit management' },
-        { id: 'schemes', label: 'Chit schemes', icon: 'file', href: 'tenant/schemes.html' },
-        { id: 'groups', label: 'Chit groups', icon: 'grid', href: 'tenant/groups.html' },
-        { id: 'auctions', label: 'Auctions', icon: 'gavel', disabled: true, tag: 'Soon' },
-        { id: 'subscribers', label: 'Subscribers', icon: 'users', disabled: true, tag: 'Soon' },
-        { id: 'collections', label: 'Collections', icon: 'wallet', disabled: true, tag: 'Soon' },
-        { section: 'Organisation' },
+        { section: 'Customers' },
+        { id: 'customers', label: 'Customers', icon: 'idCard', href: 'tenant/customers.html', module: 'customer.record' },
+        { section: 'Chits' },
+        { id: 'schemes', label: 'Chit schemes', icon: 'file', href: 'tenant/schemes.html', module: 'chits.scheme' },
+        { id: 'groups', label: 'Chit groups', icon: 'grid', href: 'tenant/groups.html', module: 'chits.group' },
+        { section: 'CRM' },
+        { id: 'leads', label: 'Leads', icon: 'target', href: 'tenant/leads.html', module: 'crm.lead' },
+        { id: 'followups', label: 'Follow-ups', icon: 'calendar', href: 'tenant/follow-ups.html', module: 'crm.followup', tag: '3' },
+        { id: 'pipeline', label: 'Pipeline report', icon: 'trendUp', href: 'tenant/pipeline.html', module: 'crm.report' },
+        { section: 'HRMS' },
+        { id: 'employees', label: 'Employees', icon: 'users', href: 'tenant/employees.html', module: 'hrms.employee' },
+        { id: 'attendance', label: 'Attendance', icon: 'clock', href: 'tenant/attendance.html', module: 'hrms.attendance' },
+        { id: 'leave', label: 'Leave', icon: 'calendar', href: 'tenant/leave.html', module: 'hrms.leave', tag: '3' },
+        { id: 'hrms-setup', label: 'HR setup', icon: 'sliders', href: 'tenant/hrms-setup.html', module: 'hrms.org' },
+        { id: 'hrms-reports', label: 'HR reports', icon: 'chart', href: 'tenant/hrms-reports.html', module: 'hrms.employee' },
+        { section: 'Payroll' },
+        { id: 'payroll-runs', label: 'Payroll runs', icon: 'coins', href: 'tenant/payroll-runs.html', module: 'payroll.run' },
+        { id: 'salaries', label: 'Salary structures', icon: 'rupee', href: 'tenant/salaries.html', module: 'payroll.structure' },
+        { section: 'Accounting' }
+      ].concat(accItems('tenant')).concat([
+        { section: 'My workspace' },
+        { id: 'my-hr', label: 'My HR & payslips', icon: 'user', href: 'tenant/my-hr.html', module: 'hrms.selfservice' },
+        { section: 'Settings' },
+        { id: 'members', label: 'Members', icon: 'userCog', href: 'tenant/members.html' },
+        { id: 'roles', label: 'Roles & permissions', icon: 'key', href: 'tenant/roles.html' },
         { id: 'branches', label: 'Branches', icon: 'pin', href: 'tenant/branches.html' },
-        { id: 'users', label: 'Users & roles', icon: 'userCog', href: 'tenant/users.html' },
-        { id: 'mobile', label: 'Your member app', icon: 'phone', href: 'tenant/mobile-app.html' },
-        { section: 'Account' },
-        { id: 'subscription', label: 'Subscription', icon: 'card', href: 'tenant/subscription.html' },
-        { id: 'branding', label: 'Branding', icon: 'palette', href: 'tenant/branding.html' },
-        { id: 'appearance', label: 'Appearance', icon: 'sliders', href: 'tenant/appearance.html' }
-      ]
+        { id: 'profile', label: 'Organisation profile', icon: 'building', href: 'tenant/profile.html' },
+        { id: 'subscription', label: 'Plan & usage', icon: 'card', href: 'tenant/subscription.html' },
+        { id: 'audit', label: 'Audit trail', icon: 'activity', href: 'tenant/audit.html' },
+        { id: 'appearance', label: 'Personal theme', icon: 'palette', href: 'tenant/appearance.html' }
+      ])
     }
   };
+
+  /* Pages shared by both portals (accounting/, account.html) use
+     data-portal="auto": ?realm=platform shows the Platform Console shell. */
+  function portalOf() {
+    var p = document.body.getAttribute('data-portal');
+    if (p === 'auto') { p = param('realm') === 'platform' ? 'platform' : 'tenant'; document.body.setAttribute('data-portal', p); }
+    return p;
+  }
+  function realmQ() { return document.body.getAttribute('data-portal') === 'platform' ? '?realm=platform' : ''; }
+  /* Chit group lifecycle stepper, shared by group-new and group-view.
+     Create (FORMING) → enrol customers → commencement certificate (no blockers left) → running (COMMENCED / CLOSED). */
+  function groupStages(g) {
+    var st = g ? g.status : null, blocked = g && g.commencementBlockers && g.commencementBlockers.length;
+    var cur = !g ? 0 : st === 'FORMING' ? (blocked ? 1 : 2) : st === 'COMMENCED' ? 3 : st === 'CLOSED' ? 4 : -1;
+    var c = g && g.commencement;
+    var steps = [
+      ['Create group', g ? 'Created · ' + human(st) : 'Scheme, branch & dates', ''],
+      ['Enrol customers', g ? (g.enrolled || 0) + ' / ' + g.installments + ' tickets' : 'On the group page', 'en'],
+      ['Commencement', c ? 'CC ' + c.ccNumber : (g && st === 'FORMING' ? (blocked ? blocked + ' blocker' + (blocked > 1 ? 's' : '') + ' left' : 'Ready to record CC') : 'Record the CC'), 'cc'],
+      ['Running', c ? 'First auction ' + date(c.firstAuctionOn) : 'Auctions begin', '']
+    ];
+    return '<div class="stepper' + (cur === -1 ? ' cancelled' : '') + '">' + steps.map(function (x, i) {
+      var cls = cur === -1 ? '' : i < cur || (st === 'CLOSED') ? 'done' : i === cur ? 'active' : '';
+      return '<div class="step ' + cls + '"' + (x[2] && g ? ' data-go="' + x[2] + '" role="button" tabindex="0" title="Open ' + x[0].toLowerCase() + '"' : '') + '><span class="bubble">' + (cls === 'done' ? icon('check', 'sm') : i + 1) + '</span><span class="step-txt"><b>' + x[0] + '</b><span>' + x[1] + '</span></span></div>';
+    }).join('') + '</div>';
+  }
+  /* Accounting pages serve both realms: the tenant's books and (with ?realm=platform) ChitSphere's own books. */
+  function accCtx() {
+    var pl = document.body.getAttribute('data-portal') === 'platform';
+    return { platform: pl, q: pl ? '&realm=platform' : '', q1: pl ? '?realm=platform' : '', book: pl ? DB.platformBook : DB.book,
+      base: pl ? '/api/platform/v1/admin/accounting' : '/api/accounting/v1/tenants/{tenantId}', home: pl ? '../platform/dashboard.html' : '../tenant/dashboard.html' };
+  }
 
   /* ------------------------------------------------------------ Shell */
   function buildShell() {
     var body = document.body;
-    var portal = body.getAttribute('data-portal');
+    var portal = portalOf();
     var page = body.getAttribute('data-page');
     var main = document.querySelector('main.content');
     if (!portal || !main || !NAV[portal]) return;
     var cfg = NAV[portal];
+    var DBx = window.DB || {};
+    var me = (portal === 'tenant' ? DBx.me : DBx.platformMe) || { fullName: 'User', email: '', role: 'USER' };
+    var enabled = DBx.enabledModules || [];
 
     var shell = document.createElement('div');
     shell.className = 'shell';
@@ -203,53 +300,74 @@
     try { pinned = localStorage.getItem('cs.sidebar.pin') === '1'; } catch (e) {}
     if (!pinned) shell.classList.add('collapsed');
 
+    cfg.items.forEach(function (it) {
+      if (portal === 'tenant' && it.module && enabled.length && enabled.indexOf(it.module) < 0) { it.disabled = true; it.tag = 'Not in plan'; }
+    });
     var nav = cfg.items.map(function (it) {
       if (it.section) return '<div class="sb-section">' + it.section + '</div>';
       var cls = 'sb-link' + (it.id === page ? ' active' : '') + (it.disabled ? ' disabled' : '');
-      return '<a class="' + cls + '" href="' + (it.href ? link(it.href) : '#') + '" title="' + it.label + '"' + (it.id === page ? ' aria-current="page"' : '') + '>' +
+      return '<a class="' + cls + '" href="' + (it.href && !it.disabled ? link(it.href) : '#') + '" title="' + it.label + '"' + (it.id === page ? ' aria-current="page"' : '') + '>' +
         icon(it.icon) + '<span>' + it.label + '</span>' + (it.tag ? '<em class="tag">' + it.tag + '</em>' : '') + '</a>';
     }).join('');
 
-    var foot = portal === 'tenant'
-      ? '<div class="sb-plan"><div class="row between"><b>Growth plan</b><span class="xs">Renews 14 Jan</span></div>' +
-        '<div class="meter"><div class="meter-row"><span>Groups</span><b>84 / 120</b></div><div class="meter-bar"><div class="meter-fill" style="width:70%"></div></div></div></div>'
-      : '<div class="sb-plan"><b>v0.1 · UI prototype</b><div class="xs" style="opacity:.8">Mock data only</div></div>';
+    var foot;
+    if (portal === 'tenant' && DBx.entitlement) {
+      var gl = DBx.entitlement.limits.filter(function (l) { return l.id === 'chits.group.max'; })[0];
+      var pct = gl ? Math.round(gl.used / gl.limit * 100) : 0;
+      foot = '<a class="sb-plan" href="' + link('tenant/subscription.html') + '" style="display:block;color:inherit"><div class="row between"><b>' + human(DBx.entitlement.planCode) + ' · v' + DBx.entitlement.planVersion + '</b><span class="xs">' + human(DBx.entitlement.subscriptionStatus) + '</span></div>' +
+        (gl ? '<div class="meter"><div class="meter-row"><span>Chit groups</span><b>' + gl.used + ' / ' + gl.limit + '</b></div><div class="meter-bar"><div class="meter-fill" style="width:' + pct + '%"></div></div></div>' : '') + '</a>';
+    } else {
+      foot = '<div class="sb-plan"><b>UI prototype</b><div class="xs" style="opacity:.8">Mock data shaped like the API contracts</div></div>';
+    }
 
     var sidebar = '<aside class="sidebar" aria-label="Main navigation">' +
       '<div class="sb-brand"><div class="sb-logo">' + cfg.brand.mark + '</div><div class="sb-brand-text"><b>' + cfg.brand.name + '</b><span>' + cfg.brand.sub + '</span></div></div>' +
       '<nav class="sb-nav">' + nav + '</nav><div class="sb-foot">' + foot + '</div></aside><div class="sb-backdrop" data-sb-close></div>';
 
-    var tenantBadge = portal === 'tenant'
-      ? '<div class="dropdown desktop-only"><button class="tenant-switch" data-menu="#mTenant"><span class="avatar sq sm">SV</span>Sri Venkata Chits' + icon('chevD', 'sm') + '</button>' +
-        '<div class="menu left" id="mTenant"><div class="menu-head"><div class="xs muted">Tenant</div><b>Sri Venkata Chits Pvt. Ltd.</b><div class="xs muted">T-1001 · svchits.chitsphere.in</div></div>' +
-        '<a href="' + link('tenant/branches.html') + '">' + icon('pin') + 'All branches (7)</a><a href="' + link('tenant/subscription.html') + '">' + icon('card') + 'Subscription</a></div></div>'
-      : '<span class="badge primary desktop-only">' + icon('shield', 'sm') + 'Platform</span>';
+    /* Tenant switcher: GET /api/platform/v1/me/tenants, POST /api/auth/v1/tenant-session */
+    var tenantBadge;
+    if (portal === 'tenant') {
+      var mine = DBx.myTenants || [];
+      var cur = mine.filter(function (t) { return t.current; })[0] || { name: cfg.brand.name, code: '', role: me.role };
+      tenantBadge = '<div class="dropdown desktop-only"><button class="tenant-switch" data-menu="#mTenant"><span class="avatar sq sm">' + cfg.brand.mark + '</span>' + esc(cur.name) + icon('chevD', 'sm') + '</button>' +
+        '<div class="menu left" id="mTenant" style="width:300px"><div class="menu-head"><div class="xs muted">Signed in to</div><b>' + esc(cur.name) + '</b><div class="xs muted">Org code <span class="mono">' + esc(cur.code) + '</span> · ' + human(cur.role) + '</div></div>' +
+        mine.filter(function (t) { return !t.current; }).map(function (t) {
+          var off = t.status !== 'ACTIVE';
+          return '<a href="' + (off ? '#' : link('tenant/dashboard.html')) + '"' + (off ? ' style="opacity:.55;pointer-events:none"' : ' data-switch="' + esc(t.name) + '"') + '>' + icon('building') + '<span style="flex:1">' + esc(t.name) + '<span class="xs muted" style="display:block">' + human(t.role) + (off ? ' · ' + human(t.status) : '') + '</span></span></a>';
+        }).join('') +
+        '<div class="sep"></div><a href="' + link('choose-tenant.html') + '">' + icon('switch') + 'All my organisations</a></div></div>';
+    } else {
+      tenantBadge = '<span class="badge primary desktop-only">' + icon('shield', 'sm') + human(me.role) + '</span>';
+    }
+
+    var notes = portal === 'tenant'
+      ? [['checkSquare', '2 vouchers wait for your approval', 'accounting/approvals.html'], ['calendar', '3 leave requests pending', 'tenant/leave.html'], ['alert', '3 follow-ups are overdue', 'tenant/follow-ups.html'], ['grid', 'SV-25L-D26 needs 6 more tickets to commence', 'tenant/group-view.html?id=g-5']]
+      : [['building', 'Kaveri Chits has no plan yet (PENDING)', 'platform/tenant-view.html?id=t-kaveri'], ['alert', 'Sahyadri provisioning step OPEN_BOOKS failed', 'platform/tenant-view.html?id=t-sahyadri'], ['clock', 'Kanaka grace period ends 17 Nov', 'platform/tenant-view.html?id=t-kanaka'], ['lock', 'Kiran Desai is locked out', 'platform/users.html']];
 
     var topbar = '<header class="topbar">' +
       '<button class="icon-btn mobile-only" data-sb-open aria-label="Open menu">' + icon('menu') + '</button>' +
       '<button class="icon-btn desktop-only" data-sb-toggle aria-label="' + (pinned ? 'Unpin sidebar' : 'Pin sidebar open') + '" title="' + (pinned ? 'Unpin sidebar (open on hover)' : 'Pin sidebar open') + '">' + icon('panel') + '</button>' +
       '<a class="tb-brand" href="' + link(portal + '/dashboard.html') + '"><span class="sb-logo">' + cfg.brand.mark + '</span><b>' + cfg.brand.name + '</b></a>' +
       tenantBadge +
-      '<label class="search"><span class="sr-only">Search</span>' + icon('search', 'sm') + '<input class="input" placeholder="' + (portal === 'tenant' ? 'Search groups, schemes, subscribers…' : 'Search tenants, invoices…') + '"><kbd>/</kbd></label>' +
+      '<label class="search"><span class="sr-only">Search</span>' + icon('search', 'sm') + '<input class="input" placeholder="' + (portal === 'tenant' ? 'Search customers, groups, employees…' : 'Search tenants, plans, staff…') + '"><kbd>/</kbd></label>' +
       '<div class="topbar-spacer"></div>' +
       '<div class="topbar-actions">' +
         '<button class="icon-btn" data-theme-toggle aria-label="Toggle dark mode" title="Toggle light / dark"></button>' +
         '<button class="icon-btn" data-open="#themePanel" aria-label="Theme settings" title="Theme settings">' + icon('palette') + '</button>' +
         '<button class="icon-btn" aria-label="Notifications" data-menu="#mNotif">' + icon('bell') + '<span class="dot"></span></button>' +
-        '<div class="dropdown"><div class="menu" id="mNotif" style="width:320px">' +
-          '<div class="menu-head row between"><b>Notifications</b><span class="badge hl">3 new</span></div>' +
-          (portal === 'tenant'
-            ? '<a href="#">' + icon('alert') + '<span>PSO for <b>SV-5L-F26</b> awaiting update</span></a><a href="#">' + icon('gavel') + '<span>Auction #24 for SV-5L-A24 on 5 Dec</span></a><a href="#">' + icon('users') + '<span>SV-25L-D26 is 68% enrolled</span></a>'
-            : '<a href="#">' + icon('building') + '<span>Kaveri Chits awaiting KYC review</span></a><a href="#">' + icon('receipt') + '<span>INV-2026-1140 overdue (Shubham Chits)</span></a><a href="#">' + icon('clock') + '<span>Godavari trial ends in 14 days</span></a>') +
+        '<div class="dropdown"><div class="menu" id="mNotif" style="width:340px">' +
+          '<div class="menu-head row between"><b>Needs attention</b><span class="badge hl">' + notes.length + '</span></div>' +
+          notes.map(function (n) { return '<a href="' + link(n[2]) + '">' + icon(n[0]) + '<span>' + n[1] + '</span></a>'; }).join('') +
         '</div></div>' +
-        '<div class="dropdown"><button class="user-chip" data-menu="#mUser"><span class="avatar sm">' + initials(cfg.user.name) + '</span><span class="meta"><b>' + cfg.user.name + '</b><span>' + cfg.user.role + '</span></span>' + icon('chevD', 'sm') + '</button>' +
-        '<div class="menu" id="mUser"><div class="menu-head"><b>' + cfg.user.name + '</b><div class="xs muted">' + cfg.user.role + '</div></div>' +
-          '<a href="#">' + icon('user') + 'My profile</a>' +
-          '<button data-open="#themePanel">' + icon('palette') + 'Appearance</button>' +
+        '<div class="dropdown"><button class="user-chip" data-menu="#mUser"><span class="avatar sm">' + initials(me.fullName) + '</span><span class="meta"><b>' + esc(me.fullName) + '</b><span>' + human(me.role) + '</span></span>' + icon('chevD', 'sm') + '</button>' +
+        '<div class="menu" id="mUser"><div class="menu-head"><b>' + esc(me.fullName) + '</b><div class="xs muted">' + esc(me.email) + '</div></div>' +
+          '<a href="' + link('account.html' + (portal === 'platform' ? '?realm=platform' : '')) + '">' + icon('user') + 'Account & security</a>' +
+          '<button data-open="#themePanel">' + icon('palette') + 'Personal theme</button>' +
           (portal === 'tenant'
-            ? '<a href="' + link('platform/dashboard.html') + '">' + icon('switch') + 'Switch to Platform console</a>'
-            : '<a href="' + link('tenant/dashboard.html') + '">' + icon('switch') + 'View as tenant (SV Chits)</a>') +
-          '<div class="sep"></div><a class="danger" href="' + link(portal === 'tenant' ? 'login.html?org=svchits' : 'platform/login.html') + '">' + icon('logout') + 'Sign out</a>' +
+            ? '<a href="' + link('platform/dashboard.html') + '">' + icon('switch') + 'Prototype: Platform console</a>'
+            : '<a href="' + link('tenant/dashboard.html') + '">' + icon('switch') + 'Prototype: tenant workspace</a>') +
+          '<div class="sep"></div><a href="' + link('login.html?signedOut=1') + '">' + icon('logout') + 'Sign out</a>' +
+          '<a class="danger" href="' + link('login.html?signedOut=all') + '">' + icon('logout') + 'Sign out everywhere</a>' +
         '</div></div>' +
       '</div></header>';
 
@@ -271,6 +389,9 @@
     shell.querySelector('[data-sb-toggle]').classList.toggle('active', pinned);
     shell.querySelector('[data-sb-open]').addEventListener('click', function () { shell.classList.add('mobile-open'); });
     shell.querySelector('[data-sb-close]').addEventListener('click', function () { shell.classList.remove('mobile-open'); });
+    shell.querySelectorAll('[data-switch]').forEach(function (a) {
+      a.addEventListener('click', function (e) { e.preventDefault(); toast('Switching to ' + a.getAttribute('data-switch') + ' (POST /api/auth/v1/tenant-session)', 'info'); setTimeout(function () { location.href = a.href; }, 700); });
+    });
 
     document.addEventListener('keydown', function (e) {
       if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
@@ -532,12 +653,14 @@
   /* ------------------------------------------------------------ Validation */
   function validate(root) {
     var ok = true, first = null;
-    root.querySelectorAll('[required]').forEach(function (inp) {
+    root.querySelectorAll('[required], [pattern]').forEach(function (inp) {
+      if (!inp.required && !inp.value) return;
       if (inp.offsetParent === null && inp.type !== 'hidden') return; // skip hidden sections
       var fld = inp.closest('.field');
       var bad = !String(inp.value || '').trim();
       if (!bad && inp.min !== '' && inp.type === 'number' && +inp.value < +inp.min) bad = true;
       if (!bad && inp.max !== '' && inp.type === 'number' && +inp.value > +inp.max) bad = true;
+      if (!bad && inp.pattern && !new RegExp('^(?:' + inp.pattern + ')$').test(inp.value)) bad = true;
       if (fld) fld.classList.toggle('invalid', bad);
       if (bad) { ok = false; if (!first) first = inp; }
     });
@@ -586,7 +709,7 @@
           var v = c.render ? c.render(r) : esc(r[c.key]);
           return '<td class="' + (c.num ? 'num ' : '') + (c.cls || '') + '">' + v + '</td>';
         }).join('') + '</tr>';
-      }).join('') : '<tr><td colspan="' + opts.columns.length + '"><div class="empty"><div class="e-ico">' + icon('search') + '</div><b>No matching records</b>Try a different search or clear filters.</div></td></tr>';
+      }).join('') : '<tr><td colspan="' + opts.columns.length + '"><div class="empty"><div class="e-ico">' + icon('search') + '</div><b>' + esc(opts.empty || 'No matching records') + '</b>' + (opts.empty ? '' : 'Try a different search or clear filters.') + '</div></td></tr>';
       if (opts.onRow) tbody.querySelectorAll('tr.clickable').forEach(function (tr, i) {
         tr.addEventListener('click', function (e) { if (!e.target.closest('button, a, input, .dropdown')) opts.onRow(slice[i], e); });
       });
@@ -672,13 +795,125 @@
     el.innerHTML = '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"><path class="area" d="' + d + ' L' + w + ' ' + h + ' L0 ' + h + ' Z"/><path class="line" d="' + d + '" vector-effect="non-scaling-stroke"/></svg>';
   }
 
+  /* ------------------------------------------------------------ Form + dialog helpers
+     Field spec: { id, label, type: text|email|tel|number|date|month|time|password|select|textarea|switch|checks|static,
+                   req, options: [v] | [[v, label]], enum: 'EnumName', blank: 'label', hint, err, span: 2,
+                   min, max, step, pattern, maxlength, placeholder, value, mono, readonly }
+     { section: 'Title', text } inserts a heading row. */
+  function optionList(f) {
+    var list = f.options || (f.enum && window.DB && DB.ENUM[f.enum]) || [];
+    return (f.blank != null ? '<option value="">' + esc(f.blank) + '</option>' : '') + list.map(function (o) {
+      var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : human(o);
+      return '<option value="' + esc(v) + '"' + (String(f.value) === String(v) ? ' selected' : '') + '>' + esc(l) + '</option>';
+    }).join('');
+  }
+  function fieldHtml(f) {
+    if (f.section) return '<div class="span-2" style="grid-column:1/-1;padding-top:6px;border-top:1px solid var(--border)"><b>' + f.section + '</b>' + (f.text ? '<div class="xs muted">' + f.text + '</div>' : '') + '</div>';
+    if (f.html) return '<div class="field' + (f.span === 2 ? ' span-2' : '') + '" style="' + (f.span === 2 ? 'grid-column:1/-1' : '') + '">' + f.html + '</div>';
+    var id = f.id, a = ' id="' + id + '" name="' + id + '"' + (f.req ? ' required' : '') +
+      (f.min != null ? ' min="' + f.min + '"' : '') + (f.max != null ? ' max="' + f.max + '"' : '') + (f.step != null ? ' step="' + f.step + '"' : '') +
+      (f.pattern ? ' pattern="' + f.pattern + '"' : '') + (f.maxlength ? ' maxlength="' + f.maxlength + '"' : '') +
+      (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + (f.readonly ? ' readonly' : '') + (f.disabled ? ' disabled' : '');
+    var ctl;
+    if (f.type === 'select') ctl = '<select class="select"' + a + '>' + optionList(f) + '</select>';
+    else if (f.type === 'textarea') ctl = '<textarea class="textarea"' + a + '>' + esc(f.value || '') + '</textarea>';
+    else if (f.type === 'switch') return '<div class="field' + (f.span === 2 ? ' span-2' : '') + '"><label class="switch"><input type="checkbox"' + a + (f.value ? ' checked' : '') + '><span class="track"></span>' + f.label + '</label>' + (f.hint ? '<span class="hint">' + f.hint + '</span>' : '') + '</div>';
+    else if (f.type === 'checks') ctl = '<div class="checks" id="' + id + '">' + (f.options || []).map(function (o) {
+      var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : human(o);
+      return '<label><input type="checkbox" value="' + esc(v) + '"' + ((f.value || []).indexOf(v) > -1 ? ' checked' : '') + '><span>' + l + '</span></label>';
+    }).join('') + '</div>';
+    else if (f.type === 'static') ctl = '<div id="' + id + '" style="padding-top:6px">' + (f.value == null ? '—' : f.value) + '</div>';
+    else ctl = '<input class="input' + (f.mono ? ' mono' : '') + '" type="' + (f.type || 'text') + '"' + a + (f.value != null ? ' value="' + esc(f.value) + '"' : '') + '>';
+    return '<div class="field' + (f.span === 2 ? ' span-2' : '') + '"><label for="' + id + '">' + f.label + (f.req ? ' <span class="req">*</span>' : '') + '</label>' + ctl +
+      (f.hint ? '<span class="hint">' + f.hint + '</span>' : '') + '<span class="err">' + (f.err || 'Required') + '</span></div>';
+  }
+  function formHtml(fields, cols) { return '<div class="form-grid' + (cols ? ' cols-' + cols : '') + '">' + fields.map(fieldHtml).join('') + '</div>'; }
+  function values(root) {
+    var o = {};
+    root.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (el) { o[el.name] = el.type === 'checkbox' ? el.checked : el.value; });
+    root.querySelectorAll('.checks[id]').forEach(function (el) { o[el.id] = Array.prototype.map.call(el.querySelectorAll('input:checked'), function (i) { return i.value; }); });
+    return o;
+  }
+  function fill(root, rec) {
+    Object.keys(rec || {}).forEach(function (k) {
+      var el = root.querySelector('[name="' + k + '"]');
+      if (!el) { var ch = root.querySelector('.checks#' + k); if (ch) ch.querySelectorAll('input').forEach(function (i) { i.checked = (rec[k] || []).indexOf(i.value) > -1; }); return; }
+      if (el.type === 'checkbox') el.checked = !!rec[k]; else el.value = rec[k] == null ? '' : rec[k];
+    });
+  }
+
+  /* One reusable modal / drawer, built on demand.
+     opts: { title, sub, icon, text, fields, html, ok, danger, api, done, wide, drawer, record, onOpen(root), onOk(values, root) → false keeps it open } */
+  function dialog(opts) {
+    var isDrawer = !!opts.drawer, id = isDrawer ? 'uiDrawer' : 'uiModal';
+    var el = document.getElementById(id);
+    if (!el) { el = document.createElement('div'); el.id = id; el.setAttribute('role', 'dialog'); document.body.appendChild(el); }
+    el.className = (isDrawer ? 'drawer' : 'modal') + (opts.wide ? (isDrawer ? ' wide' : ' lg') : '');
+    var body = (opts.text ? '<p class="muted" style="margin-bottom:14px">' + opts.text + '</p>' : '') + (opts.html || '') + (opts.fields ? formHtml(opts.fields, opts.cols) : '') +
+      (opts.api ? '<div class="xs muted" style="margin-top:14px">' + icon('external', 'sm') + ' <span class="api">' + esc(opts.api) + '</span></div>' : '');
+    var head = '<div class="card-title-icon"' + (opts.danger ? ' style="background:var(--danger-soft);color:var(--danger)"' : '') + '>' + icon(opts.icon || (opts.danger ? 'alert' : 'edit')) + '</div><div><h3>' + opts.title + '</h3>' + (opts.sub ? '<p>' + opts.sub + '</p>' : '') + '</div><button class="icon-btn ml-auto" data-close aria-label="Close">' + icon('x') + '</button>';
+    var foot = '<button class="btn" data-close>Cancel</button>' + (opts.ok === false ? '' : '<button class="btn ' + (opts.danger ? 'danger' : 'primary') + '" data-ok>' + (opts.ok || 'Save') + '</button>');
+    el.innerHTML = isDrawer
+      ? '<div class="drawer-head">' + head + '</div><div class="drawer-body">' + body + '</div><div class="drawer-foot">' + foot + '</div>'
+      : '<div class="modal-head">' + head + '</div><div class="modal-body">' + body + '</div><div class="modal-foot">' + foot + '</div>';
+    if (opts.record) fill(el, opts.record);
+    if (opts.onOpen) opts.onOpen(el);
+    var okBtn = el.querySelector('[data-ok]');
+    if (okBtn) okBtn.addEventListener('click', function () {
+      if (!validate(el)) return;
+      var r = opts.onOk ? opts.onOk(values(el), el) : undefined;
+      if (r === false) return;
+      closeLayers();
+      if (opts.done !== false) toast(opts.done || 'Saved', opts.danger ? 'warning' : 'success');
+    });
+    openLayer(el);
+    return el;
+  }
+  function confirmAct(title, text, opts) { opts = opts || {}; opts.title = title; opts.text = text; opts.ok = opts.ok || 'Confirm'; return dialog(opts); }
+
+  function kv(pairs) { return '<dl class="kv">' + pairs.map(function (p) { return '<dt>' + p[0] + '</dt><dd>' + (p[1] == null || p[1] === '' ? '—' : p[1]) + '</dd>'; }).join('') + '</dl>'; }
+  function meter(label, used, limit) {
+    var unl = limit === -1, pct = unl || !limit ? 0 : Math.min(100, Math.round(used / limit * 100));
+    var cls = pct >= 100 ? 'danger' : pct >= 80 ? 'warn' : '';
+    return '<div class="meter"><div class="meter-row"><span>' + label + '</span><b>' + num(used) + ' / ' + (unl ? '∞' : num(limit)) + '</b></div><div class="meter-bar"><div class="meter-fill ' + cls + '" style="width:' + (unl ? 6 : pct) + '%"></div></div></div>';
+  }
+  /* Row menus: rowMenu('rm_' + id, [[act, label, danger, icon]]) + onAct(function (act, id) {}) */
+  function onAct(fn) {
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-act]'); if (!b) return;
+      var m = b.closest('.menu'); var id = b.getAttribute('data-id') || (m && m.id ? m.id.replace(/^rm_/, '') : null);
+      closeMenus(); fn(b.getAttribute('data-act'), id, b);
+    });
+  }
+  function api(s) { return '<span class="api">' + esc(s) + '</span>'; }
+  function ent(title, sub, mark, color) {
+    return '<div class="ent"><span class="avatar sq sm"' + (color ? ' style="background:' + color + ';color:#fff"' : '') + '>' + esc(mark || initials(title)) + '</span><div class="ent-txt"><b>' + esc(title) + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</div></div>';
+  }
+  function rowMenu(id, items) {
+    return '<div class="dropdown"><button class="icon-btn sm" data-menu="#' + id + '" aria-label="Actions">' + icon('moreV') + '</button><div class="menu" id="' + id + '">' +
+      items.filter(Boolean).map(function (it) { return '<button data-act="' + it[0] + '"' + (it[2] ? ' class="danger"' : '') + '>' + icon(it[3] || 'chevR') + it[1] + '</button>'; }).join('') + '</div></div>';
+  }
+  /* Password rules from auth (PasswordPolicy): ≥12 chars, upper, lower, digit, symbol, not name/email. */
+  function pwRules(input, list, ctx) {
+    var rules = [['len', 'At least 12 characters', function (v) { return v.length >= 12; }], ['up', 'An uppercase letter', function (v) { return /[A-Z]/.test(v); }],
+      ['lo', 'A lowercase letter', function (v) { return /[a-z]/.test(v); }], ['dg', 'A number', function (v) { return /\d/.test(v); }],
+      ['sy', 'A symbol such as ! @ # $', function (v) { return /[^A-Za-z0-9]/.test(v); }],
+      ['id', 'Not your name or email', function (v) { var c = (ctx && ctx()) || []; return !!v && !c.some(function (x) { return x && x.length > 2 && v.toLowerCase().indexOf(x.toLowerCase()) > -1; }); }]];
+    list.innerHTML = rules.map(function (r) { return '<li data-r="' + r[0] + '">' + r[1] + '</li>'; }).join('');
+    function check() { var v = input.value, all = true; rules.forEach(function (r) { var ok = r[2](v); all = all && ok; list.querySelector('[data-r="' + r[0] + '"]').classList.toggle('ok', ok); }); return all; }
+    input.addEventListener('input', check); check();
+    return check;
+  }
+
   /* ------------------------------------------------------------ Boot */
   window.UI = {
     root: ROOT, link: link, icon: icon, hydrateIcons: hydrateIcons,
     inr: inr, inrShort: inrShort, num: num, date: date, initials: initials, badge: badge, esc: esc, param: param,
     toast: toast, open: openLayer, close: closeLayers, validate: validate, table: table, bars: bars, spark: spark,
     loader: pageLoader, enhanceTabs: enhanceTabs, nav: NAV,
-    activateTab: activateTab
+    activateTab: activateTab, human: human, dt: dt, month: month, realmQ: realmQ, acc: accCtx, groupStages: groupStages,
+    field: fieldHtml, form: formHtml, values: values, fill: fill, dialog: dialog, confirm: confirmAct,
+    kv: kv, meter: meter, api: api, ent: ent, rowMenu: rowMenu, onAct: onAct, pwRules: pwRules, options: optionList
   };
 
   function boot() {

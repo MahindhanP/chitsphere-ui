@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audit trail · Sri Venkata Chits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<!--
+  GET /api/platform/v1/tenants/{tenantId}/audit-events (needs platform.audit.read). Includes ChitSphere support sessions.
+-->
+<body data-portal="tenant" data-page="audit">
+<main class="content">
+  <div class="page-head">
+    <div class="titles">
+      <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i>Settings<i data-i="chevR"></i>Audit trail</div>
+      <h1>Audit trail</h1>
+      <p>Sign-ins, changes and approvals in Sri Venkata Chits, including any ChitSphere support access.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search event, person, record…"></div><select class="select" id="fO"><option value="">All outcomes</option><option>SUCCESS</option><option>FAILURE</option></select><input class="input" type="date" style="width:auto" value="2026-11-01"><input class="input" type="date" style="width:auto" value="2026-11-14"></div>
+    <div id="tbl"></div>
+  </div>
+</main>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.addEventListener('app:ready', function () {
+  var rows = DB.audit.filter(function (a) { return a.tenantId === 't-svchits'; }).concat([{ type: 'support.elevation.started', actor: 'Kiran Desai (ChitSphere support)', subject: 'TKT-2240: owner cannot see Warangal branch', outcome: 'SUCCESS', clientIp: '10.0.4.20', occurredAt: '2026-11-12T10:00:00Z' }]);
+  UI.table({ el: '#tbl', rows: rows, search: '#q', searchKeys: ['type', 'actor', 'subject'], filters: [{ el: '#fO', key: 'outcome' }], pageSize: 12, columns: [
+    { key: 'occurredAt', label: 'When', sort: true, render: function (a) { return UI.dt(a.occurredAt); } },
+    { key: 'type', label: 'Event', render: function (a) { return '<span class="mono xs">' + a.type + '</span>'; } },
+    { key: 'actor', label: 'By' }, { key: 'subject', label: 'Record', render: function (a) { return UI.esc(a.subject); } },
+    { key: 'clientIp', label: 'IP', render: function (a) { return '<span class="mono xs">' + a.clientIp + '</span>'; } },
+    { key: 'outcome', label: 'Outcome', render: function (a) { return UI.badge(a.outcome); } }] });
+});
+</script>
+</body>
+</html>
