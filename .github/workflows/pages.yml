@@ -1,0 +1,39 @@
+name: Deploy prototype to Pages
+
+# main is served at the site root, api_contract (finalized Sprint 1 designs) under /api_contract/
+on:
+  push:
+    branches: [main, api_contract]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: _site
+      - uses: actions/checkout@v4
+        with:
+          ref: api_contract
+          path: _site/api_contract
+      - run: rm -rf _site/.git _site/.github _site/api_contract/.git _site/api_contract/.github
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
