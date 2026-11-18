@@ -142,7 +142,7 @@
     PAST_DUE: 'danger', SUSPENDED: 'danger', TRIAL_EXPIRED: 'danger', ABSENT: 'danger', REJECTED: 'danger', MISSED: 'danger', OVERDUE: 'danger', FAILURE: 'danger', FAILED: 'danger', EXHAUSTED: 'danger', NONE: 'danger',
     CONTACTED: 'primary', COMPANY: 'primary', UNLIMITED: 'primary',
     DRAFT: 'neutral', RETIRED: 'neutral', ARCHIVED: 'neutral', CLOSED: 'neutral', DISABLED: 'neutral', INACTIVE: 'neutral', CANCELLED: 'neutral', CANCELED: 'neutral',
-    ENDED: 'neutral', EXITED: 'neutral', LOST: 'neutral', HOLIDAY: 'neutral', EXPIRED: 'neutral', REVOKED: 'neutral', VACANT: 'outline'
+    ENDED: 'neutral', EXITED: 'neutral', REPLACED: 'neutral', LOST: 'neutral', HOLIDAY: 'neutral', EXPIRED: 'neutral', REVOKED: 'neutral', VACANT: 'outline'
   };
   var LABEL = {
     TENANT_OWNER: 'Owner', TENANT_ADMIN: 'Admin', TENANT_USER: 'User', PLATFORM_ADMIN: 'Platform admin', PLATFORM_SUPPORT: 'Platform support',

@@ -301,12 +301,29 @@ DB.schemes = [
   { id: 's-5', code: 'MAHA-25L', name: 'Mahalakshmi 25L / 50M', chitValue: 2500000, installments: 50, auctionFrequency: 'MONTHLY', collectionOption: 'BEFORE_AUCTION', minBidPercent: 5, maxBidPercent: 30, companyCommissionPercent: 5, companyTickets: 2, enrolmentFee: 2500, penaltyNonPrizedPercent: 18, penaltyPrizedPercent: 24, minMembersForCommencement: 40, status: 'ACTIVE', createdAt: '2025-03-22T09:00:00Z', color: '#5B21B6' },
   { id: 's-6', code: 'DAILY-50K', name: 'Daily Deposit 50K / 100D', chitValue: 50000, installments: 100, auctionFrequency: 'DAILY', collectionOption: 'BEFORE_AUCTION', minBidPercent: 5, maxBidPercent: 20, companyCommissionPercent: 5, companyTickets: 1, enrolmentFee: 50, penaltyNonPrizedPercent: 12, penaltyPrizedPercent: 18, minMembersForCommencement: 80, status: 'ARCHIVED', createdAt: '2025-07-01T09:00:00Z', color: '#1F2937' }
 ];
-DB.schemes.forEach(function (s) { s.installmentAmount = Math.round(s.chitValue / s.installments); });
+/* Versions, compliance and icons (SchemeView): a modification ("Modify terms", POST …/schemes/{id}/versions) saves the new money
+   terms as the next version and the old one becomes REPLACED. Replaced versions are history, so they live apart from the list.
+   LAKSHMI-10L is on version 2; its version 1 (max bid 35%) had one group formed from it. */
+DB.schemeHistory = [
+  { id: 's-2v1', code: 'LAKSHMI-10L', name: 'Lakshmi 10L / 40M', chitValue: 1000000, installments: 40, auctionFrequency: 'MONTHLY', collectionOption: 'BEFORE_AUCTION', minBidPercent: 5, maxBidPercent: 35, companyCommissionPercent: 5, companyTickets: 1, enrolmentFee: 1000, penaltyNonPrizedPercent: 18, penaltyPrizedPercent: 24, minMembersForCommencement: 32, status: 'REPLACED', createdAt: '2024-03-05T09:00:00Z', color: '#072E77',
+    originalSchemeId: 's-2v1', versionNumber: 1, isCompliant: true, complianceCheckedBy: 'u-lakshmi', complianceCheckedAt: '2024-03-08T09:00:00Z' }
+];
+DB.schemes.concat(DB.schemeHistory).forEach(function (s) {
+  s.installmentAmount = Math.round(s.chitValue / s.installments);
+  if (s.penaltySfPercent == null) s.penaltySfPercent = 0;
+  if (s.originalSchemeId == null) { s.originalSchemeId = s.id; s.versionNumber = 1; }
+  if (s.isCompliant === undefined) { s.isCompliant = null; s.complianceCheckedBy = null; s.complianceCheckedAt = null; }
+  s.originalCreatedAt = s.originalCreatedAt || s.createdAt;
+  s.hasIcon = !!s.hasIcon;
+});
+Object.assign(DB.schemes[1], { originalSchemeId: 's-2v1', versionNumber: 2, createdAt: '2025-09-01T09:00:00Z', originalCreatedAt: '2024-03-05T09:00:00Z' });
+Object.assign(DB.schemes[0], { isCompliant: true, complianceCheckedBy: 'u-ravi', complianceCheckedAt: '2024-02-12T09:00:00Z', hasIcon: true, penaltySfPercent: 2 });
+Object.assign(DB.schemes[2], { isCompliant: false, complianceCheckedBy: 'u-lakshmi', complianceCheckedAt: '2024-04-20T09:00:00Z' });
 
 /* GET /api/chits/v1/tenants/{id}/groups (scheme terms are copied into each group) */
 DB.groups = [
   { id: 'g-1', code: 'SV-5L-A24', name: 'Swarna A 2024', schemeId: 's-1', branchId: 'br-amp', startsOn: '2024-12-05', advanceInstallments: 0, status: 'COMMENCED', enrolled: 50, commencement: { ccNumber: 'CC/HYD/2024/1188', ccDate: '2024-11-28', commencedOn: '2024-12-05', firstAuctionOn: '2025-01-05', challanReference: 'CH-77812', documentReference: 'DMS/CC/1188' } },
-  { id: 'g-2', code: 'SV-10L-B24', name: 'Lakshmi B 2024', schemeId: 's-2', branchId: 'br-kkp', startsOn: '2025-05-10', advanceInstallments: 1, status: 'COMMENCED', enrolled: 40, commencement: { ccNumber: 'CC/HYD/2025/0412', ccDate: '2025-05-02', commencedOn: '2025-05-10', firstAuctionOn: '2025-06-10' } },
+  { id: 'g-2', code: 'SV-10L-B24', name: 'Lakshmi B 2024', schemeId: 's-2v1', branchId: 'br-kkp', startsOn: '2025-05-10', advanceInstallments: 1, status: 'COMMENCED', enrolled: 40, commencement: { ccNumber: 'CC/HYD/2025/0412', ccDate: '2025-05-02', commencedOn: '2025-05-10', firstAuctionOn: '2025-06-10' } },
   { id: 'g-3', code: 'SV-2L-C25', name: 'Vasantha C 2025', schemeId: 's-3', branchId: 'br-dsn', startsOn: '2026-02-15', advanceInstallments: 0, status: 'COMMENCED', enrolled: 20, commencement: { ccNumber: 'CC/HYD/2026/0090', ccDate: '2026-02-10', commencedOn: '2026-02-15', firstAuctionOn: '2026-03-15' } },
   { id: 'g-4', code: 'SV-1LW-E26', name: 'Weekly E 2026', schemeId: 's-4', branchId: 'br-wgl', startsOn: '2026-11-14', advanceInstallments: 0, status: 'COMMENCED', enrolled: 25, commencement: { ccNumber: 'CC/WGL/2026/0233', ccDate: '2026-11-10', commencedOn: '2026-11-14', firstAuctionOn: '2026-11-19' } },
   { id: 'g-5', code: 'SV-25L-D26', name: 'Mahalakshmi D 2026', schemeId: 's-5', branchId: 'br-amp', startsOn: '2026-12-20', advanceInstallments: 1, status: 'FORMING', enrolled: 34, remarks: 'Premium group for HNI customers.' },
@@ -315,7 +332,7 @@ DB.groups = [
   { id: 'g-8', code: 'SV-2L-H26', name: 'Vasantha H 2026', schemeId: 's-3', branchId: 'br-nzb', startsOn: '2026-10-15', advanceInstallments: 0, status: 'CANCELLED', enrolled: 1, cancelReason: 'Not enough subscribers in Nizamabad before the planned start.' }
 ];
 DB.groups.forEach(function (g) {
-  var s = DB.schemes.find(function (x) { return x.id === g.schemeId; });
+  var s = DB.schemes.concat(DB.schemeHistory).find(function (x) { return x.id === g.schemeId; });
   ['chitValue', 'installments', 'installmentAmount', 'auctionFrequency', 'collectionOption', 'companyTickets', 'enrolmentFee', 'minMembersForCommencement', 'color'].forEach(function (k) { g[k] = s[k]; });
   g.schemeCode = s.code;
   g.vacant = g.installments - g.enrolled;
@@ -563,7 +580,15 @@ DB.tenantByCode = function (c) { return DB.tenants.find(function (t) { return t.
 DB.plan = function (id) { return DB.plans.find(function (p) { return p.id === id || p.code === id; }); };
 DB.branch = function (id) { return DB.branches.find(function (b) { return b.id === id; }); };
 DB.branchName = function (id) { var b = DB.branch(id); return b ? b.name : '—'; };
-DB.scheme = function (id) { return DB.schemes.find(function (s) { return s.id === id; }); };
+DB.scheme = function (id) { return DB.schemes.concat(DB.schemeHistory).find(function (s) { return s.id === id; }); };
+/* GET …/schemes/{id}/versions: every version, newest first */
+DB.schemeVersions = function (s) { return DB.schemes.concat(DB.schemeHistory).filter(function (x) { return x.originalSchemeId === s.originalSchemeId; }).sort(function (a, b) { return b.versionNumber - a.versionNumber; }); };
+/* GET …/schemes/{id}/icon, by original scheme id (every version shares the icon). The app turns the image into a data: URL
+   because the back-end CSP is img-src 'self' data:. */
+DB.schemeIcons = {
+  's-1': 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#FDF3DC"/><circle cx="32" cy="32" r="20" fill="#E0A526" stroke="#9A5B05" stroke-width="3"/><text x="32" y="40" font-family="Arial" font-size="22" font-weight="700" text-anchor="middle" fill="#7A4504">₹</text></svg>')
+};
+DB.userName = function (userId) { var m = DB.memberships.find(function (x) { return x.userId === userId; }); return m ? m.fullName : userId === DB.me.id ? 'you' : 'a user'; };
 DB.group = function (id) { return DB.groups.find(function (g) { return g.id === id || g.code === id; }); };
 DB.customer = function (id) { return DB.customers.find(function (c) { return c.id === id; }); };
 DB.employee = function (id) { return DB.employees.find(function (e) { return e.id === id; }); };

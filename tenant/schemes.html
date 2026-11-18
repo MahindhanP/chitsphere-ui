@@ -13,7 +13,11 @@
 </head>
 <!--
   GET /api/chits/v1/tenants/{tenantId}/schemes. A scheme is a reusable template of chit terms; each group copies
-  the terms when it is created, so later scheme edits never change running groups.
+  the terms when it is created, so later scheme edits never change running groups. Without a status filter the list shows
+  ACTIVE and ARCHIVED schemes (REPLACED versions are history, reached from a scheme's Versions tab).
+  Filters: search, auctionFrequency, status, chitValue, installments, maxBidPercent, isCompliant, createdFrom, createdTo
+  (options from GET …/schemes/filter-options). Export: GET …/schemes/export (same filters, CSV; chits.scheme.export).
+  Delete: DELETE …/schemes/{schemeId} (chits.scheme.delete) removes every version and the icon; 409 once any version has a group.
 -->
 <body data-portal="tenant" data-page="schemes">
 <main class="content">
@@ -23,10 +27,25 @@
       <h1>Chit schemes</h1>
       <p>Templates of chit terms. Groups are created from a scheme. <b id="usage"></b></p>
     </div>
-    <div class="actions"><a class="btn primary" href="scheme-new.html"><i data-i="plus"></i>New scheme</a></div>
+    <div class="actions"><button class="btn" id="export"><i data-i="download"></i>Export CSV</button><a class="btn primary" href="scheme-new.html"><i data-i="plus"></i>New scheme</a></div>
   </div>
+  <div id="banner"></div>
   <div class="card">
-    <div class="toolbar"><div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search schemes…"></div><select class="select" id="fFreq"></select><select class="select" id="fStatus"><option value="">All statuses</option><option value="ACTIVE">Active</option><option value="ARCHIVED">Archived</option></select></div>
+    <div class="toolbar">
+      <div class="input-icon"><i data-i="search"></i><input class="input" id="q" placeholder="Search schemes…"></div>
+      <select class="select" id="fFreq"></select>
+      <select class="select" id="fStatus"><option value="">All statuses</option><option value="ACTIVE">Active</option><option value="ARCHIVED">Archived</option></select>
+      <button class="btn" id="moreBtn" type="button"><i data-i="filter"></i>More filters <span class="badge info" id="moreCount" style="display:none"></span></button>
+      <button class="btn ghost" id="clear" type="button" style="display:none"><i data-i="x"></i>Clear filters</button>
+    </div>
+    <div class="toolbar more-filters" id="more" style="display:none">
+      <select class="select" id="fCv"></select>
+      <select class="select" id="fInst"></select>
+      <select class="select" id="fMax"></select>
+      <select class="select" id="fComp"><option value="">Compliance: any</option><option value="true">Complied</option><option value="false">Not complied</option></select>
+      <label>Created from<input class="input" type="date" id="fFrom"></label>
+      <label>to<input class="input" type="date" id="fTo"></label>
+    </div>
     <div id="tbl"></div>
   </div>
 </main>
@@ -38,25 +57,102 @@ document.addEventListener('app:ready', function () {
   var $ = function (id) { return document.getElementById(id); };
   var lim = DB.entitlement.limits.filter(function (l) { return l.id === 'chits.scheme.max'; })[0];
   $('usage').textContent = lim.used + ' of ' + lim.limit + ' schemes on your plan.';
+  var groupsOf = function (s) { return DB.groups.filter(function (g) { return g.schemeId === s.id; }).length; };
+  var groupsAllVersions = function (s) { return DB.schemeVersions(s).reduce(function (n, v) { return n + groupsOf(v); }, 0); };
+  var uniq = function (k) { return DB.schemes.map(function (s) { return s[k]; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (x, y) { return x - y; }); };
+
+  // GET …/schemes/filter-options: distinct values across current schemes
   $('fFreq').innerHTML = UI.options({ enum: 'AuctionFrequency', blank: 'Any frequency' });
-  UI.table({ el: '#tbl', rows: DB.schemes, search: '#q', searchKeys: ['name', 'code'], filters: [{ el: '#fFreq', key: 'auctionFrequency' }, { el: '#fStatus', key: 'status' }],
+  $('fCv').innerHTML = UI.options({ options: uniq('chitValue').map(function (v) { return [v, UI.inr(v)]; }), blank: 'Chit value: any' });
+  $('fInst').innerHTML = UI.options({ options: uniq('installments').map(function (v) { return [v, v + ' installments']; }), blank: 'Installments: any' });
+  $('fMax').innerHTML = UI.options({ options: uniq('maxBidPercent').map(function (v) { return [v, v + '%']; }), blank: 'Maximum bid: any' });
+
+  var MORE = ['fCv', 'fInst', 'fMax', 'fComp', 'fFrom', 'fTo'], ALL = ['q', 'fFreq', 'fStatus'].concat(MORE);
+  function filtered() {
+    var from = $('fFrom').value, to = $('fTo').value;
+    return DB.schemes.filter(function (s) {
+      var d = s.originalCreatedAt.slice(0, 10);
+      return (!from || d >= from) && (!to || d <= to);
+    });
+  }
+  function current() { // what the table shows, for the export
+    var st = tbl.state, q = st.q;
+    return filtered().filter(function (r) {
+      if (q && (r.name + ' ' + r.code).toLowerCase().indexOf(q) < 0) return false;
+      for (var k in st.filters) if (st.filters[k] && String(r[k]) !== st.filters[k]) return false;
+      return true;
+    });
+  }
+  function syncChrome() {
+    var n = MORE.filter(function (id) { return $(id).value; }).length;
+    $('moreCount').textContent = n; $('moreCount').style.display = n ? '' : 'none';
+    $('clear').style.display = ALL.some(function (id) { return $(id).value; }) ? '' : 'none';
+  }
+  var compliance = function (v) { return v === null ? '<span class="badge">Not reviewed</span>' : v ? '<span class="badge success">Complied</span>' : '<span class="badge danger">Not complied</span>'; };
+
+  var tbl = UI.table({ el: '#tbl', rows: filtered, search: '#q', searchKeys: ['name', 'code'],
+    filters: [{ el: '#fFreq', key: 'auctionFrequency' }, { el: '#fStatus', key: 'status' }, { el: '#fCv', key: 'chitValue' }, { el: '#fInst', key: 'installments' },
+      { el: '#fMax', key: 'maxBidPercent' }, { el: '#fComp', key: 'isCompliant' }],
     onRow: function (s) { location.href = 'scheme.html?id=' + s.id; },
     columns: [
-      { key: 'name', label: 'Scheme', sort: true, render: function (s) { return UI.ent(s.name, '<span class="mono">' + s.code + '</span>', s.installments, s.color); } },
+      { key: 'name', label: 'Scheme', sort: true, render: function (s) {
+        var html = UI.ent(s.name, '<span class="mono">' + s.code + '</span> · ' + s.installments + ' installments', s.installments, s.color);
+        var icon = DB.schemeIcons[s.originalSchemeId]; // uploaded icon replaces the coloured initials
+        if (icon) html = html.replace(/<span class="avatar sq sm"[^>]*>[^<]*<\/span>/, '<img class="avatar sq sm" src="' + icon + '" alt="">');
+        return s.versionNumber > 1 ? html.replace('</b>', '<span class="version-chip" title="Version ' + s.versionNumber + '">v' + s.versionNumber + '</span></b>') : html;
+      } },
       { key: 'chitValue', label: 'Chit value', num: true, sort: true, render: function (s) { return UI.inr(s.chitValue); } },
       { key: 'installmentAmount', label: 'Instalment', num: true, render: function (s) { return UI.inr(s.installmentAmount) + '<div class="xs muted">× ' + s.installments + ' · ' + UI.human(s.auctionFrequency).toLowerCase() + '</div>'; } },
       { key: 'bid', label: 'Bid range', render: function (s) { return s.minBidPercent + '–' + s.maxBidPercent + '%'; } },
       { key: 'companyCommissionPercent', label: 'Commission', num: true, render: function (s) { return s.companyCommissionPercent + '%'; } },
       { key: 'collectionOption', label: 'Collection', render: function (s) { return UI.human(s.collectionOption); } },
-      { key: 'groups', label: 'Groups', num: true, render: function (s) { return DB.groups.filter(function (g) { return g.schemeId === s.id; }).length; } },
+      { key: 'groups', label: 'Groups', num: true, render: function (s) { return groupsOf(s); } },
+      { key: 'isCompliant', label: 'Compliance', render: function (s) { return compliance(s.isCompliant); } },
       { key: 'status', label: 'Status', render: function (s) { return UI.badge(s.status); } },
-      { key: 'x', label: '', cls: 'actions-cell', render: function (s) { return s.status === 'ACTIVE' ? UI.rowMenu('rm_' + s.id, [['view', 'View', false, 'eye'], ['edit', 'Edit', false, 'edit'], ['group', 'Create group', false, 'plus'], ['archive', 'Archive', true, 'trash']]) : ''; } }] });
+      { key: 'x', label: '', cls: 'actions-cell', render: function (s) {
+        // Delete only when this version has no groups; the server still refuses (409) if an earlier version had one.
+        var del = !groupsOf(s) ? ['delete', 'Delete', true, 'trash'] : null;
+        return UI.rowMenu('rm_' + s.id, s.status === 'ACTIVE'
+          ? [['view', 'View', false, 'eye'], ['edit', 'Edit', false, 'edit'], ['modify', 'Modify terms', false, 'layers'], ['group', 'Create group', false, 'plus'], ['archive', 'Archive', true, 'trash'], del]
+          : [['view', 'View', false, 'eye'], del]);
+      } }] });
+
+  ['fFrom', 'fTo'].forEach(function (id) { $(id).addEventListener('change', function () { tbl.render(); }); });
+  ALL.forEach(function (id) { $(id).addEventListener('change', syncChrome); $(id).addEventListener('input', syncChrome); });
+  $('moreBtn').addEventListener('click', function () { var m = $('more'); m.style.display = m.style.display === 'none' ? '' : 'none'; });
+  $('clear').addEventListener('click', function () {
+    ALL.forEach(function (id) { $(id).value = ''; $(id).dispatchEvent(new Event(id === 'q' ? 'input' : 'change')); });
+  });
+
+  $('export').addEventListener('click', function () {
+    // GET …/schemes/export with the same filters; the real file carries every SchemeView field.
+    var cols = ['id', 'code', 'versionNumber', 'name', 'status', 'chitValue', 'installments', 'installmentAmount', 'auctionFrequency', 'collectionOption', 'minBidPercent', 'maxBidPercent',
+      'companyCommissionPercent', 'companyTickets', 'enrolmentFee', 'penaltyNonPrizedPercent', 'penaltyPrizedPercent', 'penaltySfPercent', 'minMembersForCommencement', 'isCompliant', 'originalCreatedAt'];
+    var cell = function (v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var csv = [cols.join(',')].concat(current().map(function (s) { return cols.map(function (c) { return cell(s[c]); }).join(','); })).join('\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'chit-schemes-' + DB.NOW.slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    UI.toast('Exported ' + current().length + ' schemes (GET …/schemes/export)', 'success');
+  });
+
   UI.onAct(function (act, id) {
     var s = DB.scheme(id);
     if (act === 'view') location.href = 'scheme.html?id=' + id;
     if (act === 'edit') location.href = 'scheme.html?id=' + id + '&edit=1';
+    if (act === 'modify') location.href = 'scheme.html?id=' + id + '&modify=1';
     if (act === 'group') location.href = 'group-new.html?scheme=' + id;
     if (act === 'archive') UI.confirm('Archive ' + s.name + '?', 'No new groups can use it. Existing groups keep their copied terms.', { danger: true, ok: 'Archive', api: 'POST …/schemes/{schemeId}/archive', done: 'Scheme archived' });
+    if (act === 'delete') UI.confirm('Delete ' + UI.esc(s.name) + '?', 'This deletes every version of the scheme and its icon. It can’t be undone. Only schemes that never had a group can be deleted.', {
+      danger: true, ok: 'Delete', icon: 'trash', api: 'DELETE …/schemes/{schemeId}', done: false,
+      onOk: function () {
+        var n = groupsAllVersions(s);
+        $('banner').innerHTML = n
+          ? '<div class="alert danger mb-4">' + UI.icon('alert') + '<div><b>Not possible now</b>' + n + ' chit group(s) were formed from an earlier version of ' + s.code + '; archive it instead. (409 CONFLICT)</div></div>'
+          : '';
+        if (!n) { DB.schemes.splice(DB.schemes.indexOf(s), 1); tbl.render(); UI.toast('Scheme deleted', 'warning'); }
+      } });
   });
 });
 </script>

@@ -13,8 +13,11 @@
 </head>
 <!--
   POST /api/chits/v1/tenants/{tenantId}/schemes (create only; ?id= redirects to scheme.html, where schemes are viewed and edited).
-  After creation only name, enrolment fee, penalties and minimum members can change; value, instalments,
-  frequency, bids, commission and company tickets are fixed. installmentAmount = chitValue / installments.
+  After creation only name, enrolment fee, penalties and minimum members can change in place; frequency, collection, bids,
+  commission and company tickets change through "Modify terms" (a new version); code, value and instalments never change.
+  installmentAmount = chitValue / installments. Name check: GET …/schemes/name-availability?name= (case-insensitive).
+  Optional icon: POST …/schemes/{schemeId}/icon (multipart, PNG/JPEG/WebP, max 1 MB) right after the scheme is created;
+  if that upload fails the scheme still exists and the detail page says the icon failed.
 -->
 <body data-portal="tenant" data-page="schemes">
 <main class="content" style="max-width:1100px">
@@ -28,14 +31,14 @@
   <form id="f" novalidate class="grid g-main-side">
     <div class="card">
       <div class="form-section"><div class="form-section-head"><h3><i data-i="file"></i>Identity</h3></div><div id="s1"></div></div>
-      <div class="form-section"><div class="form-section-head"><h3><i data-i="rupee"></i>Value & schedule</h3><p>Fixed after creation.</p></div><div id="s2"></div></div>
-      <div class="form-section"><div class="form-section-head"><h3><i data-i="gavel"></i>Auction & commission</h3><p>Fixed after creation.</p></div><div id="s3"></div></div>
+      <div class="form-section"><div class="form-section-head"><h3><i data-i="rupee"></i>Value & schedule</h3><p>Value and instalments are fixed; frequency and collection change only with Modify terms.</p></div><div id="s2"></div></div>
+      <div class="form-section"><div class="form-section-head"><h3><i data-i="gavel"></i>Auction & commission</h3><p>Change only with Modify terms (a new version).</p></div><div id="s3"></div></div>
       <div class="form-section"><div class="form-section-head"><h3><i data-i="percent"></i>Fees, penalties & commencement</h3><p>Can be changed later.</p></div><div id="s4"></div></div>
       <div class="form-section row" style="justify-content:flex-end"><a class="btn" href="schemes.html">Cancel</a><button class="btn primary" type="submit"><i data-i="save"></i><span id="okTxt">Create scheme</span></button></div>
     </div>
     <div class="stack-lg" style="position:sticky;top:80px;align-self:start">
       <div class="card"><div class="card-head"><h3>Summary</h3></div><div class="card-body"><div class="calc-strip" id="calc"></div><div class="xs muted mt-4" id="note"></div></div></div>
-      <div class="alert info"><i data-i="info"></i><div><b>Limits from the API</b>Instalments 5–120 · min bid 0–40% · max bid 1–40% · commission 0–5% · company tickets 0–10 · penalties 0–36% · min members 1–120.</div></div>
+      <div class="alert info"><i data-i="info"></i><div><b>Limits from the API</b>Code 2–30 characters · instalments 5–120 · min bid 0–40% and at least the commission · max bid 1–40% · commission 0–5% · company tickets 0–10 and fewer than the instalments · penalties 0–36% p.a. · min members 1–instalments.</div></div>
     </div>
   </form>
 </main>
@@ -47,29 +50,75 @@ document.addEventListener('app:ready', function () {
   var $ = function (id) { return document.getElementById(id); };
   // Existing schemes are viewed and edited on scheme.html; this page only creates.
   if (UI.param('id')) { location.replace('scheme.html?id=' + encodeURIComponent(UI.param('id')) + '&edit=1'); return; }
-  var s = null, lock = false;
-  if (s) { $('crumb').textContent = s.name; $('h').textContent = s.name; $('sub').innerHTML = '<span class="mono">' + s.code + '</span> · ' + UI.badge(s.status) + ' · locked fields are greyed out'; $('okTxt').textContent = 'Save changes'; }
-  $('s1').innerHTML = UI.form([{ id: 'code', label: 'Code', req: true, mono: true, readonly: lock, pattern: '[A-Za-z0-9][A-Za-z0-9-]{1,39}', err: 'Letters, digits or hyphens', placeholder: 'SWARNA-5L' }, { id: 'name', label: 'Name', req: true, placeholder: 'Swarna 5L / 50M' }]);
-  $('s2').innerHTML = UI.form([{ id: 'chitValue', label: 'Chit value (₹)', type: 'number', req: true, min: 1000, readonly: lock }, { id: 'installments', label: 'Instalments (= tickets)', type: 'number', req: true, min: 5, max: 120, readonly: lock },
-    { id: 'auctionFrequency', label: 'Auction frequency', type: 'select', req: true, enum: 'AuctionFrequency', disabled: lock }, { id: 'collectionOption', label: 'Collection', type: 'select', req: true, enum: 'CollectionOption', disabled: lock, hint: 'Collect the instalment before or after each auction' }]);
-  $('s3').innerHTML = UI.form([{ id: 'minBidPercent', label: 'Minimum bid %', type: 'number', req: true, min: 0, max: 40, step: 0.5, readonly: lock }, { id: 'maxBidPercent', label: 'Maximum bid %', type: 'number', req: true, min: 1, max: 40, step: 0.5, readonly: lock },
-    { id: 'companyCommissionPercent', label: 'Foreman commission %', type: 'number', req: true, min: 0, max: 5, step: 0.5, readonly: lock }, { id: 'companyTickets', label: 'Company tickets', type: 'number', req: true, min: 0, max: 10, readonly: lock, hint: 'Tickets held by the company itself' }]);
-  $('s4').innerHTML = UI.form([{ id: 'enrolmentFee', label: 'Enrolment fee (₹)', type: 'number', min: 0 }, { id: 'minMembersForCommencement', label: 'Minimum enrolled to commence', type: 'number', req: true, min: 1, max: 120 },
-    { id: 'penaltyNonPrizedPercent', label: 'Late penalty, non-prized (% p.a.)', type: 'number', min: 0, max: 36, step: 0.5 }, { id: 'penaltyPrizedPercent', label: 'Late penalty, prized (% p.a.)', type: 'number', min: 0, max: 36, step: 0.5 }]);
-  UI.fill($('f'), s || { auctionFrequency: 'MONTHLY', collectionOption: 'BEFORE_AUCTION', minBidPercent: 5, maxBidPercent: 30, companyCommissionPercent: 5, companyTickets: 1, minMembersForCommencement: 40, penaltyNonPrizedPercent: 18, penaltyPrizedPercent: 24, chitValue: 500000, installments: 50, enrolmentFee: 500 });
+  var ICON_TYPES = ['image/png', 'image/jpeg', 'image/webp'], icon = null;
+  var iconHtml = '<label for="icon">Icon <span class="xs muted">(optional)</span></label>' +
+    '<label class="dropzone" style="display:flex;align-items:center;gap:12px"><span class="dz-ico" id="iconPrev">' + UI.icon('image') + '</span>' +
+    '<span><b id="iconName">Choose an image</b><span id="iconHint">PNG, JPEG or WebP, at most 1 MB. Shown on lists; every version shares it.</span></span>' +
+    '<input type="file" id="icon" accept="' + ICON_TYPES.join(',') + '"></label><span class="err" id="iconErr" style="display:none"></span>';
+  $('s1').innerHTML = UI.form([
+    { id: 'code', label: 'Code', req: true, mono: true, maxlength: 30, pattern: '[A-Za-z0-9][A-Za-z0-9-]{1,29}', err: '2–30 letters, digits or hyphens; can’t start with a hyphen', placeholder: 'SWARNA-5L', hint: '2–30 letters, digits or hyphens. Stored in capitals; can’t change later.' },
+    { id: 'name', label: 'Name', req: true, maxlength: 120, placeholder: 'Swarna 5L / 50M', err: 'Enter a name' },
+    { html: iconHtml, span: 2 }]);
+  $('s2').innerHTML = UI.form([{ id: 'chitValue', label: 'Chit value (₹)', type: 'number', req: true, min: 1000, max: 100000000, step: 0.01, err: 'Between ₹1,000 and ₹10,00,00,000' },
+    { id: 'installments', label: 'Instalments (= tickets)', type: 'number', req: true, min: 5, max: 120, step: 1, hint: '5–120', err: 'Between 5 and 120' },
+    { id: 'auctionFrequency', label: 'Auction frequency', type: 'select', req: true, enum: 'AuctionFrequency' }, { id: 'collectionOption', label: 'Collection', type: 'select', req: true, enum: 'CollectionOption', hint: 'Collect the instalment before or after each auction' }]);
+  $('s3').innerHTML = UI.form([{ id: 'minBidPercent', label: 'Minimum bid %', type: 'number', req: true, min: 0, max: 40, step: 0.01, hint: 'At least the commission, so the dividend is never negative', err: 'Between 0% and 40%' },
+    { id: 'maxBidPercent', label: 'Maximum bid %', type: 'number', req: true, min: 1, max: 40, step: 0.01, hint: 'Chit Funds Act cap: 40%', err: 'Between 1% and 40%' },
+    { id: 'companyCommissionPercent', label: 'Foreman commission %', type: 'number', req: true, min: 0, max: 5, step: 0.01, hint: 'Chit Funds Act cap: 5%', err: 'Between 0% and 5%' },
+    { id: 'companyTickets', label: 'Company tickets', type: 'number', req: true, min: 0, max: 10, step: 1, hint: 'Tickets held by the company itself', err: 'Between 0 and 10' }]);
+  $('s4').innerHTML = UI.form([{ id: 'enrolmentFee', label: 'Enrolment fee (₹)', type: 'number', req: true, min: 0, step: 0.01, hint: 'Charged per enrolled ticket' },
+    { id: 'minMembersForCommencement', label: 'Minimum enrolled to commence', type: 'number', req: true, min: 1, max: 120, step: 1 },
+    { id: 'penaltyNonPrizedPercent', label: 'Late penalty, non-prized (% p.a.)', type: 'number', req: true, min: 0, max: 36, step: 0.01, err: 'Between 0% and 36%' },
+    { id: 'penaltyPrizedPercent', label: 'Late penalty, prized (% p.a.)', type: 'number', req: true, min: 0, max: 36, step: 0.01, err: 'Between 0% and 36%' },
+    { id: 'penaltySfPercent', label: 'Penalty SF (% p.a.)', type: 'number', req: true, min: 0, max: 36, step: 0.01, err: 'Between 0% and 36%', hint: 'Passed to accounting with the two late-penalty rates' }]);
+  UI.fill($('f'), { auctionFrequency: 'MONTHLY', collectionOption: 'BEFORE_AUCTION', minBidPercent: 5, maxBidPercent: 30, companyCommissionPercent: 5, companyTickets: 1, minMembersForCommencement: 40, penaltyNonPrizedPercent: 18, penaltyPrizedPercent: 24, penaltySfPercent: 0, chitValue: 500000, installments: 50, enrolmentFee: 500 });
+
+  /* Field errors for rules between fields; the message replaces the field's usual one. An empty message only restores
+     the usual text, so a range error UI.validate just flagged stays visible. */
+  function fieldError(id, msg) {
+    var fld = $(id).closest('.field'), err = fld.querySelector('.err');
+    if (!err.dataset.base) err.dataset.base = err.textContent;
+    err.textContent = msg || err.dataset.base;
+    if (msg) fld.classList.add('invalid');
+  }
+  function nameTaken() { var v = $('name').value.trim().toLowerCase(); return !!v && DB.schemes.concat(DB.schemeHistory).some(function (s) { return s.name.toLowerCase() === v; }); }
+  $('name').addEventListener('blur', function () { fieldError('name', nameTaken() ? 'This name is already used by another scheme' : ''); });
+
+  function rules(v) {
+    var n = +v.installments || 0, out = {};
+    if (+v.minBidPercent > +v.maxBidPercent) out.minBidPercent = 'The minimum bid can’t be above the maximum bid';
+    else if (+v.minBidPercent < +v.companyCommissionPercent) out.minBidPercent = 'The minimum bid must be at least the commission, so the dividend is never negative';
+    if (n && +v.companyTickets >= n) out.companyTickets = 'Leave at least one ticket for subscribers';
+    if (n && +v.minMembersForCommencement > n) out.minMembersForCommencement = 'At most ' + n + ' (the number of tickets)';
+    return out;
+  }
   function calc() {
     var v = UI.values($('f')), cv = +v.chitValue || 0, n = +v.installments || 0;
-    var inst = n ? Math.round(cv / n) : 0;
-    $('calc').innerHTML = [['Instalment', UI.inr(inst)], ['Commission / auction', UI.inr(cv * (+v.companyCommissionPercent || 0) / 100)], ['Max discount', UI.inr(cv * (+v.maxBidPercent || 0) / 100)], ['Tickets for sale', Math.max(0, n - (+v.companyTickets || 0))]].map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
-    var bad = +v.minBidPercent > +v.maxBidPercent, over = +v.minMembersForCommencement > n;
-    $('note').innerHTML = bad ? '<span style="color:var(--danger)">Minimum bid can’t be above maximum bid.</span>' : over ? '<span style="color:var(--danger)">Minimum members can’t exceed the number of instalments.</span>' : 'Duration: ' + n + ' ' + (v.auctionFrequency === 'WEEKLY' ? 'weeks' : v.auctionFrequency === 'DAILY' ? 'days' : v.auctionFrequency === 'BI_MONTHLY' ? 'half-months' : 'months') + '.';
-    return !bad && !over;
+    $('calc').innerHTML = [['Instalment', UI.inr(n ? Math.round(cv / n * 100) / 100 : 0)], ['Commission / auction', UI.inr(cv * (+v.companyCommissionPercent || 0) / 100)], ['Max discount', UI.inr(cv * (+v.maxBidPercent || 0) / 100)], ['Tickets for sale', Math.max(0, n - (+v.companyTickets || 0))]]
+      .map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
+    var r = rules(v), first = r.minBidPercent || r.companyTickets || (r.minMembersForCommencement && 'Minimum members: ' + r.minMembersForCommencement.toLowerCase());
+    $('note').innerHTML = first ? '<span style="color:var(--danger)">' + first + '</span>' : 'Duration: ' + n + ' ' + (v.auctionFrequency === 'WEEKLY' ? 'weeks' : v.auctionFrequency === 'DAILY' ? 'days' : v.auctionFrequency === 'BI_MONTHLY' ? 'half-months' : 'months') + '.';
+    return r;
   }
   $('f').addEventListener('input', calc); $('f').addEventListener('change', calc); calc();
+
+  $('icon').addEventListener('change', function () {
+    var f = this.files[0], bad = !f ? '' : ICON_TYPES.indexOf(f.type) < 0 ? 'Choose a PNG, JPEG or WebP image' : f.size > 1024 * 1024 ? 'The icon must be 1 MB or smaller' : '';
+    $('iconErr').textContent = bad; $('iconErr').style.display = bad ? 'block' : 'none';
+    icon = f && !bad ? f : null;
+    $('iconName').textContent = icon ? icon.name : 'Choose an image';
+    $('iconHint').textContent = icon ? Math.max(1, Math.round(icon.size / 1024)) + ' KB · uploaded after the scheme is created' : 'PNG, JPEG or WebP, at most 1 MB. Shown on lists; every version shares it.';
+    if (icon) { var rd = new FileReader(); rd.onload = function () { $('iconPrev').innerHTML = '<img src="' + rd.result + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">'; }; rd.readAsDataURL(icon); }
+    else $('iconPrev').innerHTML = UI.icon('image');
+  });
+
   $('f').addEventListener('submit', function (e) {
     e.preventDefault();
-    if (!UI.validate(this) || !calc()) return;
-    UI.toast(s ? 'Scheme updated (PUT …/schemes/' + s.id + ')' : 'Scheme created (POST …/schemes)', 'success');
+    var ok = UI.validate(this), r = calc();
+    ['minBidPercent', 'companyTickets', 'minMembersForCommencement'].forEach(function (k) { fieldError(k, r[k] || ''); });
+    if (nameTaken()) { fieldError('name', 'This name is already used by another scheme'); ok = false; }
+    if (!ok || Object.keys(r).length) { var bad = document.querySelector('#f .field.invalid input, #f .field.invalid select'); if (bad) bad.focus(); return; }
+    UI.toast('Scheme created (POST …/schemes)' + (icon ? ', icon uploaded (POST …/schemes/{id}/icon)' : ''), 'success');
     setTimeout(function () { location.href = 'schemes.html'; }, 700);
   });
 });

@@ -12,17 +12,25 @@
   <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <!--
-  GET /api/chits/v1/tenants/{tenantId}/schemes/{schemeId}; PUT …/schemes/{schemeId} (UpdateSchemeRequest: name, enrolmentFee,
-  penaltyNonPrizedPercent, penaltyPrizedPercent, minMembersForCommencement, version). Everything else is fixed after creation.
-  POST …/schemes/{schemeId}/archive. Groups under the scheme: GET …/groups?schemeId={schemeId}. Opens in view mode; ?edit=1 opens in edit mode.
+  GET /api/chits/v1/tenants/{tenantId}/schemes/{schemeId}. Opens in view mode; ?edit=1 edits, ?modify=1 modifies; ?tab=groups|versions|estimate.
+  Edit (PUT …/schemes/{schemeId}, UpdateSchemeRequest): name, enrolmentFee, penaltyNonPrizedPercent, penaltyPrizedPercent, penaltySfPercent,
+    minMembersForCommencement, version.
+  Modify terms (POST …/schemes/{schemeId}/versions, ModifySchemeRequest): auctionFrequency, collectionOption, minBidPercent, maxBidPercent,
+    companyCommissionPercent, companyTickets plus the fees, penalties and minimum members, version. Saves version N+1; this version becomes
+    REPLACED; groups already formed keep their terms; the new version starts without a compliance review.
+  Code, name (in a modification), chit value and instalments never change.
+  Compliance (POST …/schemes/{schemeId}/compliance { isCompliant }, chits.scheme.compliance): any version can be reviewed.
+  Icon (GET/POST/DELETE …/schemes/{schemeId}/icon; PNG/JPEG/WebP, max 1 MB): shared by every version; shown as a data: URL.
+  Versions: GET …/schemes/{schemeId}/versions. Fixed-bid estimate: GET …/schemes/{schemeId}/fixed-bid-estimate.
+  Archive: POST …/schemes/{schemeId}/archive. Delete: DELETE …/schemes/{schemeId}, only while no version has a group.
+  Groups under the scheme: GET …/groups?schemeId={schemeId}.
 -->
 <body data-portal="tenant" data-page="schemes">
 <main class="content">
   <div class="page-head">
     <div class="titles">
       <div class="crumbs"><a href="dashboard.html">Home</a><i data-i="chevR"></i><a href="schemes.html">Schemes</a><i data-i="chevR"></i><span id="crumb"></span></div>
-      <h1 id="h"></h1>
-      <p id="sub"></p>
+      <div class="ent" style="gap:14px"><span id="mark"></span><div><h1 id="h" style="margin:0"></h1><p id="sub" style="margin:2px 0 0"></p></div></div>
     </div>
     <div class="actions" id="acts"></div>
   </div>
@@ -30,22 +38,38 @@
   <div class="grid g-4" id="kpis"></div>
   <div class="grid g-main-side mt-4">
     <form class="card" id="f" novalidate>
-      <div class="card-head"><div class="card-title-icon"><i data-i="file"></i></div><div><h3>Scheme terms</h3><p class="xs muted" id="modeTxt"></p></div></div>
+      <div class="card-head"><div class="card-title-icon"><i data-i="file"></i></div><div><h3 id="formTitle">Scheme terms</h3><p class="xs muted" id="modeTxt"></p></div></div>
       <div class="form-section"><div class="form-section-head"><h3><i data-i="file"></i>Identity</h3></div><div id="s1"></div></div>
-      <div class="form-section"><div class="form-section-head"><h3><i data-i="rupee"></i>Value & schedule</h3><p>Fixed after creation.</p></div><div id="s2"></div></div>
-      <div class="form-section"><div class="form-section-head"><h3><i data-i="gavel"></i>Auction & commission</h3><p>Fixed after creation.</p></div><div id="s3"></div></div>
+      <div class="form-section"><div class="form-section-head"><h3><i data-i="rupee"></i>Value & schedule</h3><p id="s2note"></p></div><div id="s2"></div></div>
+      <div class="form-section"><div class="form-section-head"><h3><i data-i="gavel"></i>Auction & commission</h3><p id="s3note"></p></div><div id="s3"></div></div>
       <div class="form-section"><div class="form-section-head"><h3><i data-i="percent"></i>Fees, penalties & commencement</h3><p id="s4note">Can be changed.</p></div><div id="s4"></div></div>
-      <div class="form-section row" id="editFoot" style="justify-content:flex-end;display:none"><button class="btn" type="button" id="cancel">Cancel</button><button class="btn primary" type="submit"><i data-i="save"></i>Save changes</button></div>
+      <div class="form-section row" id="editFoot" style="justify-content:flex-end;display:none"><button class="btn" type="button" id="cancel">Cancel</button><button class="btn primary" type="submit"><i data-i="save"></i><span id="saveTxt">Save changes</span></button></div>
     </form>
     <div class="stack-lg">
-      <div class="card"><div class="card-head"><h3>At a glance</h3></div><div class="card-body"><div class="calc-strip" id="calc"></div></div></div>
+      <div class="card"><div class="card-head"><h3 id="calcTitle">At a glance</h3></div><div class="card-body"><div class="calc-strip" id="calc"></div><div class="xs mt-4" id="calcNote"></div></div></div>
+      <div class="card"><div class="card-head"><div class="card-title-icon"><i data-i="shieldCheck"></i></div><div><h3>Compliance</h3><p class="xs muted">Review of this version’s terms</p></div></div><div class="card-body stack" id="comp"></div></div>
+      <div class="card" id="iconCard"><div class="card-head"><div class="card-title-icon"><i data-i="image"></i></div><div><h3>Icon</h3><p class="xs muted">Shared by every version of the scheme</p></div></div><div class="card-body stack" id="iconBody"></div></div>
       <div class="card"><div class="card-head"><h3>Groups by status</h3></div><div class="card-body stack" id="byStatus"></div></div>
     </div>
   </div>
-  <div class="card mt-4">
-    <div class="card-head"><div class="card-title-icon"><i data-i="users"></i></div><div><h3 id="gTitle">Groups under this scheme</h3><p class="xs muted">Each group copied these terms when it was created. Editing the scheme doesn’t change them.</p></div><div class="tools" id="gTools"></div></div>
+
+  <div class="tabs mt-4" data-tabs id="tabs">
+    <button data-tab="groups">Groups <span class="count" id="cGroups"></span></button>
+    <button data-tab="versions">Versions <span class="count" id="cVersions"></span></button>
+    <button data-tab="estimate">Fixed-bid estimate</button>
+  </div>
+  <div class="card tab-panel" data-tab-panel="groups" style="margin-top:var(--gap)">
+    <div class="card-head"><div class="card-title-icon"><i data-i="users"></i></div><div><h3 id="gTitle">Groups under this scheme</h3><p class="xs muted">Each group copied these terms when it was created. Editing or modifying the scheme doesn’t change them.</p></div><div class="tools" id="gTools"></div></div>
     <div class="toolbar"><div class="segmented" data-seg id="fSt"><button class="active" data-v="">All</button></div></div>
     <div id="tbl"></div>
+  </div>
+  <div class="card tab-panel" data-tab-panel="versions" style="margin-top:var(--gap)">
+    <div class="card-head"><div class="card-title-icon"><i data-i="layers"></i></div><div><h3>Versions</h3><p class="xs muted">Modify terms saves a new version; groups keep the version they were formed from. Click a row to open it.</p></div></div>
+    <div id="vTbl"></div>
+  </div>
+  <div class="card tab-panel" data-tab-panel="estimate" style="margin-top:var(--gap)">
+    <div class="card-head"><div class="card-title-icon"><i data-i="trendDown"></i></div><div><h3>Fixed-bid estimate</h3><p class="xs muted" id="eNote"></p></div></div>
+    <div id="eTbl"></div>
   </div>
 </main>
 
@@ -55,67 +79,186 @@
 document.addEventListener('app:ready', function () {
   var $ = function (id) { return document.getElementById(id); };
   var s = DB.scheme(UI.param('id') || 's-1') || DB.schemes[0], version = 3;
-  var archived = s.status === 'ARCHIVED', editing = false;
+  var replaced = s.status === 'REPLACED', active = s.status === 'ACTIVE';
+  var mode = 'view';
   var groups = DB.groups.filter(function (g) { return g.schemeId === s.id; });
+  var versions = DB.schemeVersions(s), current = versions.filter(function (v) { return v.status !== 'REPLACED'; })[0];
+  var groupsAllVersions = DB.groups.filter(function (g) { return versions.some(function (v) { return v.id === g.schemeId; }); }).length;
   var ST = ['FORMING', 'COMMENCED', 'CLOSED', 'CANCELLED'];
   var count = function (st) { return groups.filter(function (g) { return g.status === st; }).length; };
   var freqUnit = { WEEKLY: 'weeks', DAILY: 'days', BI_MONTHLY: 'half-months', MONTHLY: 'months' };
   var pct = function (v) { return v == null ? '—' : v + '%'; };
   var lock = UI.icon('lock', 'sm');
+  var compliance = function (v) { return v === null ? '<span class="badge">Not reviewed</span>' : v ? '<span class="badge success">Complied</span>' : '<span class="badge danger">Not complied</span>'; };
+  var chip = function (v) { return v.versionNumber > 1 ? '<span class="version-chip" title="Version ' + v.versionNumber + '">v' + v.versionNumber + '</span>' : ''; };
+  var MODIFY = ['auctionFrequency', 'collectionOption', 'minBidPercent', 'maxBidPercent', 'companyCommissionPercent', 'companyTickets', 'enrolmentFee', 'penaltyNonPrizedPercent', 'penaltyPrizedPercent', 'penaltySfPercent', 'minMembersForCommencement'];
+  var EDIT = ['name', 'enrolmentFee', 'penaltyNonPrizedPercent', 'penaltyPrizedPercent', 'penaltySfPercent', 'minMembersForCommencement'];
 
+  function markHtml() {
+    var icon = DB.schemeIcons[s.originalSchemeId];
+    return icon ? '<img class="avatar sq lg" src="' + icon + '" alt="">' : '<span class="avatar sq lg" style="background:' + s.color + ';color:#fff">' + UI.esc(UI.initials(s.name)) + '</span>';
+  }
   function head() {
     document.title = s.name + ' · Schemes';
-    $('crumb').textContent = s.name; $('h').textContent = s.name;
-    $('sub').innerHTML = '<span class="mono">' + s.code + '</span> · ' + UI.badge(s.status) + ' · created ' + UI.date(s.createdAt) + ' · <b>' + groups.length + '</b> group' + (groups.length === 1 ? '' : 's');
-    $('acts').innerHTML = editing ? '' :
-      (archived ? '' : '<button class="btn danger-ghost" id="archive">' + UI.icon('trash') + 'Archive</button>') +
-      (archived ? '' : '<button class="btn primary" id="edit">' + UI.icon('edit') + 'Edit</button>');
-    $('banner').innerHTML = archived ? '<div class="alert warning mb-4">' + UI.icon('alert') + '<div><b>Archived</b>No new groups can use this scheme, and its terms can no longer be edited. Existing groups carry on.</div></div>' :
-      editing && groups.length ? '<div class="alert info mb-4">' + UI.icon('info') + '<div><b>Only new groups get these changes</b>The ' + groups.length + ' existing group' + (groups.length === 1 ? '' : 's') + ' keep the terms they copied.</div></div>' : '';
-    if ($('edit')) $('edit').addEventListener('click', function () { setMode(true); });
+    $('crumb').textContent = s.name; $('h').innerHTML = UI.esc(s.name) + chip(s);
+    $('mark').innerHTML = markHtml();
+    $('sub').innerHTML = '<span class="mono">' + s.code + '</span> · ' + UI.badge(s.status) + ' · ' + compliance(s.isCompliant) + ' · created ' + UI.date(s.originalCreatedAt) + ' · <b>' + groups.length + '</b> group' + (groups.length === 1 ? '' : 's');
+    var canDelete = !replaced && groupsAllVersions === 0;
+    $('acts').innerHTML = mode !== 'view' ? '' :
+      (canDelete ? '<button class="btn danger-ghost" id="del">' + UI.icon('trash') + 'Delete</button>' : '') +
+      (active ? '<button class="btn danger-ghost" id="archive">' + UI.icon('trash') + 'Archive</button>' : '') +
+      (active ? '<a class="btn" href="group-new.html?scheme=' + s.id + '">' + UI.icon('plus') + 'New group</a>' : '') +
+      (active ? '<button class="btn" id="modify">' + UI.icon('layers') + 'Modify terms</button>' : '') +
+      (active ? '<button class="btn primary" id="edit">' + UI.icon('edit') + 'Edit</button>' : '');
+    var b = '';
+    if (UI.param('created') === '1') b += '<div class="alert success mb-4">' + UI.icon('checkCircle') + '<div><b>Scheme created</b>Groups can now be formed from it.</div></div>';
+    if (replaced) b += '<div class="alert warning mb-4">' + UI.icon('alert') + '<div><b>Replaced by a newer version</b>This version is kept as history; groups formed from it keep its terms. ' +
+      (current ? '<a href="scheme.html?id=' + current.id + '">Open the current version (v' + current.versionNumber + ') →</a>' : '') + '</div></div>';
+    if (s.status === 'ARCHIVED') b += '<div class="alert warning mb-4">' + UI.icon('alert') + '<div><b>Archived</b>No new groups can use this scheme, and its terms can no longer be edited. Existing groups carry on.</div></div>';
+    if (mode === 'edit' && groups.length) b += '<div class="alert info mb-4">' + UI.icon('info') + '<div><b>Only new groups get these changes</b>The ' + groups.length + ' existing group' + (groups.length === 1 ? '' : 's') + ' keep the terms they copied.</div></div>';
+    if (mode === 'modify') b += '<div class="alert info mb-4">' + UI.icon('layers') + '<div><b>Creates version ' + (s.versionNumber + 1) + '</b>Groups already formed keep their terms; the new version needs a fresh compliance review.</div></div>';
+    $('banner').innerHTML = b + '<div id="err"></div>';
+    if ($('edit')) $('edit').addEventListener('click', function () { setMode('edit'); });
+    if ($('modify')) $('modify').addEventListener('click', function () { setMode('modify'); });
     if ($('archive')) $('archive').addEventListener('click', function () {
       UI.confirm('Archive ' + s.name + '?', 'No new groups can be created from it. ' + (count('FORMING') ? count('FORMING') + ' forming group(s) carry on as they are.' : 'Existing groups keep their copied terms.'), { danger: true, ok: 'Archive', api: 'POST …/schemes/{schemeId}/archive', done: 'Scheme archived' });
     });
+    if ($('del')) $('del').addEventListener('click', function () {
+      UI.confirm('Delete ' + UI.esc(s.name) + '?', 'This deletes every version of the scheme and its icon. It can’t be undone. Only schemes that never had a group can be deleted.',
+        { danger: true, ok: 'Delete', icon: 'trash', api: 'DELETE …/schemes/{schemeId}', done: 'Scheme deleted', onOk: function () { setTimeout(function () { location.href = 'schemes.html'; }, 700); } });
+    });
   }
 
-  function view(pairs) { return UI.kv(pairs.map(function (p) { return [p[0], p[2] ? '<span style="display:inline-flex;align-items:center;gap:6px">' + p[1] + '<span class="muted" title="Fixed after creation" style="display:inline-flex">' + lock + '</span></span>' : p[1]]; })); }
+  function view(pairs) { return UI.kv(pairs.map(function (p) { return [p[0], p[2] ? '<span style="display:inline-flex;align-items:center;gap:6px">' + p[1] + '<span class="muted" title="Fixed" style="display:inline-flex">' + lock + '</span></span>' : p[1]]; })); }
+  var feeFields = function () {
+    return [{ id: 'enrolmentFee', label: 'Enrolment fee (₹)', type: 'number', req: true, min: 0, step: 0.01, value: s.enrolmentFee },
+      { id: 'minMembersForCommencement', label: 'Minimum enrolled to commence', type: 'number', req: true, min: 1, max: s.installments, value: s.minMembersForCommencement, hint: 'At most ' + s.installments + ' (the number of tickets)', err: 'Between 1 and ' + s.installments },
+      { id: 'penaltyNonPrizedPercent', label: 'Late penalty, non-prized (% p.a.)', type: 'number', req: true, min: 0, max: 36, step: 0.01, value: s.penaltyNonPrizedPercent, err: 'Between 0% and 36%' },
+      { id: 'penaltyPrizedPercent', label: 'Late penalty, prized (% p.a.)', type: 'number', req: true, min: 0, max: 36, step: 0.01, value: s.penaltyPrizedPercent, err: 'Between 0% and 36%' },
+      { id: 'penaltySfPercent', label: 'Penalty SF (% p.a.)', type: 'number', req: true, min: 0, max: 36, step: 0.01, value: s.penaltySfPercent, err: 'Between 0% and 36%', hint: 'Passed to accounting with the two late-penalty rates' }];
+  };
+  var lockedStatic = function (id, label, html) { return { id: id, label: label, type: 'static', value: '<span style="display:inline-flex;align-items:center;gap:6px">' + html + '<span class="muted" title="Fixed" style="display:inline-flex">' + lock + '</span></span>' }; };
+
   function render() {
-    $('modeTxt').textContent = editing ? 'Editing. Fields with a lock are fixed after creation.' : 'Click Edit to change the name, fees, penalties or minimum members.';
-    $('f').classList.toggle('editing', editing);
-    $('editFoot').style.display = editing ? '' : 'none';
+    var editing = mode === 'edit', modifying = mode === 'modify';
+    $('formTitle').textContent = modifying ? 'Modify terms' : 'Scheme terms';
+    $('modeTxt').textContent = editing ? 'Editing. Fields with a lock are fixed after creation.'
+      : modifying ? 'Code, name, chit value and instalments stay the same in every version.'
+        : active ? 'Edit changes the name, fees, penalties or minimum members. Modify terms changes the money terms as a new version.' : 'Read only.';
+    var lockedNote = modifying ? 'Saved as a new version.' : active ? 'Changes only through Modify terms (a new version).' : 'Fixed.';
+    $('s2note').textContent = lockedNote; $('s3note').textContent = lockedNote;
+    $('f').classList.toggle('editing', mode !== 'view');
+    $('editFoot').style.display = mode !== 'view' ? '' : 'none';
+    $('saveTxt').textContent = modifying ? 'Save as version ' + (s.versionNumber + 1) : 'Save changes';
     $('s1').innerHTML = editing
-      ? UI.form([{ id: 'code', label: 'Code', type: 'static', value: '<span style="display:inline-flex;align-items:center;gap:6px"><span class="mono">' + s.code + '</span><span class="muted" title="Fixed after creation" style="display:inline-flex">' + lock + '</span></span>' }, { id: 'name', label: 'Name', req: true, maxlength: 120, value: s.name }])
-      : view([['Code', '<span class="mono">' + s.code + '</span>', true], ['Name', UI.esc(s.name)]]);
-    $('s2').innerHTML = view([['Chit value', UI.inr(s.chitValue), true], ['Instalments (= tickets)', s.installments, true], ['Instalment amount', UI.inr(s.installmentAmount), true],
-      ['Auction frequency', UI.human(s.auctionFrequency), true], ['Collection', UI.human(s.collectionOption), true], ['Duration', s.installments + ' ' + (freqUnit[s.auctionFrequency] || 'periods'), true]]);
-    $('s3').innerHTML = view([['Minimum bid', pct(s.minBidPercent), true], ['Maximum bid', pct(s.maxBidPercent), true], ['Foreman commission', pct(s.companyCommissionPercent), true], ['Company tickets', s.companyTickets, true]]);
-    $('s4note').textContent = editing ? 'Applies to groups created from now on.' : 'Can be changed.';
-    $('s4').innerHTML = editing
-      ? UI.form([{ id: 'enrolmentFee', label: 'Enrolment fee (₹)', type: 'number', req: true, min: 0, step: 0.01, value: s.enrolmentFee },
-          { id: 'minMembersForCommencement', label: 'Minimum enrolled to commence', type: 'number', req: true, min: 1, max: s.installments, value: s.minMembersForCommencement, hint: 'At most ' + s.installments + ' (the number of tickets)', err: 'Between 1 and ' + s.installments },
-          { id: 'penaltyNonPrizedPercent', label: 'Late penalty, non-prized (% p.a.)', type: 'number', req: true, min: 0, max: 36, step: 0.01, value: s.penaltyNonPrizedPercent, err: 'Between 0 and 36' },
-          { id: 'penaltyPrizedPercent', label: 'Late penalty, prized (% p.a.)', type: 'number', req: true, min: 0, max: 36, step: 0.01, value: s.penaltyPrizedPercent, err: 'Between 0 and 36' }])
+      ? UI.form([lockedStatic('code', 'Code', '<span class="mono">' + s.code + '</span>'), { id: 'name', label: 'Name', req: true, maxlength: 120, value: s.name }])
+      : view([['Code', '<span class="mono">' + s.code + '</span>', true], ['Name', UI.esc(s.name), modifying]]);
+    $('s2').innerHTML = modifying
+      ? UI.form([lockedStatic('cv', 'Chit value', UI.inr(s.chitValue)), lockedStatic('inst', 'Instalments (= tickets)', s.installments),
+          { id: 'auctionFrequency', label: 'Auction frequency', type: 'select', req: true, enum: 'AuctionFrequency', value: s.auctionFrequency },
+          { id: 'collectionOption', label: 'Collection', type: 'select', req: true, enum: 'CollectionOption', value: s.collectionOption }])
+      : view([['Chit value', UI.inr(s.chitValue), true], ['Instalments (= tickets)', s.installments, true], ['Instalment amount', UI.inr(s.installmentAmount), true],
+          ['Auction frequency', UI.human(s.auctionFrequency), true], ['Collection', UI.human(s.collectionOption), true], ['Duration', s.installments + ' ' + (freqUnit[s.auctionFrequency] || 'periods'), true]]);
+    $('s3').innerHTML = modifying
+      ? UI.form([{ id: 'minBidPercent', label: 'Minimum bid %', type: 'number', req: true, min: 0, max: 40, step: 0.01, value: s.minBidPercent, hint: 'At least the commission, so the dividend is never negative', err: 'Between 0% and 40%' },
+          { id: 'maxBidPercent', label: 'Maximum bid %', type: 'number', req: true, min: 1, max: 40, step: 0.01, value: s.maxBidPercent, hint: 'Chit Funds Act cap: 40%', err: 'Between 1% and 40%' },
+          { id: 'companyCommissionPercent', label: 'Foreman commission %', type: 'number', req: true, min: 0, max: 5, step: 0.01, value: s.companyCommissionPercent, hint: 'Chit Funds Act cap: 5%', err: 'Between 0% and 5%' },
+          { id: 'companyTickets', label: 'Company tickets', type: 'number', req: true, min: 0, max: 10, step: 1, value: s.companyTickets, hint: 'Fewer than the ' + s.installments + ' instalments', err: 'Between 0 and 10' }])
+      : view([['Minimum bid', pct(s.minBidPercent), true], ['Maximum bid', pct(s.maxBidPercent), true], ['Foreman commission', pct(s.companyCommissionPercent), true], ['Company tickets', s.companyTickets, true]]);
+    $('s4note').textContent = mode !== 'view' ? 'Applies to groups created from now on.' : 'Can be changed.';
+    $('s4').innerHTML = mode !== 'view' ? UI.form(feeFields())
       : view([['Enrolment fee', UI.inr(s.enrolmentFee)], ['Minimum enrolled to commence', s.minMembersForCommencement + ' of ' + s.installments],
-          ['Late penalty, non-prized', pct(s.penaltyNonPrizedPercent) + ' p.a.'], ['Late penalty, prized', pct(s.penaltyPrizedPercent) + ' p.a.']]);
-    $('calc').innerHTML = [['Instalment', UI.inr(s.installmentAmount)], ['Commission / auction', UI.inr(s.chitValue * s.companyCommissionPercent / 100)], ['Max discount', UI.inr(s.chitValue * s.maxBidPercent / 100)], ['Tickets for sale', Math.max(0, s.installments - s.companyTickets)]]
-      .map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
+          ['Late penalty, non-prized', pct(s.penaltyNonPrizedPercent) + ' p.a.'], ['Late penalty, prized', pct(s.penaltyPrizedPercent) + ' p.a.'], ['Penalty SF', pct(s.penaltySfPercent) + ' p.a.']]);
+    calc();
     head();
     if (editing) { var n = $('name'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+    if (modifying) $('auctionFrequency').focus();
   }
-  function setMode(on) { editing = on; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function setMode(m) { mode = m; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-  $('cancel').addEventListener('click', function () { setMode(false); });
+  /* Summary card; live while modifying, with the first rule between fields the draft breaks. */
+  function rules(v) {
+    if (+v.minBidPercent > +v.maxBidPercent) return ['minBidPercent', 'The minimum bid can’t be above the maximum bid'];
+    if (+v.minBidPercent < +v.companyCommissionPercent) return ['minBidPercent', 'The minimum bid must be at least the commission, so the dividend is never negative'];
+    if (+v.companyTickets >= s.installments) return ['companyTickets', 'Leave at least one ticket for subscribers'];
+    if (+v.minMembersForCommencement > s.installments) return ['minMembersForCommencement', 'Minimum members: at most ' + s.installments + ' (the number of tickets)'];
+    return null;
+  }
+  function calc() {
+    var v = mode === 'modify' ? UI.values($('f')) : s;
+    var cv = s.chitValue, n = s.installments;
+    $('calcTitle').textContent = mode === 'modify' ? 'New version' : 'At a glance';
+    $('calc').innerHTML = [['Instalment', UI.inr(s.installmentAmount)], ['Commission / auction', UI.inr(cv * (+v.companyCommissionPercent || 0) / 100)], ['Max discount', UI.inr(cv * (+v.maxBidPercent || 0) / 100)], ['Tickets for sale', Math.max(0, n - (+v.companyTickets || 0))]]
+      .map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
+    var r = mode === 'modify' ? rules(v) : null;
+    $('calcNote').innerHTML = mode !== 'modify' ? '' : r ? '<span style="color:var(--danger)">' + r[1] + '</span>' : '<span class="muted">Duration: ' + n + ' ' + freqUnit[v.auctionFrequency] + '.</span>';
+    return r;
+  }
+  $('f').addEventListener('input', calc); $('f').addEventListener('change', calc);
+
+  $('cancel').addEventListener('click', function () { setMode('view'); });
   $('f').addEventListener('submit', function (e) {
     e.preventDefault();
     if (!UI.validate(this)) return;
-    var v = UI.values(this), changed = [];
-    var next = { name: v.name.trim(), enrolmentFee: +v.enrolmentFee, minMembersForCommencement: +v.minMembersForCommencement, penaltyNonPrizedPercent: +v.penaltyNonPrizedPercent, penaltyPrizedPercent: +v.penaltyPrizedPercent };
-    Object.keys(next).forEach(function (k) { if (next[k] !== s[k]) changed.push(k); });
-    if (!changed.length) { UI.toast('Nothing changed', 'info'); setMode(false); return; }
+    var v = UI.values(this), fields = mode === 'modify' ? MODIFY : EDIT, next = {}, changed = [];
+    if (mode === 'modify') { var r = rules(v); if (r) { var fld = $(r[0]).closest('.field'); fld.querySelector('.err').textContent = r[1]; fld.classList.add('invalid'); $(r[0]).focus(); return; } }
+    if (mode === 'edit' && DB.schemes.some(function (x) { return x.originalSchemeId !== s.originalSchemeId && x.name.toLowerCase() === v.name.trim().toLowerCase(); })) {
+      var nf = $('name').closest('.field'); nf.querySelector('.err').textContent = 'This name is already used by another scheme'; nf.classList.add('invalid'); $('name').focus(); return;
+    }
+    fields.forEach(function (k) { next[k] = k === 'name' || k === 'auctionFrequency' || k === 'collectionOption' ? String(v[k]).trim() : +v[k]; if (next[k] !== s[k]) changed.push(k); });
+    if (!changed.length) { UI.toast('Nothing changed', 'info'); setMode('view'); return; }
+    if (mode === 'modify') {
+      UI.toast('Version ' + (s.versionNumber + 1) + ' saved (POST …/schemes/' + s.id + '/versions). Version ' + s.versionNumber + ' is now replaced.', 'success');
+      setTimeout(function () { location.href = 'scheme.html?id=' + s.id; }, 900);
+      return;
+    }
     Object.assign(s, next); version++;
     UI.toast('Scheme saved (PUT …/schemes/' + s.id + ', version ' + (version - 1) + ' → ' + version + ')', 'success');
-    setMode(false);
+    setMode('view');
   });
+
+  // compliance
+  function renderCompliance() {
+    $('comp').innerHTML = '<div>' + compliance(s.isCompliant) + '</div>' +
+      '<div class="xs muted">' + (s.complianceCheckedAt ? 'Reviewed ' + UI.date(s.complianceCheckedAt) + ' by ' + UI.esc(DB.userName(s.complianceCheckedBy)) + '.' : 'This version hasn’t been reviewed yet.') + '</div>' +
+      '<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm" data-mark="true"' + (s.isCompliant === true ? ' disabled' : '') + '>' + UI.icon('check') + 'Mark complied</button>' +
+      '<button class="btn sm" data-mark="false"' + (s.isCompliant === false ? ' disabled' : '') + '>' + UI.icon('x') + 'Mark not complied</button></div>';
+  }
+  $('comp').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-mark]'); if (!b) return;
+    s.isCompliant = b.getAttribute('data-mark') === 'true'; s.complianceCheckedBy = DB.me.id; s.complianceCheckedAt = DB.NOW;
+    renderCompliance(); head();
+    UI.toast('Compliance recorded (POST …/schemes/' + s.id + '/compliance)', 'success');
+  });
+
+  // icon (not for replaced versions)
+  var ICON_TYPES = ['image/png', 'image/jpeg', 'image/webp'], picked = null;
+  function renderIcon() {
+    var has = !!DB.schemeIcons[s.originalSchemeId];
+    $('iconBody').innerHTML = '<div class="row" style="gap:12px;align-items:center">' + markHtml() + '<span class="xs muted">' + (has ? 'Icon uploaded.' : 'No icon; initials are shown.') + '</span></div>' +
+      '<label class="dropzone" style="display:block"><input type="file" id="iconFile" accept="' + ICON_TYPES.join(',') + '"><b>' + (picked ? UI.esc(picked.name) : 'Choose an image') + '</b><span>' +
+      (picked ? Math.max(1, Math.round(picked.size / 1024)) + ' KB · ready to upload' : 'PNG, JPEG or WebP, at most 1 MB') + '</span></label>' +
+      '<div class="xs" id="iconErr" style="color:var(--danger);display:none"></div>' +
+      '<div class="row" style="gap:8px"><button class="btn sm primary" id="iconUp"' + (picked ? '' : ' disabled') + '>' + UI.icon('upload') + (has ? 'Replace icon' : 'Upload icon') + '</button>' +
+      (has ? '<button class="btn sm danger-ghost" id="iconRm">' + UI.icon('trash') + 'Remove icon</button>' : '') + '</div>';
+    $('iconFile').addEventListener('change', function () {
+      var f = this.files[0], bad = !f ? '' : ICON_TYPES.indexOf(f.type) < 0 ? 'Choose a PNG, JPEG or WebP image' : f.size > 1024 * 1024 ? 'The icon must be 1 MB or smaller' : '';
+      picked = f && !bad ? f : null; renderIcon();
+      if (bad) { $('iconErr').textContent = bad; $('iconErr').style.display = 'block'; }
+    });
+    $('iconUp').addEventListener('click', function () {
+      if (!picked) return;
+      var rd = new FileReader(); // the app shows icons as data: URLs (CSP img-src 'self' data:)
+      rd.onload = function () { DB.schemeIcons[s.originalSchemeId] = rd.result; picked = null; renderIcon(); head(); UI.toast('Icon uploaded (POST …/schemes/' + s.id + '/icon)', 'success'); };
+      rd.readAsDataURL(picked);
+    });
+    if ($('iconRm')) $('iconRm').addEventListener('click', function () {
+      UI.confirm('Remove the icon?', 'Every version of ' + UI.esc(s.name) + ' goes back to coloured initials.', { danger: true, ok: 'Remove', icon: 'trash', api: 'DELETE …/schemes/{schemeId}/icon', done: 'Icon removed',
+        onOk: function () { delete DB.schemeIcons[s.originalSchemeId]; renderIcon(); head(); } });
+    });
+  }
+  if (replaced) $('iconCard').style.display = 'none'; else renderIcon();
+  renderCompliance();
 
   // groups under this scheme
   var enrolled = groups.filter(function (g) { return g.status !== 'CANCELLED'; }).reduce(function (t, g) { return t + (g.enrolled || 0); }, 0);
@@ -123,9 +266,10 @@ document.addEventListener('app:ready', function () {
     .map(function (k) { return '<div class="card kpi"><div class="label"><span class="ico">' + UI.icon(k[0]) + '</span>' + k[1] + '</div><div class="value">' + k[2] + '</div><div class="delta">' + k[3] + '</div></div>'; }).join('');
   $('byStatus').innerHTML = ST.map(function (st) { return '<div class="row between small"><span>' + UI.badge(st) + '</span><b>' + count(st) + '</b></div>'; }).join('');
   $('gTitle').textContent = 'Groups under this scheme (' + groups.length + ')';
-  $('gTools').innerHTML = archived ? '' : '<a class="btn sm primary" href="group-new.html?scheme=' + s.id + '">' + UI.icon('plus') + 'New group</a>';
+  $('cGroups').textContent = groups.length; $('cVersions').textContent = versions.length;
+  $('gTools').innerHTML = active ? '<a class="btn sm primary" href="group-new.html?scheme=' + s.id + '">' + UI.icon('plus') + 'New group</a>' : '';
   $('fSt').innerHTML += ST.map(function (st) { return '<button data-v="' + st + '">' + UI.human(st) + ' <span class="xs muted">' + count(st) + '</span></button>'; }).join('');
-  UI.table({ el: '#tbl', rows: groups, filters: [{ el: '#fSt', key: 'status' }], empty: archived ? 'No groups were created from this scheme' : 'No groups yet. Create the first one from this scheme.',
+  UI.table({ el: '#tbl', rows: groups, filters: [{ el: '#fSt', key: 'status' }], empty: active ? 'No groups yet. Create the first one from this scheme.' : 'No groups were created from this version',
     onRow: function (g) { location.href = 'group-view.html?id=' + g.id; },
     columns: [
       { key: 'code', label: 'Group', sort: true, render: function (g) { return '<b class="mono">' + g.code + '</b><div class="xs muted">' + UI.esc(g.name) + '</div>'; } },
@@ -135,7 +279,41 @@ document.addEventListener('app:ready', function () {
       { key: 'enrolmentFee', label: 'Enrolment fee', num: true, render: function (g) { return UI.inr(g.enrolmentFee) + (g.enrolmentFee !== s.enrolmentFee ? '<div class="xs muted">Scheme now ' + UI.inr(s.enrolmentFee) + '</div>' : ''); } },
       { key: 'status', label: 'Status', render: function (g) { return UI.badge(g.status); } }] });
 
-  editing = UI.param('edit') === '1' && !archived;
+  // versions
+  UI.table({ el: '#vTbl', rows: versions, onRow: function (v) { if (v.id !== s.id) location.href = 'scheme.html?id=' + v.id + '&tab=versions'; },
+    columns: [
+      { key: 'versionNumber', label: 'Version', render: function (v) { return '<b>v' + v.versionNumber + '</b>' + (v.id === s.id ? ' <span class="xs muted">· this page</span>' : ''); } },
+      { key: 'status', label: 'Status', render: function (v) { return UI.badge(v.status); } },
+      { key: 'bid', label: 'Bid range', render: function (v) { return v.minBidPercent + '–' + v.maxBidPercent + '%'; } },
+      { key: 'companyCommissionPercent', label: 'Commission', num: true, render: function (v) { return v.companyCommissionPercent + '%'; } },
+      { key: 'companyTickets', label: 'Company tickets', num: true },
+      { key: 'isCompliant', label: 'Compliance', render: function (v) { return compliance(v.isCompliant); } },
+      { key: 'createdAt', label: 'Created', render: function (v) { return UI.date(v.createdAt); } },
+      { key: 'groups', label: 'Groups', num: true, render: function (v) { return DB.groups.filter(function (g) { return g.schemeId === v.id; }).length; } }] });
+
+  // fixed-bid estimate (FixedBidEstimator): auction 1 at the minimum bid; from auction 2, start at the maximum and step down by
+  // (max − min) / instalments while above the minimum. Amounts in paise so floating point never shows.
+  var step = (s.maxBidPercent - s.minBidPercent) / s.installments, est = [];
+  var row = function (seq, p) { var bp = Math.round(p * 100) / 100, amt = Math.round(s.chitValue * bp) / 100; return { seq: seq, bidPercent: bp, bidAmount: amt, prizedAmount: Math.round((s.chitValue - amt) * 100) / 100 }; };
+  est.push(row(1, s.minBidPercent));
+  for (var seq = 2, bid = s.maxBidPercent; seq <= s.installments && bid > s.minBidPercent + 1e-9; seq++, bid -= step) est.push(row(seq, bid));
+  $('eNote').textContent = 'Auction 1 is at the minimum bid (' + s.minBidPercent + '%). From auction 2 the bid starts at the maximum (' + s.maxBidPercent + '%) and drops by (max − min) ÷ instalments each auction while it stays above the minimum. An illustration only; real bids are set at each auction.';
+  UI.table({ el: '#eTbl', rows: est, pageSize: 12,
+    columns: [
+      { key: 'seq', label: 'Auction #', num: true },
+      { key: 'bidPercent', label: 'Bid %', num: true, render: function (a) { return a.bidPercent + '%'; } },
+      { key: 'bidAmount', label: 'Discount', num: true, render: function (a) { return UI.inr(a.bidAmount); } },
+      { key: 'prizedAmount', label: 'Prize amount', num: true, render: function (a) { return UI.inr(a.prizedAmount); } }] });
+
+  // tabs follow ?tab=
+  var tab = ['groups', 'versions', 'estimate'].indexOf(UI.param('tab')) > -1 ? UI.param('tab') : 'groups';
+  UI.activateTab(document.querySelector('#tabs [data-tab="' + tab + '"]'));
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]'); if (!b) return;
+    var u = new URL(location.href); u.searchParams.set('tab', b.getAttribute('data-tab')); history.replaceState(null, '', u);
+  });
+
+  mode = active && UI.param('modify') === '1' ? 'modify' : active && UI.param('edit') === '1' ? 'edit' : 'view';
   render();
 });
 </script>

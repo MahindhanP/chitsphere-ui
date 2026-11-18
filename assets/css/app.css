@@ -963,3 +963,10 @@ table.table { width: 100%; border-collapse: separate; border-spacing: 0; font-si
   .shell.collapsed .sidebar:hover .sb-foot { animation: sb-reveal 220ms var(--ease) 90ms both; }
 }
 @keyframes sb-reveal { from { opacity: 0; } }
+
+/* Chit schemes: version chip, icon avatar, extra filter row */
+.version-chip { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; margin-left: 6px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; color: var(--info); background: var(--info-soft); vertical-align: middle; }
+img.avatar { object-fit: cover; padding: 0; background: var(--surface-2); border: 1px solid var(--border); }
+.toolbar.more-filters { border-top: 1px dashed var(--border); align-items: flex-end; }
+.toolbar.more-filters .select, .toolbar.more-filters .input { width: auto; }
+.toolbar.more-filters label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text-3); }
